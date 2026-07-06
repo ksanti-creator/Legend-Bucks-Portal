@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
-import { useGetReward, useGetMe, useCreateRedemption } from "@workspace/api-client-react";
+import { useGetReward, useGetMe, useCreateRedemption, getGetRewardQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ export default function RewardDetail() {
   const { toast } = useToast();
   
   const { data: user } = useGetMe();
-  const { data: reward, isLoading } = useGetReward(id, { query: { enabled: !!id } });
+  const { data: reward, isLoading } = useGetReward(id, { query: { queryKey: getGetRewardQueryKey(id), enabled: !!id } });
   const redeemMut = useCreateRedemption();
   const queryClient = useQueryClient();
 
@@ -51,7 +51,7 @@ export default function RewardDetail() {
   }
 
   const canAfford = (user.balance || 0) >= reward.buckCost;
-  const isAvailable = reward.active && (reward.quantity === null || reward.quantity > 0);
+  const isAvailable = reward.active && (reward.quantity == null || reward.quantity > 0);
   const canRedeem = canAfford && isAvailable;
 
   const handleRedeem = () => {

@@ -12,6 +12,7 @@ export default function Dashboard() {
   const { data: user } = useGetMe();
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary({
     query: {
+      queryKey: getGetDashboardSummaryQueryKey(),
       enabled: user?.role === "admin" || user?.role === "manager"
     }
   });
@@ -69,9 +70,9 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Employees</p>
-                <p className="text-2xl font-bold font-display">
+                <div className="text-2xl font-bold font-display">
                   {isLoadingSummary ? <Skeleton className="h-8 w-16" /> : summary?.totalEmployees}
-                </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -82,9 +83,9 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Bucks Awarded (Month)</p>
-                <p className="text-2xl font-bold font-display">
+                <div className="text-2xl font-bold font-display">
                   {isLoadingSummary ? <Skeleton className="h-8 w-24" /> : summary?.thisMonthBucksAwarded?.toLocaleString() || 0}
-                </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -95,9 +96,9 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
-                <p className="text-2xl font-bold font-display">
+                <div className="text-2xl font-bold font-display">
                   {isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.pendingApprovals}
-                </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -108,9 +109,9 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Goals</p>
-                <p className="text-2xl font-bold font-display">
+                <div className="text-2xl font-bold font-display">
                   {isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.activeGoals}
-                </p>
+                </div>
               </div>
             </CardContent>
           </Card>

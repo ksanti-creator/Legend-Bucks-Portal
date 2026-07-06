@@ -7,6 +7,7 @@ import {
   useDeactivateEmployee,
   useGetMe,
   getGetEmployeeQueryKey,
+  getGetEmployeeBalanceQueryKey,
   getListTransactionsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -48,9 +49,9 @@ export default function EmployeeDetail() {
   const [isDeactivating, setIsDeactivating] = useState(false);
 
   const { data: currentUser } = useGetMe();
-  const { data: employee, isLoading: isLoadingEmp } = useGetEmployee(id, { query: { enabled: !!id } });
-  const { data: balance, isLoading: isLoadingBal } = useGetEmployeeBalance(id, { query: { enabled: !!id } });
-  const { data: transactions, isLoading: isLoadingTx } = useListTransactions({ employeeId: id }, { query: { enabled: !!id } });
+  const { data: employee, isLoading: isLoadingEmp } = useGetEmployee(id, { query: { queryKey: getGetEmployeeQueryKey(id), enabled: !!id } });
+  const { data: balance, isLoading: isLoadingBal } = useGetEmployeeBalance(id, { query: { queryKey: getGetEmployeeBalanceQueryKey(id), enabled: !!id } });
+  const { data: transactions, isLoading: isLoadingTx } = useListTransactions({ employeeId: id }, { query: { queryKey: getListTransactionsQueryKey({ employeeId: id }), enabled: !!id } });
   
   const deactivateMut = useDeactivateEmployee();
 
@@ -214,7 +215,7 @@ export default function EmployeeDetail() {
             <CardContent className="p-0 flex-1 overflow-auto">
               {isLoadingTx ? (
                 <div className="p-6 text-center text-muted-foreground">Loading...</div>
-              ) : transactions && transactions.length > 0 ? (
+              ) : transactions && transactions.items.length > 0 ? (
                 <Table>
                   <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm">
                     <TableRow>
@@ -225,7 +226,7 @@ export default function EmployeeDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.map((tx) => {
+                    {transactions.items.map((tx) => {
                       const isPositive = 
                         (tx.type === 'award' && tx.toEmployeeId === id) || 
                         (tx.type === 'refund' && tx.toEmployeeId === id) ||

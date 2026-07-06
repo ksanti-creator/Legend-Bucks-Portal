@@ -4,7 +4,8 @@ import {
   useAssignBudget, 
   useGetMyBudgetRemaining, 
   useGetMe,
-  useListEmployees
+  useListEmployees,
+  getGetMyBudgetRemainingQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -45,7 +46,7 @@ export default function Budgets() {
   const [open, setOpen] = useState(false);
 
   const { data: remaining, isLoading: isLoadingRemaining } = useGetMyBudgetRemaining({
-    query: { enabled: !isAdmin }
+    query: { queryKey: getGetMyBudgetRemainingQueryKey(), enabled: !isAdmin }
   });
 
   const { data: budgets, isLoading: isLoadingBudgets } = useListBudgets({

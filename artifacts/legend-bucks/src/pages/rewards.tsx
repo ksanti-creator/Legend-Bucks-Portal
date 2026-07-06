@@ -116,7 +116,7 @@ export default function Rewards() {
                   ) : (
                     <Gift className="h-16 w-16 text-muted-foreground/30" />
                   )}
-                  {reward.quantity !== null && reward.quantity <= 5 && (
+                  {reward.quantity != null && reward.quantity <= 5 && (
                     <Badge variant="destructive" className="absolute top-3 right-3 shadow-sm">
                       Only {reward.quantity} left
                     </Badge>
