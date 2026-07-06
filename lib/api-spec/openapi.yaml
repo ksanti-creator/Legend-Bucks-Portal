@@ -95,7 +95,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CurrentUser"
+                $ref: "#/components/schemas/AuthSession"
         "400":
           description: Invalid or expired token
 
@@ -948,6 +948,37 @@ components:
         balance:
           type: integer
           description: Current Legend Bucks balance
+
+    AuthSession:
+      type: object
+      required: [id, firstName, lastName, email, role, status, token]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, team_member]
+        department:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [active, inactive, invited]
+        balance:
+          type: integer
+          description: Current Legend Bucks balance
+        token:
+          type: string
+          description: Session token to store client-side and send as Bearer auth
 
     Employee:
       type: object

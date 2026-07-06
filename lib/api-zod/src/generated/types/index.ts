@@ -8,6 +8,9 @@
 
 export * from './activityItem';
 export * from './activityItemType';
+export * from './authSession';
+export * from './authSessionRole';
+export * from './authSessionStatus';
 export * from './balanceSummary';
 export * from './budget';
 export * from './budgetInput';

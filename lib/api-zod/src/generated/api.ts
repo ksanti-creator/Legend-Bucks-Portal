@@ -63,7 +63,8 @@ export const VerifyMagicLinkResponse = zod.object({
   "location": zod.string().nullish(),
   "managerId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive', 'invited']),
-  "balance": zod.number().optional().describe('Current Legend Bucks balance')
+  "balance": zod.number().optional().describe('Current Legend Bucks balance'),
+  "token": zod.string().describe('Session token to store client-side and send as Bearer auth')
 })
 
 

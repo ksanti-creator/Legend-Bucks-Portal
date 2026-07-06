@@ -42,7 +42,7 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       
-      <Route path="/">
+      <Route path="/" nest>
         <Shell>
           <Switch>
             <Route path="/" component={Home} />

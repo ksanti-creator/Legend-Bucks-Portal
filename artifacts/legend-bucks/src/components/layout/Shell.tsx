@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { cn, getInitials } from "@/lib/utils";
+import { clearSessionToken } from "@/lib/auth-token";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
@@ -48,7 +49,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   const handleLogout = () => {
     logout.mutate(undefined, {
-      onSuccess: () => setLocation("/login")
+      onSettled: () => {
+        clearSessionToken();
+        setLocation("/login");
+      },
     });
   };
 

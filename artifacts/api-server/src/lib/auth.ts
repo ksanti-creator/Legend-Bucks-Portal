@@ -67,8 +67,19 @@ export async function getSessionEmployee(sessionToken: string) {
   return row ? row.employee : null;
 }
 
+export function extractSessionToken(req: Request): string | undefined {
+  // Prefer the Authorization: Bearer header (works inside the Replit preview
+  // iframe where third-party cookies are blocked), fall back to the cookie.
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const bearer = authHeader.slice("Bearer ".length).trim();
+    if (bearer) return bearer;
+  }
+  return req.cookies?.["session_token"];
+}
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const token = req.cookies?.["session_token"];
+  const token = extractSessionToken(req);
   if (!token) {
     res.status(401).json({ error: "Unauthenticated" });
     return;

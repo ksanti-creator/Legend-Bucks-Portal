@@ -30,13 +30,13 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((e) => e.status === "active").length;
 
-  const [totalBucksRow] = await db.execute<{ total: string }>(
+  const { rows: [totalBucksRow] } = await db.execute<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'award'`
   ) as any;
 
   const month = currentMonth();
   const [from, to] = monthToRange(month);
-  const [monthBucksRow] = await db.execute<{ total: string }>(
+  const { rows: [monthBucksRow] } = await db.execute<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'award' AND created_at >= '${from}' AND created_at < '${to}'`
   ) as any;
 
@@ -48,7 +48,7 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
   const activeGoals = goals.filter((g) => g.active).length;
 
   // Top department by bucks received
-  const deptResult = await db.execute<{ department: string; total: string }>(
+  const { rows: deptRows } = await db.execute<{ department: string; total: string }>(
     `SELECT e.department, COALESCE(SUM(t.amount), 0) AS total
      FROM transactions t
      JOIN employees e ON e.id = t.to_employee_id
@@ -58,7 +58,7 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
      LIMIT 1`
   ) as any;
 
-  const topDepartment = deptResult[0]?.department ?? null;
+  const topDepartment = deptRows[0]?.department ?? null;
 
   res.json(
     GetDashboardSummaryResponse.parse({
@@ -170,7 +170,7 @@ router.get("/dashboard/leaderboard", requireAuth, async (req, res): Promise<void
   const month = params.data.month ?? currentMonth();
   const [from, to] = monthToRange(month);
 
-  const rows = await db.execute<{ employee_id: number; total: string }>(
+  const { rows } = await db.execute<{ employee_id: number; total: string }>(
     `SELECT to_employee_id AS employee_id, COALESCE(SUM(amount), 0) AS total
      FROM transactions
      WHERE type = 'award' AND to_employee_id IS NOT NULL

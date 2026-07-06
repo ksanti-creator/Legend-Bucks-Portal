@@ -44,6 +44,43 @@ export interface CurrentUser {
   balance?: number;
 }
 
+export type AuthSessionRole = typeof AuthSessionRole[keyof typeof AuthSessionRole];
+
+
+export const AuthSessionRole = {
+  admin: 'admin',
+  manager: 'manager',
+  team_member: 'team_member',
+} as const;
+
+export type AuthSessionStatus = typeof AuthSessionStatus[keyof typeof AuthSessionStatus];
+
+
+export const AuthSessionStatus = {
+  active: 'active',
+  inactive: 'inactive',
+  invited: 'invited',
+} as const;
+
+export interface AuthSession {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: AuthSessionRole;
+  /** @nullable */
+  department?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  managerId?: number | null;
+  status: AuthSessionStatus;
+  /** Current Legend Bucks balance */
+  balance?: number;
+  /** Session token to store client-side and send as Bearer auth */
+  token: string;
+}
+
 export type EmployeeRole = typeof EmployeeRole[keyof typeof EmployeeRole];
 
 

@@ -15,6 +15,7 @@ import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
+import { clearSessionToken } from "@/lib/auth-token";
 import { LogOut, Loader2, Save } from "lucide-react";
 import { useEffect } from "react";
 
@@ -67,9 +68,10 @@ export default function Settings() {
 
   const handleLogout = () => {
     logout.mutate(undefined, {
-      onSuccess: () => {
+      onSettled: () => {
+        clearSessionToken();
         window.location.href = "/login";
-      }
+      },
     });
   };
 

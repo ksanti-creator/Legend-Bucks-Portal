@@ -21,6 +21,7 @@ import type {
 
 import type {
   ActivityItem,
+  AuthSession,
   BalanceSummary,
   Budget,
   BudgetInput,
@@ -324,9 +325,9 @@ export const getVerifyMagicLinkUrl = () => {
 /**
  * @summary Verify a magic link token and create session
  */
-export const verifyMagicLink = async (magicLinkVerify: MagicLinkVerify, options?: RequestInit): Promise<CurrentUser> => {
+export const verifyMagicLink = async (magicLinkVerify: MagicLinkVerify, options?: RequestInit): Promise<AuthSession> => {
 
-  return customFetch<CurrentUser>(getVerifyMagicLinkUrl(),
+  return customFetch<AuthSession>(getVerifyMagicLinkUrl(),
   {
     ...options,
     method: 'POST',

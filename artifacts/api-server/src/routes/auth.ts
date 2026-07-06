@@ -19,6 +19,7 @@ import {
   getCurrentUser,
   deleteSession,
   getEmployeeBalance,
+  extractSessionToken,
 } from "../lib/auth";
 import { sendMagicLinkEmail, sendInviteEmail } from "../lib/email";
 
@@ -139,12 +140,18 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
       managerId: employee.managerId,
       status: employee.status,
       balance,
+      // Also returned in the body so the client can store it and authenticate
+      // via Authorization: Bearer — required inside the Replit preview iframe
+      // where third-party cookies are blocked.
+      token: sessionToken,
     }),
   );
 });
 
 router.post("/auth/logout", async (req, res): Promise<void> => {
-  const token = req.cookies?.["session_token"];
+  // Revoke whichever token the client presented — Bearer header (token mode)
+  // or cookie — so the server session is actually invalidated on logout.
+  const token = extractSessionToken(req);
   if (token) {
     await deleteSession(token);
   }

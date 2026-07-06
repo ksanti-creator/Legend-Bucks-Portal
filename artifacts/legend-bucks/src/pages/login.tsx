@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Mail, KeyRound, Loader2, FlaskConical, ShieldCheck, Users, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { setSessionToken } from "@/lib/auth-token";
 
 const emailSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -86,7 +87,8 @@ export default function Login() {
     verifyMagicLink.mutate(
       { data: { token: data.token } },
       {
-        onSuccess: (user) => {
+        onSuccess: ({ token, ...user }) => {
+          setSessionToken(token);
           queryClient.setQueryData(getGetMeQueryKey(), user);
           toast({ title: "Welcome back!" });
           setLocation("/dashboard");
@@ -114,7 +116,8 @@ export default function Login() {
               verifyMagicLink.mutate(
                 { data: { token: res.token } },
                 {
-                  onSuccess: (user) => {
+                  onSuccess: ({ token, ...user }) => {
+                    setSessionToken(token);
                     queryClient.setQueryData(getGetMeQueryKey(), user);
                     resolve();
                     setLocation("/dashboard");
