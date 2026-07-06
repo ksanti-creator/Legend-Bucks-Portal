@@ -116,10 +116,12 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
   }
 
   const sessionToken = await createSession(employee.id);
+  // SameSite=None + Secure is required so the cookie works inside Replit's
+  // preview iframe (cross-site from replit.com to <repl>.replit.dev).
   res.cookie("session_token", sessionToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: true,
+    sameSite: "none",
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: "/",
   });
