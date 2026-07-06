@@ -151,13 +151,13 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
       return;
     }
 
-    const [usedRow] = await db.execute<{ total: string }>(
+    const usedResult = await db.execute<{ total: string }>(
       `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions
        WHERE type = 'award' AND from_employee_id = ${user.id}
          AND created_at >= '${monthToRange(month)[0]}' AND created_at < '${monthToRange(month)[1]}'`
-    ) as any;
+    );
 
-    const used = parseInt(usedRow?.total ?? "0", 10);
+    const used = parseInt(usedResult.rows[0]?.total ?? "0", 10);
     if (used + amount > budget.totalAmount) {
       res.status(400).json({ error: `Insufficient budget. Remaining: ${budget.totalAmount - used} bucks` });
       return;
@@ -241,25 +241,25 @@ router.get("/transactions/summary", requireAuth, async (req, res): Promise<void>
   const month = params.data.month ?? currentMonth();
   const [from, to] = monthToRange(month);
 
-  const [totalSentRow] = await db.execute<{ total: string }>(
+  const totalSentResult = await db.execute<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'award' AND from_employee_id = ${targetId}`
-  ) as any;
-  const [totalReceivedRow] = await db.execute<{ total: string }>(
+  );
+  const totalReceivedResult = await db.execute<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('award','refund') AND to_employee_id = ${targetId}`
-  ) as any;
-  const [monthSentRow] = await db.execute<{ total: string }>(
+  );
+  const monthSentResult = await db.execute<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'award' AND from_employee_id = ${targetId} AND created_at >= '${from}' AND created_at < '${to}'`
-  ) as any;
-  const [monthReceivedRow] = await db.execute<{ total: string }>(
+  );
+  const monthReceivedResult = await db.execute<{ total: string }>(
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('award','refund') AND to_employee_id = ${targetId} AND created_at >= '${from}' AND created_at < '${to}'`
-  ) as any;
+  );
 
   res.json(
     GetTransactionSummaryResponse.parse({
-      totalSent: parseInt(totalSentRow?.total ?? "0", 10),
-      totalReceived: parseInt(totalReceivedRow?.total ?? "0", 10),
-      thisMonthSent: parseInt(monthSentRow?.total ?? "0", 10),
-      thisMonthReceived: parseInt(monthReceivedRow?.total ?? "0", 10),
+      totalSent: parseInt(totalSentResult.rows[0]?.total ?? "0", 10),
+      totalReceived: parseInt(totalReceivedResult.rows[0]?.total ?? "0", 10),
+      thisMonthSent: parseInt(monthSentResult.rows[0]?.total ?? "0", 10),
+      thisMonthReceived: parseInt(monthReceivedResult.rows[0]?.total ?? "0", 10),
     }),
   );
 });

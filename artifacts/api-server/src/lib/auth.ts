@@ -129,6 +129,5 @@ export async function getEmployeeBalance(employeeId: number): Promise<number> {
       END), 0) AS balance
      FROM transactions`
   );
-  const rows = result as unknown as Array<{ balance: string }>;
-  return parseInt(rows[0]?.balance ?? "0", 10);
+  return parseInt(result.rows[0]?.balance ?? "0", 10);
 }

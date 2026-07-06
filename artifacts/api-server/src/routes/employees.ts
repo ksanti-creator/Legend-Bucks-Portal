@@ -192,8 +192,8 @@ router.get("/employees/:id/balance", requireAuth, async (req, res): Promise<void
     `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('redemption_debit','contribution') AND from_employee_id = ${emp.id}`
   );
 
-  const credits = parseInt((creditResult as any)[0]?.total ?? "0", 10);
-  const debits = parseInt((debitResult as any)[0]?.total ?? "0", 10);
+  const credits = parseInt(creditResult.rows[0]?.total ?? "0", 10);
+  const debits = parseInt(debitResult.rows[0]?.total ?? "0", 10);
   const balance = credits - debits;
 
   res.json(

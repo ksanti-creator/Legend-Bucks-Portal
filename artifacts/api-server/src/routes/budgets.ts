@@ -28,7 +28,7 @@ async function getUsedAmount(managerId: number, month: string): Promise<number> 
      WHERE type = 'award' AND from_employee_id = ${managerId}
        AND created_at >= '${from}' AND created_at < '${to}'`
   );
-  return parseInt((result as any)[0]?.total ?? "0", 10);
+  return parseInt(result.rows[0]?.total ?? "0", 10);
 }
 
 function monthToRange(month: string): [string, string] {
