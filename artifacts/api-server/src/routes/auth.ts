@@ -20,6 +20,7 @@ import {
   deleteSession,
   getEmployeeBalance,
 } from "../lib/auth";
+import { sendMagicLinkEmail, sendInviteEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -63,9 +64,15 @@ router.post("/auth/login", async (req, res): Promise<void> => {
 
   const token = await createMagicToken(employee.id);
 
-  req.log.info({ employeeId: employee.id }, "Magic link generated");
+  // Send the magic link email; also surface the token in dev for easy testing
+  try {
+    await sendMagicLinkEmail(employee.email, employee.firstName, token);
+    req.log.info({ employeeId: employee.id }, "Magic link email sent");
+  } catch (err) {
+    req.log.error({ err, employeeId: employee.id }, "Failed to send magic link email");
+    // Don't block login — fall through so dev token is still returned
+  }
 
-  // In production you'd send an email; in dev we return the token for easy testing
   const isDev = process.env.NODE_ENV !== "production";
   res.json(
     RequestMagicLinkResponse.parse({
@@ -181,11 +188,15 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
     })
     .returning();
 
-  // Generate magic token for invitation (do NOT log the token itself)
+  // Generate magic token and email the invitation
   const token = await createMagicToken(employee.id);
-  req.log.info({ employeeId: employee.id }, "Invite sent");
-  // In production you'd email the token; in dev we surface it on the response only
-  void token;
+  const inviterName = `${user.firstName} ${user.lastName}`;
+  try {
+    await sendInviteEmail(employee.email, employee.firstName, inviterName, token);
+    req.log.info({ employeeId: employee.id }, "Invite email sent");
+  } catch (err) {
+    req.log.error({ err, employeeId: employee.id }, "Failed to send invite email");
+  }
 
   res.status(201).json(
     InviteEmployeeResponse.parse({
