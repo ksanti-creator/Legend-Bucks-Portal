@@ -76,7 +76,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-64 border-r border-border bg-sidebar text-sidebar-foreground flex flex-col">
+      <aside className="fixed inset-y-0 left-0 w-64 border-r border-border bg-sidebar text-sidebar-foreground flex flex-col z-40">
         <div className="p-5 pb-4 border-b border-sidebar-border">
           <img
             src="/logos/legend-bucks-rewards.png"
