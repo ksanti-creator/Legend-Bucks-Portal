@@ -1163,6 +1163,9 @@ components:
           type: ["string", "null"]
         redemptionId:
           type: ["integer", "null"]
+        cadValueCents:
+          type: ["integer", "null"]
+          description: For redemption rows, the reward's CAD value in cents. Only populated for admins (accounting).
         goalId:
           type: ["integer", "null"]
         createdAt:
@@ -1222,6 +1225,9 @@ components:
           type: ["string", "null"]
         buckCost:
           type: integer
+        cadValueCents:
+          type: ["integer", "null"]
+          description: Real-money value in CAD cents. Only returned to admins (accounting-only).
         imageUrl:
           type: ["string", "null"]
         quantity:
@@ -1249,6 +1255,8 @@ components:
         buckCost:
           type: integer
           minimum: 1
+        cadValueCents:
+          type: ["integer", "null"]
         imageUrl:
           type: string
         quantity:
@@ -1272,6 +1280,8 @@ components:
         buckCost:
           type: integer
           minimum: 1
+        cadValueCents:
+          type: ["integer", "null"]
         imageUrl:
           type: ["string", "null"]
         quantity:
@@ -1302,6 +1312,8 @@ components:
           enum: [requested, approved, rejected, fulfilled, cancelled]
         buckCost:
           type: integer
+        cadValueCents:
+          type: ["integer", "null"]
         note:
           type: ["string", "null"]
         adminNote:

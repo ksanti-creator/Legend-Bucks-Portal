@@ -14,6 +14,11 @@ export interface Reward {
   /** @nullable */
   category?: string | null;
   buckCost: number;
+  /**
+     * Real-money value in CAD cents. Only returned to admins (accounting-only).
+     * @nullable
+     */
+  cadValueCents?: number | null;
   /** @nullable */
   imageUrl?: string | null;
   /**

@@ -114,6 +114,14 @@ export default function Redemptions() {
                     <div className="flex flex-col justify-center items-start md:items-end min-w-[120px] pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-border md:pl-6">
                       <div className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Cost</div>
                       <div className="text-2xl font-bold font-display text-primary">{item.buckCost} LB</div>
+                      {item.cadValueCents != null && (
+                        <div className="mt-2 text-xs text-muted-foreground uppercase tracking-wider" title="Real dollar value — accounting only">
+                          CAD Value
+                          <span className="block text-base font-semibold text-foreground normal-case tracking-normal">
+                            ${(item.cadValueCents / 100).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   

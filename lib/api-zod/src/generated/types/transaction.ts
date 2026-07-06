@@ -23,6 +23,11 @@ export interface Transaction {
   note?: string | null;
   /** @nullable */
   redemptionId?: number | null;
+  /**
+     * For redemption rows, the reward's CAD value in cents. Only populated for admins (accounting).
+     * @nullable
+     */
+  cadValueCents?: number | null;
   /** @nullable */
   goalId?: number | null;
   createdAt: string;

@@ -16,6 +16,8 @@ export interface Redemption {
   status: RedemptionStatus;
   buckCost: number;
   /** @nullable */
+  cadValueCents?: number | null;
+  /** @nullable */
   note?: string | null;
   /** @nullable */
   adminNote?: string | null;

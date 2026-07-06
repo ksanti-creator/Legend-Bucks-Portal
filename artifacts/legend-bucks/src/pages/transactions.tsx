@@ -83,17 +83,18 @@ export default function Transactions() {
                 <TableHead>Type</TableHead>
                 <TableHead>From / To</TableHead>
                 <TableHead>Note</TableHead>
+                {isAdmin && <TableHead className="text-right">CAD Value</TableHead>}
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading transactions...</TableCell>
+                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">Loading transactions...</TableCell>
                 </TableRow>
               ) : !txPage?.items || txPage.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No transactions found.</TableCell>
+                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">No transactions found.</TableCell>
                 </TableRow>
               ) : (
                 txPage.items.map((tx) => {
@@ -132,6 +133,11 @@ export default function Transactions() {
                       <TableCell className="max-w-[300px] truncate text-sm">
                         {tx.note}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                          {tx.cadValueCents != null ? `${(tx.cadValueCents / 100).toFixed(2)}` : '—'}
+                        </TableCell>
+                      )}
                       <TableCell className={`text-right ${amtClass}`}>
                         {amtPrefix}{Math.abs(tx.amount)}
                       </TableCell>

@@ -23,7 +23,7 @@ import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
 
 const router: IRouter = Router();
 
-async function enrichRedemption(r: any) {
+async function enrichRedemption(r: any, isAdmin: boolean) {
   const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, r.employeeId)).limit(1);
   const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, r.rewardId)).limit(1);
   return {
@@ -34,6 +34,8 @@ async function enrichRedemption(r: any) {
     rewardName: reward?.name ?? "Unknown",
     status: r.status,
     buckCost: r.buckCost,
+    // CAD value is accounting-only: only expose it to admins, never to managers or staff.
+    cadValueCents: isAdmin ? (r.cadValueCents ?? null) : null,
     note: r.note,
     adminNote: r.adminNote,
     createdAt: r.createdAt.toISOString(),
@@ -61,7 +63,7 @@ router.get("/redemptions", requireAuth, async (req, res): Promise<void> => {
   if (params.data.status) all = all.filter((r) => r.status === params.data.status);
   if (params.data.pendingApproval) all = all.filter((r) => r.status === "requested");
 
-  const enriched = await Promise.all(all.map(enrichRedemption));
+  const enriched = await Promise.all(all.map((r) => enrichRedemption(r, user.role === "admin")));
   res.json(ListRedemptionsResponse.parse(enriched));
 });
 
@@ -112,6 +114,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
       rewardId: reward.id,
       status: initialStatus,
       buckCost: reward.buckCost,
+      cadValueCents: reward.cadValueCents ?? null,
       note: body.data.note ?? null,
     })
     .returning();
@@ -121,7 +124,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     `UPDATE transactions SET redemption_id = ${redemption.id} WHERE type = 'redemption_debit' AND from_employee_id = ${user.id} AND redemption_id IS NULL ORDER BY created_at DESC LIMIT 1`
   );
 
-  res.status(201).json(CreateRedemptionResponse.parse(await enrichRedemption(redemption)));
+  res.status(201).json(CreateRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));
 });
 
 router.get("/redemptions/:id", requireAuth, async (req, res): Promise<void> => {
@@ -143,7 +146,7 @@ router.get("/redemptions/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetRedemptionResponse.parse(await enrichRedemption(redemption)));
+  res.json(GetRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));
 });
 
 router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<void> => {
@@ -171,7 +174,7 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
     .where(eq(redemptionsTable.id, params.data.id))
     .returning();
 
-  res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated)));
+  res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });
 
 router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<void> => {
@@ -216,7 +219,7 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
     await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
   }
 
-  res.json(RejectRedemptionResponse.parse(await enrichRedemption(updated)));
+  res.json(RejectRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });
 
 router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<void> => {
@@ -268,7 +271,7 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
     await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
   }
 
-  res.json(CancelRedemptionResponse.parse(await enrichRedemption(updated)));
+  res.json(CancelRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });
 
 router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<void> => {
@@ -296,7 +299,7 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
     .where(eq(redemptionsTable.id, params.data.id))
     .returning();
 
-  res.json(FulfillRedemptionResponse.parse(await enrichRedemption(updated)));
+  res.json(FulfillRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });
 
 export default router;

@@ -51,6 +51,11 @@ const rewardSchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   buckCost: z.coerce.number().min(1, "Cost must be at least 1 LB"),
+  // Blank input must map to null (not 0), so a missing CAD value stays unset.
+  cadValue: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : v),
+    z.coerce.number().min(0, "Value cannot be negative").nullable(),
+  ),
   imageUrl: z.string().optional(),
   quantity: z.coerce.number().optional().nullable(),
   locationRestriction: z.string().optional().nullable(),
@@ -80,6 +85,7 @@ export default function ManageRewards() {
       description: "",
       category: "",
       buckCost: 100,
+      cadValue: null,
       imageUrl: "",
       quantity: null,
       locationRestriction: "",
@@ -93,11 +99,17 @@ export default function ManageRewards() {
   }
 
   const onSubmit = (data: z.infer<typeof rewardSchema>) => {
-    // Transform empty strings to null for optional API fields
+    // Transform empty strings to null for optional API fields.
+    // CAD value is entered in dollars but stored as integer cents.
+    const { cadValue, ...rest } = data;
     const payload = {
-      ...data,
+      ...rest,
       quantity: data.quantity === 0 || isNaN(data.quantity as any) ? null : data.quantity,
       locationRestriction: data.locationRestriction === "" ? null : data.locationRestriction,
+      cadValueCents:
+        cadValue === null || cadValue === undefined || isNaN(cadValue as any)
+          ? null
+          : Math.round(cadValue * 100),
     };
 
     if (editingId) {
@@ -136,6 +148,7 @@ export default function ManageRewards() {
       description: reward.description || "",
       category: reward.category || "",
       buckCost: reward.buckCost,
+      cadValue: reward.cadValueCents != null ? reward.cadValueCents / 100 : null,
       imageUrl: reward.imageUrl || "",
       quantity: reward.quantity,
       locationRestriction: reward.locationRestriction || "",
@@ -224,6 +237,30 @@ export default function ManageRewards() {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="cadValue"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CAD Value ($) — Accounting only</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="e.g. 49.99"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The real dollar cost of this reward. Visible only to admins on accounting ledgers — never shown to employees.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -369,6 +406,7 @@ export default function ManageRewards() {
                 <TableHead>Reward</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Cost</TableHead>
+                <TableHead>CAD Value</TableHead>
                 <TableHead>Inventory</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -377,11 +415,11 @@ export default function ManageRewards() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading catalog...</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading catalog...</TableCell>
                 </TableRow>
               ) : rewards?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Catalog is empty.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Catalog is empty.</TableCell>
                 </TableRow>
               ) : (
                 rewards?.map((reward) => (
@@ -401,6 +439,9 @@ export default function ManageRewards() {
                     </TableCell>
                     <TableCell>{reward.category}</TableCell>
                     <TableCell className="font-bold text-primary">{reward.buckCost} LB</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {reward.cadValueCents != null ? `${(reward.cadValueCents / 100).toFixed(2)}` : '—'}
+                    </TableCell>
                     <TableCell>{reward.quantity !== null ? reward.quantity : 'Unlimited'}</TableCell>
                     <TableCell>
                       <Badge variant={reward.active ? "success" : "secondary"}>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, transactionsTable, employeesTable, budgetsTable } from "@workspace/db";
+import { db, transactionsTable, employeesTable, budgetsTable, redemptionsTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import {
   ListTransactionsQueryParams,
@@ -29,7 +29,7 @@ function monthToRange(month: string): [string, string] {
   return [start.toISOString(), end.toISOString()];
 }
 
-async function enrichTransaction(tx: any) {
+async function enrichTransaction(tx: any, isAdmin: boolean) {
   let fromEmployeeName: string | null = null;
   let toEmployeeName: string | null = null;
 
@@ -42,6 +42,18 @@ async function enrichTransaction(tx: any) {
     if (e) toEmployeeName = `${e.firstName} ${e.lastName}`;
   }
 
+  // CAD value is accounting-only: only surface it to admins, and only for
+  // redemption rows (via the redemption's snapshotted value).
+  let cadValueCents: number | null = null;
+  if (isAdmin && tx.redemptionId) {
+    const [redemption] = await db
+      .select()
+      .from(redemptionsTable)
+      .where(eq(redemptionsTable.id, tx.redemptionId))
+      .limit(1);
+    cadValueCents = redemption?.cadValueCents ?? null;
+  }
+
   return {
     id: tx.id,
     type: tx.type,
@@ -52,6 +64,7 @@ async function enrichTransaction(tx: any) {
     toEmployeeName,
     note: tx.note,
     redemptionId: tx.redemptionId,
+    cadValueCents,
     goalId: tx.goalId,
     createdAt: tx.createdAt.toISOString(),
   };
@@ -92,7 +105,7 @@ router.get("/transactions", requireAuth, async (req, res): Promise<void> => {
 
   const total = all.length;
   const page = all.slice(offset, offset + limit);
-  const enriched = await Promise.all(page.map(enrichTransaction));
+  const enriched = await Promise.all(page.map((tx) => enrichTransaction(tx, user.role === "admin")));
 
   res.json(ListTransactionsResponse.parse({ items: enriched, total, offset, limit }));
 });
@@ -162,7 +175,7 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(SendBucksResponse.parse(await enrichTransaction(tx)));
+  res.status(201).json(SendBucksResponse.parse(await enrichTransaction(tx, user.role === "admin")));
 });
 
 router.get("/transactions/export", requireAuth, async (req, res): Promise<void> => {
@@ -275,7 +288,7 @@ router.get("/transactions/:id", requireAuth, async (req, res): Promise<void> => 
     return;
   }
 
-  res.json(GetTransactionResponse.parse(await enrichTransaction(tx)));
+  res.json(GetTransactionResponse.parse(await enrichTransaction(tx, user.role === "admin")));
 });
 
 export default router;

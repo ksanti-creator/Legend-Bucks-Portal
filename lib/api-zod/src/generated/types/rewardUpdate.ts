@@ -15,6 +15,8 @@ export interface RewardUpdate {
   /** @minimum 1 */
   buckCost?: number;
   /** @nullable */
+  cadValueCents?: number | null;
+  /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
   quantity?: number | null;

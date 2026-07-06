@@ -16,6 +16,7 @@ export const redemptionsTable = pgTable("redemptions", {
   rewardId: integer("reward_id").notNull(),
   status: redemptionStatusEnum("status").notNull().default("requested"),
   buckCost: integer("buck_cost").notNull(), // snapshot of cost at time of redemption
+  cadValueCents: integer("cad_value_cents"), // snapshot of reward's CAD value (cents) at redemption time. Accounting-only.
   note: text("note"),
   adminNote: text("admin_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

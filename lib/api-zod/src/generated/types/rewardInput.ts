@@ -12,6 +12,8 @@ export interface RewardInput {
   category?: string;
   /** @minimum 1 */
   buckCost: number;
+  /** @nullable */
+  cadValueCents?: number | null;
   imageUrl?: string;
   /** @nullable */
   quantity?: number | null;

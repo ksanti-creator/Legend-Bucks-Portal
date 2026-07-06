@@ -18,13 +18,15 @@ import { requireAuth, getCurrentUser } from "../lib/auth";
 
 const router: IRouter = Router();
 
-function rewardToResponse(r: any) {
+function rewardToResponse(r: any, isAdmin: boolean) {
   return {
     id: r.id,
     name: r.name,
     description: r.description,
     category: r.category,
     buckCost: r.buckCost,
+    // CAD value is accounting-only: only expose it to admins, never to regular staff.
+    cadValueCents: isAdmin ? (r.cadValueCents ?? null) : null,
     imageUrl: r.imageUrl,
     quantity: r.quantity,
     locationRestriction: r.locationRestriction,
@@ -53,7 +55,8 @@ router.get("/rewards", requireAuth, async (req, res): Promise<void> => {
   if (params.data.location) rewards = rewards.filter((r) => !r.locationRestriction || r.locationRestriction === params.data.location);
   if (params.data.active !== undefined) rewards = rewards.filter((r) => r.active === params.data.active);
 
-  res.json(ListRewardsResponse.parse(rewards.map(rewardToResponse)));
+  const isAdmin = user.role === "admin";
+  res.json(ListRewardsResponse.parse(rewards.map((r) => rewardToResponse(r, isAdmin))));
 });
 
 router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
@@ -76,6 +79,7 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
       description: body.data.description ?? null,
       category: body.data.category ?? null,
       buckCost: body.data.buckCost,
+      cadValueCents: body.data.cadValueCents ?? null,
       imageUrl: body.data.imageUrl ?? null,
       quantity: body.data.quantity ?? null,
       locationRestriction: body.data.locationRestriction ?? null,
@@ -84,7 +88,7 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(CreateRewardResponse.parse(rewardToResponse(reward)));
+  res.status(201).json(CreateRewardResponse.parse(rewardToResponse(reward, true)));
 });
 
 router.get("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
@@ -100,7 +104,8 @@ router.get("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetRewardResponse.parse(rewardToResponse(reward)));
+  const user = getCurrentUser(req);
+  res.json(GetRewardResponse.parse(rewardToResponse(reward, user.role === "admin")));
 });
 
 router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
@@ -127,6 +132,7 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
   if ("description" in body.data) updates.description = body.data.description;
   if ("category" in body.data) updates.category = body.data.category;
   if (body.data.buckCost !== undefined) updates.buckCost = body.data.buckCost;
+  if ("cadValueCents" in body.data) updates.cadValueCents = body.data.cadValueCents;
   if ("imageUrl" in body.data) updates.imageUrl = body.data.imageUrl;
   if ("quantity" in body.data) updates.quantity = body.data.quantity;
   if ("locationRestriction" in body.data) updates.locationRestriction = body.data.locationRestriction;
@@ -144,7 +150,7 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(UpdateRewardResponse.parse(rewardToResponse(updated)));
+  res.json(UpdateRewardResponse.parse(rewardToResponse(updated, true)));
 });
 
 router.delete("/rewards/:id", requireAuth, async (req, res): Promise<void> => {

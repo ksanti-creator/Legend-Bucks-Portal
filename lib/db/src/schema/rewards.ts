@@ -8,6 +8,7 @@ export const rewardsTable = pgTable("rewards", {
   description: text("description"),
   category: text("category"),
   buckCost: integer("buck_cost").notNull(),
+  cadValueCents: integer("cad_value_cents"), // real-money value in CAD cents; null = not set. Accounting-only.
   imageUrl: text("image_url"),
   quantity: integer("quantity"), // null = unlimited
   locationRestriction: text("location_restriction"),

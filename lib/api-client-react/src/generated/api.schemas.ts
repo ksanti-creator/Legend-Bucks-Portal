@@ -246,6 +246,11 @@ export interface Transaction {
   note?: string | null;
   /** @nullable */
   redemptionId?: number | null;
+  /**
+     * For redemption rows, the reward's CAD value in cents. Only populated for admins (accounting).
+     * @nullable
+     */
+  cadValueCents?: number | null;
   /** @nullable */
   goalId?: number | null;
   createdAt: string;
@@ -280,6 +285,11 @@ export interface Reward {
   /** @nullable */
   category?: string | null;
   buckCost: number;
+  /**
+     * Real-money value in CAD cents. Only returned to admins (accounting-only).
+     * @nullable
+     */
+  cadValueCents?: number | null;
   /** @nullable */
   imageUrl?: string | null;
   /**
@@ -300,6 +310,8 @@ export interface RewardInput {
   category?: string;
   /** @minimum 1 */
   buckCost: number;
+  /** @nullable */
+  cadValueCents?: number | null;
   imageUrl?: string;
   /** @nullable */
   quantity?: number | null;
@@ -317,6 +329,8 @@ export interface RewardUpdate {
   category?: string | null;
   /** @minimum 1 */
   buckCost?: number;
+  /** @nullable */
+  cadValueCents?: number | null;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -346,6 +360,8 @@ export interface Redemption {
   rewardName?: string;
   status: RedemptionStatus;
   buckCost: number;
+  /** @nullable */
+  cadValueCents?: number | null;
   /** @nullable */
   note?: string | null;
   /** @nullable */

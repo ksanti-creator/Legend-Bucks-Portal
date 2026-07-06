@@ -1,3 +1,4 @@
 - [Legend Bucks auth pattern](legend-bucks-auth.md) — sessions via Bearer token in localStorage (cookies blocked in Replit iframe); balance is ledger-derived, never stored on employee row.
 - [db.execute returns { rows }](db-execute-rows.md) — raw db.execute() gives a node-postgres QueryResult, not an array; read .rows or get silent 0s / 500s.
 - [Legend Bucks schema rebuild rule](legend-bucks-schema-rebuild.md) — after any lib/db schema change, typecheck:libs must run before API server typecheck or all table imports fail.
+- [Accounting-only reward fields](legend-bucks-accounting-fields.md) — an admin-only money field must be gated in every enrich* fn (rewards, redemptions, transactions); redemptions endpoint is the easy leak.
