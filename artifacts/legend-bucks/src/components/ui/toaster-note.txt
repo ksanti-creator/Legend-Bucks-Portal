@@ -1,0 +1,4 @@
+import { AppProps } from "wouter";
+import { Toaster } from "@/components/ui/toast";
+// Note: using the hooks/use-toast export for useToast, but Toaster comes from a different path usually, or maybe we didn't generate toaster component. Let me fix toaster imports.
+// wait, Toaster is usually in @/components/ui/toaster. I will generate it.

@@ -1,0 +1,268 @@
+import { useState } from "react";
+import { useParams, Link, useLocation } from "wouter";
+import { 
+  useGetEmployee, 
+  useGetEmployeeBalance, 
+  useListTransactions, 
+  useDeactivateEmployee,
+  useGetMe,
+  getGetEmployeeQueryKey,
+  getListTransactionsQueryKey
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDateTime, getInitials } from "@/lib/utils";
+import { 
+  ArrowLeft, 
+  Mail, 
+  MapPin, 
+  Briefcase, 
+  CalendarDays, 
+  Award, 
+  Coins, 
+  AlertTriangle,
+  Send
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+export default function EmployeeDetail() {
+  const params = useParams();
+  const id = parseInt(params.id || "0", 10);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDeactivating, setIsDeactivating] = useState(false);
+
+  const { data: currentUser } = useGetMe();
+  const { data: employee, isLoading: isLoadingEmp } = useGetEmployee(id, { query: { enabled: !!id } });
+  const { data: balance, isLoading: isLoadingBal } = useGetEmployeeBalance(id, { query: { enabled: !!id } });
+  const { data: transactions, isLoading: isLoadingTx } = useListTransactions({ employeeId: id }, { query: { enabled: !!id } });
+  
+  const deactivateMut = useDeactivateEmployee();
+
+  const isAdminOrManager = currentUser?.role === "admin" || currentUser?.role === "manager";
+  const canDeactivate = currentUser?.role === "admin" && employee?.status !== "inactive";
+
+  const handleDeactivate = () => {
+    setIsDeactivating(true);
+    deactivateMut.mutate({ id }, {
+      onSuccess: () => {
+        toast({ title: "Employee deactivated" });
+        queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
+        setIsDeactivating(false);
+      },
+      onError: () => {
+        toast({ title: "Failed to deactivate", variant: "destructive" });
+        setIsDeactivating(false);
+      }
+    });
+  };
+
+  if (isLoadingEmp || !employee) {
+    return <div className="p-8">Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500">
+      <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
+        <Link href="/employees">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Directory
+        </Link>
+      </Button>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <Card className="md:col-span-1 border-none shadow-sm bg-card overflow-hidden relative">
+          <div className="h-24 bg-primary/10 w-full absolute top-0 left-0" />
+          <CardContent className="p-6 pt-12 relative z-10 text-center">
+            <Avatar className="h-24 w-24 mx-auto border-4 border-background shadow-sm mb-4">
+              <AvatarFallback className="bg-primary/5 text-primary text-2xl font-display">
+                {getInitials(employee.firstName, employee.lastName)}
+              </AvatarFallback>
+            </Avatar>
+            
+            <h2 className="text-2xl font-display font-bold text-foreground">
+              {employee.firstName} {employee.lastName}
+            </h2>
+            <p className="text-muted-foreground capitalize mb-3">
+              {employee.role.replace('_', ' ')}
+            </p>
+            
+            <Badge variant={
+              employee.status === "active" ? "success" : 
+              employee.status === "invited" ? "warning" : "secondary"
+            } className="capitalize mb-6">
+              {employee.status}
+            </Badge>
+
+            <div className="space-y-3 text-sm text-left border-t pt-6 border-border">
+              <div className="flex items-center text-muted-foreground">
+                <Mail className="h-4 w-4 mr-3 shrink-0" />
+                <span className="truncate">{employee.email}</span>
+              </div>
+              {employee.department && (
+                <div className="flex items-center text-muted-foreground">
+                  <Briefcase className="h-4 w-4 mr-3 shrink-0" />
+                  <span>{employee.department}</span>
+                </div>
+              )}
+              {employee.location && (
+                <div className="flex items-center text-muted-foreground">
+                  <MapPin className="h-4 w-4 mr-3 shrink-0" />
+                  <span>{employee.location}</span>
+                </div>
+              )}
+              {employee.managerName && (
+                <div className="flex items-center text-muted-foreground">
+                  <Award className="h-4 w-4 mr-3 shrink-0" />
+                  <span>Manager: {employee.managerName}</span>
+                </div>
+              )}
+              <div className="flex items-center text-muted-foreground">
+                <CalendarDays className="h-4 w-4 mr-3 shrink-0" />
+                <span>Joined {new Date(employee.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            {isAdminOrManager && employee.status === 'active' && (
+              <Button className="w-full mt-6 bg-primary hover:bg-primary/90" asChild>
+                <Link href={`/send?to=${employee.id}`}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Bucks
+                </Link>
+              </Button>
+            )}
+
+            {canDeactivate && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full mt-3 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
+                    Deactivate Employee
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Deactivate Employee</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to deactivate {employee.firstName} {employee.lastName}? 
+                      They will no longer be able to log in or receive Legend Bucks.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDeactivating(false)}>Cancel</Button>
+                    <Button variant="destructive" onClick={handleDeactivate} disabled={isDeactivating}>
+                      {isDeactivating ? "Deactivating..." : "Deactivate"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="md:col-span-2 space-y-6">
+          {/* Balance Cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="bg-primary text-primary-foreground border-none shadow-sm">
+              <CardContent className="p-6">
+                <Coins className="h-5 w-5 text-primary-foreground/70 mb-2" />
+                <p className="text-sm font-medium text-primary-foreground/80">Current Balance</p>
+                <p className="text-3xl font-display font-bold mt-1">
+                  {isLoadingBal ? "..." : balance?.balance.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card shadow-sm border-none">
+              <CardContent className="p-6">
+                <Award className="h-5 w-5 text-accent mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">Total Received</p>
+                <p className="text-2xl font-display font-bold mt-1">
+                  {isLoadingBal ? "..." : balance?.totalReceived.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card shadow-sm border-none">
+              <CardContent className="p-6">
+                <AlertTriangle className="h-5 w-5 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
+                <p className="text-2xl font-display font-bold mt-1">
+                  {isLoadingBal ? "..." : balance?.totalSpent.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-none shadow-sm h-[500px] flex flex-col">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-lg">Transaction History</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 overflow-auto">
+              {isLoadingTx ? (
+                <div className="p-6 text-center text-muted-foreground">Loading...</div>
+              ) : transactions && transactions.length > 0 ? (
+                <Table>
+                  <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm">
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Details</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((tx) => {
+                      const isPositive = 
+                        (tx.type === 'award' && tx.toEmployeeId === id) || 
+                        (tx.type === 'refund' && tx.toEmployeeId === id) ||
+                        (tx.type === 'adjustment' && tx.amount > 0);
+                        
+                      return (
+                        <TableRow key={tx.id}>
+                          <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                            {formatDateTime(tx.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize text-xs font-normal bg-background">
+                              {tx.type.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[250px] truncate">
+                            {tx.type === 'award' && tx.fromEmployeeId ? `From ${tx.fromEmployeeName}` : ''}
+                            {tx.type === 'award' && tx.toEmployeeId && tx.fromEmployeeId === id ? `To ${tx.toEmployeeName}` : ''}
+                            {tx.note ? ` - ${tx.note}` : ''}
+                          </TableCell>
+                          <TableCell className={`text-right font-medium ${isPositive ? 'text-green-600' : 'text-foreground'}`}>
+                            {isPositive ? '+' : '-'}{Math.abs(tx.amount)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="p-12 text-center text-muted-foreground">
+                  No transactions yet.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,2 @@
+- [Legend Bucks auth pattern](legend-bucks-auth.md) — magic-link sessions via HTTP-only cookie; balance is ledger-derived, never stored on employee row.
+- [Legend Bucks schema rebuild rule](legend-bucks-schema-rebuild.md) — after any lib/db schema change, typecheck:libs must run before API server typecheck or all table imports fail.

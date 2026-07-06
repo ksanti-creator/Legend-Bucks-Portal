@@ -1,0 +1,281 @@
+import { Router } from "express";
+import type { IRouter } from "express";
+import { db, transactionsTable, employeesTable, budgetsTable } from "@workspace/db";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import {
+  ListTransactionsQueryParams,
+  ListTransactionsResponse,
+  SendBucksBody,
+  SendBucksResponse,
+  GetTransactionParams,
+  GetTransactionResponse,
+  ExportTransactionsQueryParams,
+  GetTransactionSummaryQueryParams,
+  GetTransactionSummaryResponse,
+} from "@workspace/api-zod";
+import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+
+const router: IRouter = Router();
+
+function currentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthToRange(month: string): [string, string] {
+  const [year, mon] = month.split("-").map(Number);
+  const start = new Date(year, mon - 1, 1);
+  const end = new Date(year, mon, 1);
+  return [start.toISOString(), end.toISOString()];
+}
+
+async function enrichTransaction(tx: any) {
+  let fromEmployeeName: string | null = null;
+  let toEmployeeName: string | null = null;
+
+  if (tx.fromEmployeeId) {
+    const [e] = await db.select().from(employeesTable).where(eq(employeesTable.id, tx.fromEmployeeId)).limit(1);
+    if (e) fromEmployeeName = `${e.firstName} ${e.lastName}`;
+  }
+  if (tx.toEmployeeId) {
+    const [e] = await db.select().from(employeesTable).where(eq(employeesTable.id, tx.toEmployeeId)).limit(1);
+    if (e) toEmployeeName = `${e.firstName} ${e.lastName}`;
+  }
+
+  return {
+    id: tx.id,
+    type: tx.type,
+    amount: tx.amount,
+    fromEmployeeId: tx.fromEmployeeId,
+    fromEmployeeName,
+    toEmployeeId: tx.toEmployeeId,
+    toEmployeeName,
+    note: tx.note,
+    redemptionId: tx.redemptionId,
+    goalId: tx.goalId,
+    createdAt: tx.createdAt.toISOString(),
+  };
+}
+
+router.get("/transactions", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const params = ListTransactionsQueryParams.safeParse(req.query);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const limit = params.data.limit ?? 50;
+  const offset = params.data.offset ?? 0;
+
+  let all = await db.select().from(transactionsTable).orderBy(desc(transactionsTable.createdAt));
+
+  // Team members can only see their own transactions
+  if (user.role === "team_member") {
+    all = all.filter((tx) => tx.fromEmployeeId === user.id || tx.toEmployeeId === user.id);
+  } else if (params.data.employeeId !== undefined) {
+    const eId = params.data.employeeId;
+    all = all.filter((tx) => tx.fromEmployeeId === eId || tx.toEmployeeId === eId);
+  }
+
+  if (params.data.type) {
+    all = all.filter((tx) => tx.type === params.data.type);
+  }
+  if (params.data.from) {
+    const from = new Date(params.data.from);
+    all = all.filter((tx) => tx.createdAt >= from);
+  }
+  if (params.data.to) {
+    const to = new Date(params.data.to);
+    all = all.filter((tx) => tx.createdAt <= to);
+  }
+
+  const total = all.length;
+  const page = all.slice(offset, offset + limit);
+  const enriched = await Promise.all(page.map(enrichTransaction));
+
+  res.json(ListTransactionsResponse.parse({ items: enriched, total, offset, limit }));
+});
+
+router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (user.role === "team_member") {
+    res.status(403).json({ error: "Team members cannot send bucks" });
+    return;
+  }
+
+  const body = SendBucksBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const { toEmployeeId, amount, note } = body.data;
+
+  // Check recipient exists
+  const [recipient] = await db
+    .select()
+    .from(employeesTable)
+    .where(eq(employeesTable.id, toEmployeeId))
+    .limit(1);
+
+  if (!recipient || recipient.status === "inactive") {
+    res.status(400).json({ error: "Recipient not found or inactive" });
+    return;
+  }
+
+  // Managers must stay within monthly budget
+  if (user.role === "manager") {
+    const month = currentMonth();
+    const [budget] = await db
+      .select()
+      .from(budgetsTable)
+      .where(and(eq(budgetsTable.managerId, user.id), eq(budgetsTable.month, month)))
+      .limit(1);
+
+    if (!budget) {
+      res.status(400).json({ error: "No budget assigned for this month" });
+      return;
+    }
+
+    const [usedRow] = await db.execute<{ total: string }>(
+      `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions
+       WHERE type = 'award' AND from_employee_id = ${user.id}
+         AND created_at >= '${monthToRange(month)[0]}' AND created_at < '${monthToRange(month)[1]}'`
+    ) as any;
+
+    const used = parseInt(usedRow?.total ?? "0", 10);
+    if (used + amount > budget.totalAmount) {
+      res.status(400).json({ error: `Insufficient budget. Remaining: ${budget.totalAmount - used} bucks` });
+      return;
+    }
+  }
+
+  const [tx] = await db
+    .insert(transactionsTable)
+    .values({
+      type: "award",
+      amount,
+      fromEmployeeId: user.id,
+      toEmployeeId,
+      note: note ?? null,
+    })
+    .returning();
+
+  res.status(201).json(SendBucksResponse.parse(await enrichTransaction(tx)));
+});
+
+router.get("/transactions/export", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const params = ExportTransactionsQueryParams.safeParse(req.query);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  let all = await db.select().from(transactionsTable).orderBy(desc(transactionsTable.createdAt));
+
+  if (params.data.from) {
+    const from = new Date(params.data.from);
+    all = all.filter((tx) => tx.createdAt >= from);
+  }
+  if (params.data.to) {
+    const to = new Date(params.data.to);
+    all = all.filter((tx) => tx.createdAt <= to);
+  }
+
+  const header = "id,type,amount,fromEmployeeId,toEmployeeId,note,redemptionId,goalId,createdAt\n";
+  const rows = all.map((tx) =>
+    [
+      tx.id,
+      tx.type,
+      tx.amount,
+      tx.fromEmployeeId ?? "",
+      tx.toEmployeeId ?? "",
+      `"${(tx.note ?? "").replace(/"/g, '""')}"`,
+      tx.redemptionId ?? "",
+      tx.goalId ?? "",
+      tx.createdAt.toISOString(),
+    ].join(","),
+  );
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=transactions.csv");
+  res.send(header + rows.join("\n"));
+});
+
+router.get("/transactions/summary", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const params = GetTransactionSummaryQueryParams.safeParse(req.query);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  // Team members can only see their own summary; admins/managers can query any employee
+  const requestedId = params.data.employeeId;
+  if (requestedId !== undefined && user.role === "team_member" && requestedId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const targetId = requestedId ?? user.id;
+  const month = params.data.month ?? currentMonth();
+  const [from, to] = monthToRange(month);
+
+  const [totalSentRow] = await db.execute<{ total: string }>(
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'award' AND from_employee_id = ${targetId}`
+  ) as any;
+  const [totalReceivedRow] = await db.execute<{ total: string }>(
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('award','refund') AND to_employee_id = ${targetId}`
+  ) as any;
+  const [monthSentRow] = await db.execute<{ total: string }>(
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type = 'award' AND from_employee_id = ${targetId} AND created_at >= '${from}' AND created_at < '${to}'`
+  ) as any;
+  const [monthReceivedRow] = await db.execute<{ total: string }>(
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('award','refund') AND to_employee_id = ${targetId} AND created_at >= '${from}' AND created_at < '${to}'`
+  ) as any;
+
+  res.json(
+    GetTransactionSummaryResponse.parse({
+      totalSent: parseInt(totalSentRow?.total ?? "0", 10),
+      totalReceived: parseInt(totalReceivedRow?.total ?? "0", 10),
+      thisMonthSent: parseInt(monthSentRow?.total ?? "0", 10),
+      thisMonthReceived: parseInt(monthReceivedRow?.total ?? "0", 10),
+    }),
+  );
+});
+
+router.get("/transactions/:id", requireAuth, async (req, res): Promise<void> => {
+  const params = GetTransactionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [tx] = await db
+    .select()
+    .from(transactionsTable)
+    .where(eq(transactionsTable.id, params.data.id))
+    .limit(1);
+
+  if (!tx) {
+    res.status(404).json({ error: "Transaction not found" });
+    return;
+  }
+
+  const user = getCurrentUser(req);
+  if (user.role === "team_member" && tx.fromEmployeeId !== user.id && tx.toEmployeeId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  res.json(GetTransactionResponse.parse(await enrichTransaction(tx)));
+});
+
+export default router;

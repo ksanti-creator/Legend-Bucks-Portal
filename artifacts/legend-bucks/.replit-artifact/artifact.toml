@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Legend Bucks"
+version = "1.0.0"
+id = "artifacts/legend-bucks"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18471
+
+[services.development]
+run = "pnpm --filter @workspace/legend-bucks run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/legend-bucks", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/legend-bucks/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18471"
+BASE_PATH = "/"
