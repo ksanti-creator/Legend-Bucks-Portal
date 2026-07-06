@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRequestMagicLink, useVerifyMagicLink } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRequestMagicLink, useVerifyMagicLink, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ export default function Login() {
   const [quickLoggingIn, setQuickLoggingIn] = useState<string | null>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const requestMagicLink = useRequestMagicLink();
   const verifyMagicLink = useVerifyMagicLink();
@@ -84,7 +86,8 @@ export default function Login() {
     verifyMagicLink.mutate(
       { data: { token: data.token } },
       {
-        onSuccess: () => {
+        onSuccess: (user) => {
+          queryClient.setQueryData(getGetMeQueryKey(), user);
           toast({ title: "Welcome back!" });
           setLocation("/dashboard");
         },
@@ -111,7 +114,11 @@ export default function Login() {
               verifyMagicLink.mutate(
                 { data: { token: res.token } },
                 {
-                  onSuccess: () => { resolve(); setLocation("/dashboard"); },
+                  onSuccess: (user) => {
+                    queryClient.setQueryData(getGetMeQueryKey(), user);
+                    resolve();
+                    setLocation("/dashboard");
+                  },
                   onError: (e) => reject(e),
                 }
               );
