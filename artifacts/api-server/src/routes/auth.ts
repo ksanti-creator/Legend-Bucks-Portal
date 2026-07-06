@@ -148,7 +148,7 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
   if (token) {
     await deleteSession(token);
   }
-  res.clearCookie("session_token", { path: "/" });
+  res.clearCookie("session_token", { path: "/", httpOnly: true, secure: true, sameSite: "none" });
   res.sendStatus(204);
 });
 
