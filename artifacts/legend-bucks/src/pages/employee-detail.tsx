@@ -10,11 +10,14 @@ import {
   useListDepartments,
   useListLocations,
   useGetMe,
+  useGetEmployeeAwardCap,
   getGetEmployeeQueryKey,
   getGetEmployeeBalanceQueryKey,
+  getGetEmployeeAwardCapQueryKey,
   getListTransactionsQueryKey
 } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -71,15 +74,28 @@ export default function EmployeeDetail() {
   const [editDept, setEditDept] = useState<string>("none");
   const [editLoc, setEditLoc] = useState<string>("none");
   const [editManager, setEditManager] = useState<string>("none");
+  const [editCap, setEditCap] = useState<string>("");
 
   const isAdmin = currentUser?.role === "admin";
   const isAdminOrManager = currentUser?.role === "admin" || currentUser?.role === "manager";
   const canDeactivate = currentUser?.role === "admin" && employee?.status !== "inactive";
 
+  // The yearly award cap is private: only admins and the employee's assigned
+  // manager may see it. team_members and unrelated managers never do.
+  const isAssignedManager =
+    currentUser?.role === "manager" &&
+    employee?.managerId != null &&
+    employee.managerId === currentUser.id;
+  const canViewCap = isAdmin || isAssignedManager;
+  const { data: capInfo } = useGetEmployeeAwardCap(id, {
+    query: { queryKey: getGetEmployeeAwardCapQueryKey(id), enabled: !!id && canViewCap, retry: false },
+  });
+
   const openEdit = () => {
     setEditDept(employee?.departmentId ? employee.departmentId.toString() : "none");
     setEditLoc(employee?.locationId ? employee.locationId.toString() : "none");
     setEditManager(employee?.managerId ? employee.managerId.toString() : "none");
+    setEditCap(capInfo?.cap != null ? capInfo.cap.toString() : "");
     setEditOpen(true);
   };
 
@@ -91,12 +107,14 @@ export default function EmployeeDetail() {
           departmentId: editDept === "none" ? null : parseInt(editDept),
           locationId: editLoc === "none" ? null : parseInt(editLoc),
           managerId: editManager === "none" ? null : parseInt(editManager),
+          awardCapYearly: editCap.trim() === "" ? null : parseInt(editCap, 10),
         },
       },
       {
         onSuccess: () => {
           toast({ title: "Employee updated" });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeAwardCapQueryKey(id) });
           setEditOpen(false);
         },
         onError: () => toast({ title: "Failed to update employee", variant: "destructive" }),
@@ -254,6 +272,19 @@ export default function EmployeeDetail() {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="space-y-2">
+                      <Label>Yearly Award Cap</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="No limit"
+                        value={editCap}
+                        onChange={(e) => setEditCap(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Most Legend Bucks this person's manager can award them per year. Leave blank for no limit.
+                      </p>
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
@@ -323,6 +354,27 @@ export default function EmployeeDetail() {
               </CardContent>
             </Card>
           </div>
+
+          {canViewCap && capInfo?.cap != null && (
+            <Card className="border-none shadow-sm bg-accent/5">
+              <CardContent className="p-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Yearly Award Cap</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Max the assigned manager can award this person this year.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-display font-bold text-foreground">
+                    {capInfo.remaining?.toLocaleString()} <span className="text-base text-muted-foreground">/ {capInfo.cap.toLocaleString()} LB</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {capInfo.usedThisYear.toLocaleString()} LB awarded so far this year
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-none shadow-sm h-[500px] flex flex-col">
             <CardHeader className="pb-3 border-b">

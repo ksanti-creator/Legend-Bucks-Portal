@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BudgetRemaining {
-  managerId: number;
-  month: string;
-  totalAmount: number;
-  usedAmount: number;
-  remainingAmount: number;
+export interface GoalBudgetAward {
+  /** @minimum 1 */
+  amount: number;
 }

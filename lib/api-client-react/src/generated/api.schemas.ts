@@ -37,6 +37,8 @@ export interface CurrentUser {
   /** @nullable */
   department?: string | null;
   /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
   location?: string | null;
   /** @nullable */
   managerId?: number | null;
@@ -45,15 +47,12 @@ export interface CurrentUser {
   balance?: number;
   /** Receive an email when awarded Legend Bucks */
   notifyBucksReceived: boolean;
-  /** Receive an email when a monthly budget is assigned */
-  notifyBudgetAssigned: boolean;
   /** Receive emails about reward redemption status */
   notifyRedemptionUpdates: boolean;
 }
 
 export interface NotificationPreferences {
   notifyBucksReceived: boolean;
-  notifyBudgetAssigned: boolean;
   notifyRedemptionUpdates: boolean;
 }
 
@@ -84,6 +83,8 @@ export interface AuthSession {
   role: AuthSessionRole;
   /** @nullable */
   department?: string | null;
+  /** @nullable */
+  departmentId?: number | null;
   /** @nullable */
   location?: string | null;
   /** @nullable */
@@ -196,6 +197,12 @@ export interface EmployeeUpdate {
   managerId?: number | null;
   role?: EmployeeUpdateRole;
   status?: EmployeeUpdateStatus;
+  /**
+     * Yearly cap on bucks this employee's manager may award them. null clears the cap (no limit). Admin-only.
+     * @minimum 1
+     * @nullable
+     */
+  awardCapYearly?: number | null;
 }
 
 export interface BalanceSummary {
@@ -243,34 +250,28 @@ export interface InviteInput {
   locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
+  /**
+     * Optional yearly cap on bucks this employee's manager may award them. Omit to leave unchanged; null clears the cap (no limit). Admin-only.
+     * @minimum 1
+     * @nullable
+     */
+  awardCapYearly?: number | null;
 }
 
-export interface Budget {
-  id: number;
-  managerId: number;
-  managerName?: string;
-  /** Format: YYYY-MM */
-  month: string;
-  totalAmount: number;
-  usedAmount: number;
-  remainingAmount?: number;
-  createdAt: string;
-}
-
-export interface BudgetInput {
-  managerId: number;
-  /** Format: YYYY-MM */
-  month: string;
-  /** @minimum 0 */
-  totalAmount: number;
-}
-
-export interface BudgetRemaining {
-  managerId: number;
-  month: string;
-  totalAmount: number;
-  usedAmount: number;
-  remainingAmount: number;
+export interface AwardCapInfo {
+  employeeId: number;
+  /**
+     * The yearly award cap in bucks, or null if no cap is set.
+     * @nullable
+     */
+  cap: number | null;
+  /** Bucks the assigned manager has already awarded this employee this calendar year. */
+  usedThisYear: number;
+  /**
+     * Bucks remaining under the cap this year, or null if no cap is set.
+     * @nullable
+     */
+  remaining: number | null;
 }
 
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];
@@ -282,6 +283,7 @@ export const TransactionType = {
   refund: 'refund',
   contribution: 'contribution',
   adjustment: 'adjustment',
+  team_goal_award: 'team_goal_award',
 } as const;
 
 export interface Transaction {
@@ -438,8 +440,16 @@ export interface Goal {
   name: string;
   /** @nullable */
   description?: string | null;
-  /** @nullable */
+  /**
+     * Resolved department name (from departmentId when linked).
+     * @nullable
+     */
   department?: string | null;
+  /**
+     * Linked department id, or null for a company-wide goal.
+     * @nullable
+     */
+  departmentId?: number | null;
   targetAmount: number;
   currentAmount: number;
   progressPercent?: number;
@@ -452,8 +462,11 @@ export interface Goal {
 export interface GoalInput {
   name: string;
   description?: string;
-  /** @nullable */
-  department?: string | null;
+  /**
+     * Department this goal belongs to, or null for company-wide.
+     * @nullable
+     */
+  departmentId?: number | null;
   /** @minimum 1 */
   targetAmount: number;
   active?: boolean;
@@ -465,8 +478,11 @@ export interface GoalUpdate {
   name?: string;
   /** @nullable */
   description?: string | null;
-  /** @nullable */
-  department?: string | null;
+  /**
+     * Department this goal belongs to, or null for company-wide.
+     * @nullable
+     */
+  departmentId?: number | null;
   targetAmount?: number;
   active?: boolean;
   /** @nullable */
@@ -485,6 +501,31 @@ export interface GoalContributionRecord {
   employeeName?: string;
   amount: number;
   createdAt: string;
+}
+
+export interface GoalBudgetAward {
+  /** @minimum 1 */
+  amount: number;
+}
+
+export interface TeamBudget {
+  departmentId: number;
+  departmentName: string;
+  year: number;
+  /** Total pool set for this department this year (0 if unset). */
+  amount: number;
+  /** Bucks already awarded from the pool this year. */
+  used: number;
+  /** amount minus used (never negative in practice). */
+  remaining: number;
+}
+
+export interface TeamBudgetInput {
+  /**
+     * Total pool for this department for the current year.
+     * @minimum 0
+     */
+  amount: number;
 }
 
 export interface DashboardSummary {
@@ -538,14 +579,6 @@ locationId?: number;
 role?: string;
 status?: string;
 managerId?: number;
-};
-
-export type ListBudgetsParams = {
-managerId?: number;
-/**
- * Format: YYYY-MM
- */
-month?: string;
 };
 
 export type ListTransactionsParams = {

@@ -18,4 +18,10 @@ export interface InviteInput {
   locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
+  /**
+     * Optional yearly cap on bucks this employee's manager may award them. Omit to leave unchanged; null clears the cap (no limit). Admin-only.
+     * @minimum 1
+     * @nullable
+     */
+  awardCapYearly?: number | null;
 }

@@ -6,7 +6,7 @@ import { useInviteEmployee, useGetMe, useListEmployees, useListDepartments, useL
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, ArrowLeft, Loader2 } from "lucide-react";
@@ -20,6 +20,7 @@ const inviteSchema = z.object({
   departmentId: z.coerce.number().optional().nullable(),
   locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
+  awardCapYearly: z.number().min(1).optional().nullable(),
 });
 
 export default function InviteEmployee() {
@@ -43,6 +44,7 @@ export default function InviteEmployee() {
       departmentId: null,
       locationId: null,
       managerId: null,
+      awardCapYearly: null,
     },
   });
 
@@ -256,6 +258,33 @@ export default function InviteEmployee() {
                   )}
                 />
               </div>
+
+              {user?.role === "admin" && (
+                <FormField
+                  control={form.control}
+                  name="awardCapYearly"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yearly Award Cap (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="No limit"
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The most Legend Bucks this person's manager can award them per calendar year. Leave blank for no limit.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="flex justify-end pt-4 border-t border-border">
                 <Button type="button" variant="outline" className="mr-3" onClick={() => setLocation("/employees")}>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, transactionsTable, employeesTable, budgetsTable, redemptionsTable } from "@workspace/db";
+import { db, transactionsTable, employeesTable, redemptionsTable } from "@workspace/db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import {
   ListTransactionsQueryParams,
@@ -14,6 +14,7 @@ import {
   GetTransactionSummaryResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canAwardBucks } from "../lib/auth";
+import { getAwardedThisYear } from "../lib/awardCap";
 import { sendBucksReceivedEmail } from "../lib/email";
 
 const router: IRouter = Router();
@@ -147,29 +148,21 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Managers must stay within monthly budget
-  if (user.role === "manager") {
-    const month = currentMonth();
-    const [budget] = await db
-      .select()
-      .from(budgetsTable)
-      .where(and(eq(budgetsTable.managerId, user.id), eq(budgetsTable.month, month)))
-      .limit(1);
-
-    if (!budget) {
-      res.status(400).json({ error: "No budget assigned for this month" });
-      return;
-    }
-
-    const usedResult = await db.execute<{ total: string }>(
-      `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions
-       WHERE type = 'award' AND from_employee_id = ${user.id}
-         AND created_at >= '${monthToRange(month)[0]}' AND created_at < '${monthToRange(month)[1]}'`
-    );
-
-    const used = parseInt(usedResult.rows[0]?.total ?? "0", 10);
-    if (used + amount > budget.totalAmount) {
-      res.status(400).json({ error: `Insufficient budget. Remaining: ${budget.totalAmount - used} bucks` });
+  // Per-employee yearly award cap. A recipient may carry an optional cap that
+  // limits how much their *assigned manager* can award them per calendar year.
+  // Admins are never limited, and the cap only applies to the employee's own
+  // manager (matching the cap-info endpoint's "remaining" exactly).
+  if (
+    user.role === "manager" &&
+    recipient.awardCapYearly != null &&
+    recipient.managerId === user.id
+  ) {
+    const used = await getAwardedThisYear(user.id, recipient.id);
+    const remaining = recipient.awardCapYearly - used;
+    if (amount > remaining) {
+      res.status(400).json({
+        error: `This exceeds your yearly award cap for ${recipient.firstName}. Remaining this year: ${Math.max(0, remaining)} bucks`,
+      });
       return;
     }
   }

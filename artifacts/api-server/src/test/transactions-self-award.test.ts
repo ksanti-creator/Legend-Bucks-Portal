@@ -38,7 +38,7 @@ describe("Send bucks — no self-awarding", () => {
     expect(res.body.error).toMatch(/yourself/i);
   });
 
-  it("rejects a manager sending bucks to themselves with 400 (before any budget check)", async () => {
+  it("rejects a manager sending bucks to themselves with 400 (before any cap check)", async () => {
     const res = await request(app)
       .post("/api/transactions")
       .set(bearer(managerToken))
@@ -48,8 +48,9 @@ describe("Send bucks — no self-awarding", () => {
   });
 
   it("does not create a self-award transaction row", async () => {
-    // The admin has no budget cap, so if the guard were missing this would
-    // succeed (201). A 400 proves the row was never inserted.
+    // Admins are never limited by a per-employee cap, so if the self-award
+    // guard were missing this would succeed (201). A 400 proves the row was
+    // never inserted.
     const res = await request(app)
       .post("/api/transactions")
       .set(bearer(adminToken))

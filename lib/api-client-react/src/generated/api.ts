@@ -22,10 +22,8 @@ import type {
 import type {
   ActivityItem,
   AuthSession,
+  AwardCapInfo,
   BalanceSummary,
-  Budget,
-  BudgetInput,
-  BudgetRemaining,
   CurrentUser,
   DashboardSummary,
   Department,
@@ -36,6 +34,7 @@ import type {
   GetRecentActivityParams,
   GetTransactionSummaryParams,
   Goal,
+  GoalBudgetAward,
   GoalContribution,
   GoalContributionRecord,
   GoalInput,
@@ -43,7 +42,6 @@ import type {
   HealthStatus,
   InviteInput,
   LeaderboardEntry,
-  ListBudgetsParams,
   ListEmployeesParams,
   ListGoalsParams,
   ListRedemptionsParams,
@@ -64,6 +62,8 @@ import type {
   RewardInput,
   RewardUpdate,
   SendBucksInput,
+  TeamBudget,
+  TeamBudgetInput,
   Transaction,
   TransactionPage,
   TransactionSummary
@@ -979,27 +979,20 @@ export const useDeactivateEmployee = <TError = ErrorType<unknown>,
       return useMutation(getDeactivateEmployeeMutationOptions(options));
     }
 
-export const getListBudgetsUrl = (params?: ListBudgetsParams,) => {
-  const normalizedParams = new URLSearchParams();
+export const getGetEmployeeAwardCapUrl = (id: number,) => {
 
-  Object.entries(params || {}).forEach(([key, value]) => {
 
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
 
-  const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/budgets?${stringifiedParams}` : `/api/budgets`
+  return `/api/employees/${id}/award-cap`
 }
 
 /**
- * @summary List monthly budgets
+ * @summary Get an employee's yearly per-employee award cap and this-year remaining. Restricted to admins and the employee's assigned manager; never exposed to the employee themselves or to unrelated managers.
  */
-export const listBudgets = async (params?: ListBudgetsParams, options?: RequestInit): Promise<Budget[]> => {
+export const getEmployeeAwardCap = async (id: number, options?: RequestInit): Promise<AwardCapInfo> => {
 
-  return customFetch<Budget[]>(getListBudgetsUrl(params),
+  return customFetch<AwardCapInfo>(getGetEmployeeAwardCapUrl(id),
   {
     ...options,
     method: 'GET'
@@ -1012,269 +1005,45 @@ export const listBudgets = async (params?: ListBudgetsParams, options?: RequestI
 
 
 
-export const getListBudgetsQueryKey = (params?: ListBudgetsParams,) => {
+export const getGetEmployeeAwardCapQueryKey = (id: number,) => {
     return [
-    `/api/budgets`, ...(params ? [params] : [])
+    `/api/employees/${id}/award-cap`
     ] as const;
     }
 
 
-export const getListBudgetsQueryOptions = <TData = Awaited<ReturnType<typeof listBudgets>>, TError = ErrorType<unknown>>(params?: ListBudgetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBudgets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetEmployeeAwardCapQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeAwardCap>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAwardCap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListBudgetsQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeAwardCapQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBudgets>>> = ({ signal }) => listBudgets(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeAwardCap>>> = ({ signal }) => getEmployeeAwardCap(id, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBudgets>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAwardCap>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListBudgetsQueryResult = NonNullable<Awaited<ReturnType<typeof listBudgets>>>
-export type ListBudgetsQueryError = ErrorType<unknown>
+export type GetEmployeeAwardCapQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeAwardCap>>>
+export type GetEmployeeAwardCapQueryError = ErrorType<void>
 
 
 /**
- * @summary List monthly budgets
+ * @summary Get an employee's yearly per-employee award cap and this-year remaining. Restricted to admins and the employee's assigned manager; never exposed to the employee themselves or to unrelated managers.
  */
 
-export function useListBudgets<TData = Awaited<ReturnType<typeof listBudgets>>, TError = ErrorType<unknown>>(
- params?: ListBudgetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBudgets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useGetEmployeeAwardCap<TData = Awaited<ReturnType<typeof getEmployeeAwardCap>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAwardCap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListBudgetsQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getAssignBudgetUrl = () => {
-
-
-
-
-  return `/api/budgets`
-}
-
-/**
- * @summary Assign or update monthly budget for a manager
- */
-export const assignBudget = async (budgetInput: BudgetInput, options?: RequestInit): Promise<Budget> => {
-
-  return customFetch<Budget>(getAssignBudgetUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(budgetInput)
-  }
-);}
-
-
-
-
-export const getAssignBudgetMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignBudget>>, TError,{data: BodyType<BudgetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof assignBudget>>, TError,{data: BodyType<BudgetInput>}, TContext> => {
-
-const mutationKey = ['assignBudget'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignBudget>>, {data: BodyType<BudgetInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  assignBudget(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AssignBudgetMutationResult = NonNullable<Awaited<ReturnType<typeof assignBudget>>>
-    export type AssignBudgetMutationBody = BodyType<BudgetInput>
-    export type AssignBudgetMutationError = ErrorType<void>
-
-    /**
- * @summary Assign or update monthly budget for a manager
- */
-export const useAssignBudget = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignBudget>>, TError,{data: BodyType<BudgetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof assignBudget>>,
-        TError,
-        {data: BodyType<BudgetInput>},
-        TContext
-      > => {
-      return useMutation(getAssignBudgetMutationOptions(options));
-    }
-
-export const getGetBudgetUrl = (id: number,) => {
-
-
-
-
-  return `/api/budgets/${id}`
-}
-
-/**
- * @summary Get a budget record
- */
-export const getBudget = async (id: number, options?: RequestInit): Promise<Budget> => {
-
-  return customFetch<Budget>(getGetBudgetUrl(id),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetBudgetQueryKey = (id: number,) => {
-    return [
-    `/api/budgets/${id}`
-    ] as const;
-    }
-
-
-export const getGetBudgetQueryOptions = <TData = Awaited<ReturnType<typeof getBudget>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetBudgetQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBudget>>> = ({ signal }) => getBudget(id, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBudget>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetBudgetQueryResult = NonNullable<Awaited<ReturnType<typeof getBudget>>>
-export type GetBudgetQueryError = ErrorType<void>
-
-
-/**
- * @summary Get a budget record
- */
-
-export function useGetBudget<TData = Awaited<ReturnType<typeof getBudget>>, TError = ErrorType<void>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetBudgetQueryOptions(id,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getGetMyBudgetRemainingUrl = () => {
-
-
-
-
-  return `/api/budgets/remaining`
-}
-
-/**
- * @summary Get the current authenticated manager's remaining budget for this month
- */
-export const getMyBudgetRemaining = async ( options?: RequestInit): Promise<BudgetRemaining> => {
-
-  return customFetch<BudgetRemaining>(getGetMyBudgetRemainingUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetMyBudgetRemainingQueryKey = () => {
-    return [
-    `/api/budgets/remaining`
-    ] as const;
-    }
-
-
-export const getGetMyBudgetRemainingQueryOptions = <TData = Awaited<ReturnType<typeof getMyBudgetRemaining>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyBudgetRemaining>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetMyBudgetRemainingQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyBudgetRemaining>>> = ({ signal }) => getMyBudgetRemaining({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyBudgetRemaining>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetMyBudgetRemainingQueryResult = NonNullable<Awaited<ReturnType<typeof getMyBudgetRemaining>>>
-export type GetMyBudgetRemainingQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Get the current authenticated manager's remaining budget for this month
- */
-
-export function useGetMyBudgetRemaining<TData = Awaited<ReturnType<typeof getMyBudgetRemaining>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyBudgetRemaining>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetMyBudgetRemainingQueryOptions(options)
+  const queryOptions = getGetEmployeeAwardCapQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3663,6 +3432,77 @@ export const useContributeToGoal = <TError = ErrorType<unknown>,
       return useMutation(getContributeToGoalMutationOptions(options));
     }
 
+export const getAwardFromTeamBudgetUrl = (id: number,) => {
+
+
+
+
+  return `/api/goals/${id}/award-from-budget`
+}
+
+/**
+ * @summary Award bucks from a department's team budget pool toward this team goal. Draws down the department's yearly pool and increases the goal's progress; funds the goal only, never any individual balance. Allowed for admins and managers of the goal's department; blocked if the pool can't cover the amount.
+ */
+export const awardFromTeamBudget = async (id: number,
+    goalBudgetAward: GoalBudgetAward, options?: RequestInit): Promise<Goal> => {
+
+  return customFetch<Goal>(getAwardFromTeamBudgetUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goalBudgetAward)
+  }
+);}
+
+
+
+
+export const getAwardFromTeamBudgetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof awardFromTeamBudget>>, TError,{id: number;data: BodyType<GoalBudgetAward>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof awardFromTeamBudget>>, TError,{id: number;data: BodyType<GoalBudgetAward>}, TContext> => {
+
+const mutationKey = ['awardFromTeamBudget'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof awardFromTeamBudget>>, {id: number;data: BodyType<GoalBudgetAward>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  awardFromTeamBudget(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AwardFromTeamBudgetMutationResult = NonNullable<Awaited<ReturnType<typeof awardFromTeamBudget>>>
+    export type AwardFromTeamBudgetMutationBody = BodyType<GoalBudgetAward>
+    export type AwardFromTeamBudgetMutationError = ErrorType<void>
+
+    /**
+ * @summary Award bucks from a department's team budget pool toward this team goal. Draws down the department's yearly pool and increases the goal's progress; funds the goal only, never any individual balance. Allowed for admins and managers of the goal's department; blocked if the pool can't cover the amount.
+ */
+export const useAwardFromTeamBudget = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof awardFromTeamBudget>>, TError,{id: number;data: BodyType<GoalBudgetAward>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof awardFromTeamBudget>>,
+        TError,
+        {id: number;data: BodyType<GoalBudgetAward>},
+        TContext
+      > => {
+      return useMutation(getAwardFromTeamBudgetMutationOptions(options));
+    }
+
 export const getListGoalContributionsUrl = (id: number,) => {
 
 
@@ -3984,4 +3824,229 @@ export function useGetLeaderboard<TData = Awaited<ReturnType<typeof getLeaderboa
 
 
 
+
+export const getListTeamBudgetsUrl = () => {
+
+
+
+
+  return `/api/team-budgets`
+}
+
+/**
+ * @summary List every department's team budget for the current year with amount, used, and remaining. Admin only.
+ */
+export const listTeamBudgets = async ( options?: RequestInit): Promise<TeamBudget[]> => {
+
+  return customFetch<TeamBudget[]>(getListTeamBudgetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTeamBudgetsQueryKey = () => {
+    return [
+    `/api/team-budgets`
+    ] as const;
+    }
+
+
+export const getListTeamBudgetsQueryOptions = <TData = Awaited<ReturnType<typeof listTeamBudgets>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamBudgets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTeamBudgetsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamBudgets>>> = ({ signal }) => listTeamBudgets({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeamBudgets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTeamBudgetsQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamBudgets>>>
+export type ListTeamBudgetsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List every department's team budget for the current year with amount, used, and remaining. Admin only.
+ */
+
+export function useListTeamBudgets<TData = Awaited<ReturnType<typeof listTeamBudgets>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamBudgets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTeamBudgetsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTeamBudgetUrl = (departmentId: number,) => {
+
+
+
+
+  return `/api/team-budgets/${departmentId}`
+}
+
+/**
+ * @summary Get a single department's team budget for the current year (amount, used, remaining). Allowed for admins and managers of that department.
+ */
+export const getTeamBudget = async (departmentId: number, options?: RequestInit): Promise<TeamBudget> => {
+
+  return customFetch<TeamBudget>(getGetTeamBudgetUrl(departmentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTeamBudgetQueryKey = (departmentId: number,) => {
+    return [
+    `/api/team-budgets/${departmentId}`
+    ] as const;
+    }
+
+
+export const getGetTeamBudgetQueryOptions = <TData = Awaited<ReturnType<typeof getTeamBudget>>, TError = ErrorType<void>>(departmentId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeamBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTeamBudgetQueryKey(departmentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTeamBudget>>> = ({ signal }) => getTeamBudget(departmentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: departmentId !== null && departmentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTeamBudget>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTeamBudgetQueryResult = NonNullable<Awaited<ReturnType<typeof getTeamBudget>>>
+export type GetTeamBudgetQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get a single department's team budget for the current year (amount, used, remaining). Allowed for admins and managers of that department.
+ */
+
+export function useGetTeamBudget<TData = Awaited<ReturnType<typeof getTeamBudget>>, TError = ErrorType<void>>(
+ departmentId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeamBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTeamBudgetQueryOptions(departmentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetTeamBudgetUrl = (departmentId: number,) => {
+
+
+
+
+  return `/api/team-budgets/${departmentId}`
+}
+
+/**
+ * @summary Set (upsert) a department's team budget for the current year. Admin only.
+ */
+export const setTeamBudget = async (departmentId: number,
+    teamBudgetInput: TeamBudgetInput, options?: RequestInit): Promise<TeamBudget> => {
+
+  return customFetch<TeamBudget>(getSetTeamBudgetUrl(departmentId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(teamBudgetInput)
+  }
+);}
+
+
+
+
+export const getSetTeamBudgetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setTeamBudget>>, TError,{departmentId: number;data: BodyType<TeamBudgetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setTeamBudget>>, TError,{departmentId: number;data: BodyType<TeamBudgetInput>}, TContext> => {
+
+const mutationKey = ['setTeamBudget'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setTeamBudget>>, {departmentId: number;data: BodyType<TeamBudgetInput>}> = (props) => {
+          const {departmentId,data} = props ?? {};
+
+          return  setTeamBudget(departmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetTeamBudgetMutationResult = NonNullable<Awaited<ReturnType<typeof setTeamBudget>>>
+    export type SetTeamBudgetMutationBody = BodyType<TeamBudgetInput>
+    export type SetTeamBudgetMutationError = ErrorType<void>
+
+    /**
+ * @summary Set (upsert) a department's team budget for the current year. Admin only.
+ */
+export const useSetTeamBudget = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setTeamBudget>>, TError,{departmentId: number;data: BodyType<TeamBudgetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setTeamBudget>>,
+        TError,
+        {departmentId: number;data: BodyType<TeamBudgetInput>},
+        TContext
+      > => {
+      return useMutation(getSetTeamBudgetMutationOptions(options));
+    }
 

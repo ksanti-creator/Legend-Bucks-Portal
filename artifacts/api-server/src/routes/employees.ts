@@ -14,8 +14,11 @@ import {
   UpdateEmployeeResponse,
   DeactivateEmployeeResponse,
   GetEmployeeBalanceResponse,
+  GetEmployeeAwardCapParams,
+  GetEmployeeAwardCapResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { getAwardedThisYear } from "../lib/awardCap";
 import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
 const router: IRouter = Router();
@@ -127,6 +130,7 @@ router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
   if ("managerId" in body.data) updates.managerId = body.data.managerId;
   if (body.data.role !== undefined) updates.role = body.data.role;
   if (body.data.status !== undefined) updates.status = body.data.status;
+  if ("awardCapYearly" in body.data) updates.awardCapYearly = body.data.awardCapYearly ?? null;
 
   const [updated] = await db
     .update(employeesTable)
@@ -167,6 +171,49 @@ router.patch("/employees/:id/deactivate", requireAuth, async (req, res): Promise
   }
 
   res.json(DeactivateEmployeeResponse.parse(await buildEmployeeResponse(updated, false)));
+});
+
+// Yearly per-employee award cap + this-year remaining. Private: only admins and
+// the employee's assigned manager may read it — never the employee themselves
+// or unrelated managers.
+router.get("/employees/:id/award-cap", requireAuth, async (req, res): Promise<void> => {
+  const params = GetEmployeeAwardCapParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const user = getCurrentUser(req);
+  const [emp] = await db
+    .select()
+    .from(employeesTable)
+    .where(eq(employeesTable.id, params.data.id))
+    .limit(1);
+
+  if (!emp) {
+    res.status(404).json({ error: "Employee not found" });
+    return;
+  }
+
+  const isAssignedManager = emp.managerId != null && emp.managerId === user.id;
+  if (user.role !== "admin" && !isAssignedManager) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const cap = emp.awardCapYearly ?? null;
+  // "Used" reflects the assigned manager's awards to this employee this year.
+  const usedThisYear = emp.managerId != null ? await getAwardedThisYear(emp.managerId, emp.id) : 0;
+  const remaining = cap == null ? null : Math.max(0, cap - usedThisYear);
+
+  res.json(
+    GetEmployeeAwardCapResponse.parse({
+      employeeId: emp.id,
+      cap,
+      usedThisYear,
+      remaining,
+    }),
+  );
 });
 
 router.get("/employees/:id/balance", requireAuth, async (req, res): Promise<void> => {

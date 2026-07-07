@@ -17,9 +17,12 @@ export const employeesTable = pgTable("employees", {
   managerId: integer("manager_id"),
   role: roleEnum("role").notNull().default("team_member"),
   status: statusEnum("status").notNull().default("invited"),
+  // Optional yearly cap (in bucks) on how much this employee's manager may award
+  // to them within a calendar year. null = no limit. Private to the employee's
+  // manager and admins; never exposed to the employee.
+  awardCapYearly: integer("award_cap_yearly"),
   // Per-user email notification opt-outs. Default true = opted in.
   notifyBucksReceived: boolean("notify_bucks_received").notNull().default(true),
-  notifyBudgetAssigned: boolean("notify_budget_assigned").notNull().default(true),
   notifyRedemptionUpdates: boolean("notify_redemption_updates").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

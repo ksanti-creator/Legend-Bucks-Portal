@@ -162,14 +162,6 @@ describe("Accounting admin — blocked from every write/admin action", () => {
     expect((await request(app).post("/api/locations").set(bearer(accountingToken)).send({ name: uniq("l") })).status).toBe(403);
   });
 
-  it("cannot assign a budget (403)", async () => {
-    const res = await request(app)
-      .post("/api/budgets")
-      .set(bearer(accountingToken))
-      .send({ managerId, month: "2026-07", totalAmount: 500 });
-    expect(res.status).toBe(403);
-  });
-
   it("cannot invite an employee (403)", async () => {
     const res = await request(app)
       .post("/api/auth/invite")

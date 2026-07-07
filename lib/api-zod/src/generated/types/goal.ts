@@ -11,8 +11,16 @@ export interface Goal {
   name: string;
   /** @nullable */
   description?: string | null;
-  /** @nullable */
+  /**
+     * Resolved department name (from departmentId when linked).
+     * @nullable
+     */
   department?: string | null;
+  /**
+     * Linked department id, or null for a company-wide goal.
+     * @nullable
+     */
+  departmentId?: number | null;
   targetAmount: number;
   currentAmount: number;
   progressPercent?: number;

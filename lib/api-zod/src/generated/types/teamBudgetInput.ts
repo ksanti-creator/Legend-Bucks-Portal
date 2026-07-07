@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface BudgetInput {
-  managerId: number;
-  /** Format: YYYY-MM */
-  month: string;
-  /** @minimum 0 */
-  totalAmount: number;
+export interface TeamBudgetInput {
+  /**
+     * Total pool for this department for the current year.
+     * @minimum 0
+     */
+  amount: number;
 }

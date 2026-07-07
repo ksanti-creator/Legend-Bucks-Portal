@@ -290,19 +290,6 @@ function formatBucks(amount: number): string {
 }
 
 /**
- * Format a "YYYY-MM" month string as e.g. "July 2026".
- */
-function formatMonth(month: string): string {
-  const [year, m] = month.split("-").map((n) => parseInt(n, 10));
-  if (!year || !m) return month;
-  return new Date(Date.UTC(year, m - 1, 1)).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-/**
  * Notify a recipient that they were awarded Legend Bucks.
  */
 export async function sendBucksReceivedEmail(
@@ -341,41 +328,6 @@ export async function sendBucksReceivedEmail(
   );
 
   await sendBrandedEmail(to, `You received ${formatBucks(amount)}! 🎉`, html, "Failed to send bucks-received email");
-}
-
-/**
- * Notify a manager that a monthly budget was assigned to them.
- */
-export async function sendBudgetAssignedEmail(
-  to: string,
-  firstName: string,
-  amount: number,
-  month: string,
-): Promise<void> {
-  const monthLabel = formatMonth(month);
-
-  const html = emailShell(
-    "A Legend Bucks budget was assigned to you",
-    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;line-height:1.6;">
-       Hi ${escapeHtml(firstName)},
-     </p>
-     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;line-height:1.6;">
-       You've been assigned a Legend Bucks budget for <strong>${escapeHtml(monthLabel)}</strong> to recognize your team.
-     </p>
-     <table cellpadding="0" cellspacing="0" style="margin:0 auto 28px;">
-       <tr>
-         <td style="background:#f5f5f5;border-radius:8px;padding:24px 40px;text-align:center;">
-           <p style="margin:0 0 4px;color:#888;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">${monthLabel}</p>
-           <p style="margin:0;color:#00afed;font-size:34px;font-weight:700;letter-spacing:-0.5px;">${formatBucks(amount)}</p>
-         </td>
-       </tr>
-     </table>
-     <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
-       Sign in to Legend Bucks to start sending recognition to your team.
-     </p>`,
-  );
-
-  await sendBrandedEmail(to, `Your ${monthLabel} Legend Bucks budget is ready`, html, "Failed to send budget-assigned email");
 }
 
 /**

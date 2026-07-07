@@ -7,13 +7,13 @@ import {
   Gift, 
   ArrowRightLeft, 
   Target, 
-  PieChart, 
   LogOut,
   Settings,
   Send,
   Loader2,
   Ship,
   Building2,
+  Wallet,
   HelpCircle
 } from "lucide-react";
 
@@ -79,12 +79,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
     if (user.role === "admin" || user.role === "manager") {
       navItems.splice(1, 0, { href: "/send", label: "Send Bucks", icon: Send });
-      navItems.push({ href: "/budgets", label: "Budgets", icon: PieChart });
     }
 
     if (user.role === "admin") {
       navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
       navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
+      navItems.push({ href: "/budgets", label: "Team Budgets", icon: Wallet });
     }
   }
 

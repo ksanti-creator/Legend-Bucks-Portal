@@ -8,6 +8,9 @@ export const transactionTypeEnum = pgEnum("transaction_type", [
   "refund",
   "contribution",
   "adjustment",
+  // A manager awarding bucks from a department's team budget pool toward a team
+  // goal. Funds goal progress only — never credits any individual balance.
+  "team_goal_award",
 ]);
 
 export const transactionsTable = pgTable("transactions", {

@@ -17,6 +17,8 @@ export interface CurrentUser {
   /** @nullable */
   department?: string | null;
   /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
   location?: string | null;
   /** @nullable */
   managerId?: number | null;
@@ -25,8 +27,6 @@ export interface CurrentUser {
   balance?: number;
   /** Receive an email when awarded Legend Bucks */
   notifyBucksReceived: boolean;
-  /** Receive an email when a monthly budget is assigned */
-  notifyBudgetAssigned: boolean;
   /** Receive emails about reward redemption status */
   notifyRedemptionUpdates: boolean;
 }

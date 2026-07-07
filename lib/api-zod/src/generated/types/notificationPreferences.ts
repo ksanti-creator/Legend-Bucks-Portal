@@ -8,6 +8,5 @@
 
 export interface NotificationPreferences {
   notifyBucksReceived: boolean;
-  notifyBudgetAssigned: boolean;
   notifyRedemptionUpdates: boolean;
 }

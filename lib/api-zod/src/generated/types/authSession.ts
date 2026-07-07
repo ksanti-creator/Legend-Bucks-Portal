@@ -17,6 +17,8 @@ export interface AuthSession {
   /** @nullable */
   department?: string | null;
   /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
   location?: string | null;
   /** @nullable */
   managerId?: number | null;

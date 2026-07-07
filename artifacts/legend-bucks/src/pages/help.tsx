@@ -91,16 +91,17 @@ const FLOWS: Record<Role, Flow[]> = {
       steps: [
         "Open Send Bucks in the sidebar.",
         "Pick a team member (you can't send bucks to yourself), enter an amount, and add a note.",
-        "Send — the amount is drawn from your monthly budget.",
+        "Send — the recipient is recognized right away.",
       ],
     },
     {
-      title: "Understand your monthly budget",
-      summary: "Know how much you have left to award this month.",
+      title: "Per-person yearly award caps",
+      summary: "Some team members have a yearly limit on what you can award them.",
       steps: [
-        "Open Budgets to see your allocation and how much you've used this month.",
-        "Awards are blocked once you'd exceed the remaining budget.",
-        "Budgets reset each month; unused amounts do not roll over.",
+        "An admin may set a yearly cap on how much you can award a specific person.",
+        "If a person has a cap, Send Bucks shows how much you have left for them this year.",
+        "Awards are blocked once you'd exceed their remaining cap. Caps reset each calendar year.",
+        "People without a cap have no limit.",
       ],
     },
     {
@@ -155,11 +156,12 @@ const FLOWS: Record<Role, Flow[]> = {
       ],
     },
     {
-      title: "Set manager budgets",
-      summary: "Give managers a monthly award allowance.",
+      title: "Set a per-person award cap",
+      summary: "Limit how much a person's manager can award them each year.",
       steps: [
-        "Open Budgets and choose the manager and month.",
-        "Set their total allowance — awards are capped against it automatically.",
+        "Open a team member's profile (or the invite form) and set their Yearly Award Cap.",
+        "Their manager can then award them up to that amount per calendar year.",
+        "Leave it blank for no limit. Caps reset at the start of each calendar year.",
       ],
     },
     {
@@ -173,10 +175,10 @@ const FLOWS: Record<Role, Flow[]> = {
     },
     {
       title: "Send bucks",
-      summary: "Award bucks directly, with no budget cap.",
+      summary: "Award bucks directly, with no cap.",
       steps: [
         "Open Send Bucks, pick a recipient (not yourself), and enter an amount.",
-        "Admin awards are not limited by a monthly budget.",
+        "Admin awards are not limited by per-person caps.",
       ],
     },
     {
@@ -237,7 +239,7 @@ const ROLE_META: Record<
   manager: {
     label: "Manager",
     icon: Briefcase,
-    blurb: "Recognize your team within your monthly budget.",
+    blurb: "Recognize your team and celebrate great work.",
   },
   admin: {
     label: "Admin",

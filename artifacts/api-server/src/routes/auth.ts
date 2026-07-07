@@ -40,12 +40,12 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       email: user.email,
       role: user.role,
       department,
+      departmentId: user.departmentId,
       location,
       managerId: user.managerId,
       status: user.status,
       balance,
       notifyBucksReceived: user.notifyBucksReceived,
-      notifyBudgetAssigned: user.notifyBudgetAssigned,
       notifyRedemptionUpdates: user.notifyRedemptionUpdates,
     }),
   );
@@ -64,7 +64,6 @@ router.patch("/auth/me/notifications", requireAuth, async (req, res): Promise<vo
     .update(employeesTable)
     .set({
       notifyBucksReceived: body.data.notifyBucksReceived,
-      notifyBudgetAssigned: body.data.notifyBudgetAssigned,
       notifyRedemptionUpdates: body.data.notifyRedemptionUpdates,
     })
     .where(eq(employeesTable.id, user.id))
@@ -73,7 +72,6 @@ router.patch("/auth/me/notifications", requireAuth, async (req, res): Promise<vo
   res.json(
     UpdateNotificationPreferencesResponse.parse({
       notifyBucksReceived: updated.notifyBucksReceived,
-      notifyBudgetAssigned: updated.notifyBudgetAssigned,
       notifyRedemptionUpdates: updated.notifyRedemptionUpdates,
     }),
   );
@@ -172,6 +170,7 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
       email: employee.email,
       role: employee.role,
       department,
+      departmentId: employee.departmentId,
       location,
       managerId: employee.managerId,
       status: employee.status,
@@ -235,6 +234,7 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
       departmentId: parsed.data.departmentId ?? null,
       locationId: parsed.data.locationId ?? null,
       managerId: parsed.data.managerId ?? null,
+      awardCapYearly: parsed.data.awardCapYearly ?? null,
       status: "invited",
     })
     .returning();

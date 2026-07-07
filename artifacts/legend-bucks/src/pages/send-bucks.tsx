@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useListEmployees, useGetMe, useSendBucks } from "@workspace/api-client-react";
+import { useListEmployees, useGetMe, useSendBucks, useGetEmployeeAwardCap, getGetEmployeeAwardCapQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,15 @@ export default function SendBucks() {
     },
   });
 
+  // Show the awarding manager's remaining yearly cap for the selected recipient.
+  // Admins are never capped, so this is only fetched for managers.
+  const watchedTo = form.watch("toEmployeeId");
+  const recipientId = watchedTo ? Number(watchedTo) : 0;
+  const isManager = user?.role === "manager";
+  const { data: capInfo } = useGetEmployeeAwardCap(recipientId, {
+    query: { queryKey: getGetEmployeeAwardCapQueryKey(recipientId), enabled: isManager && recipientId > 0, retry: false },
+  });
+
   if (user?.role !== "admin" && user?.role !== "manager") {
     return <div className="p-8 text-center text-destructive">Unauthorized. Managers only.</div>;
   }
@@ -58,13 +67,12 @@ export default function SendBucks() {
             title: "Bucks Sent!",
             description: `Successfully sent ${data.amount} LB to recognize great work.`,
           });
-          queryClient.invalidateQueries({ queryKey: ["/api/budgets"] });
           setLocation("/dashboard");
         },
         onError: (err: any) => {
           toast({
             title: "Failed to send bucks",
-            description: err?.message || "Check your budget limits and try again.",
+            description: err?.message || "Please try again.",
             variant: "destructive",
           });
         },
@@ -114,6 +122,14 @@ export default function SendBucks() {
                   </FormItem>
                 )}
               />
+
+              {isManager && capInfo?.cap != null && (
+                <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm">
+                  <span className="text-muted-foreground">Your yearly award cap for this person: </span>
+                  <strong className="text-foreground">{capInfo.remaining?.toLocaleString()} LB</strong>
+                  <span className="text-muted-foreground"> remaining of {capInfo.cap.toLocaleString()} LB.</span>
+                </div>
+              )}
 
               <FormField
                 control={form.control}

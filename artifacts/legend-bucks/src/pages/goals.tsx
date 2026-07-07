@@ -5,6 +5,10 @@ import {
   useUpdateGoal, 
   useContributeToGoal, 
   useListGoalContributions,
+  useListDepartments,
+  useGetTeamBudget,
+  getGetTeamBudgetQueryKey,
+  useAwardFromTeamBudget,
   useGetMe
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,11 +18,18 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Target, Plus, Coins, CalendarDays, Loader2, Users } from "lucide-react";
+import { Target, Plus, Coins, CalendarDays, Loader2, Users, Wallet } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,10 +40,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const NO_DEPARTMENT = "none";
+
 const createGoalSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
-  department: z.string().optional(),
+  departmentId: z.string().optional(),
   targetAmount: z.coerce.number().min(100, "Target must be at least 100"),
   endsAt: z.string().optional().nullable(),
 });
@@ -48,6 +61,7 @@ export default function Goals() {
   const [contributionAmount, setContributionAmount] = useState<number>(50);
 
   const { data: goals, isLoading } = useListGoals();
+  const { data: departments } = useListDepartments();
 
   const createMut = useCreateGoal();
   const contributeMut = useContributeToGoal();
@@ -57,15 +71,25 @@ export default function Goals() {
     defaultValues: {
       name: "",
       description: "",
-      department: "",
+      departmentId: NO_DEPARTMENT,
       targetAmount: 5000,
       endsAt: null,
     },
   });
 
   const onSubmitCreate = (data: z.infer<typeof createGoalSchema>) => {
+    const departmentId =
+      data.departmentId && data.departmentId !== NO_DEPARTMENT ? Number(data.departmentId) : null;
     createMut.mutate(
-      { data },
+      {
+        data: {
+          name: data.name,
+          description: data.description,
+          departmentId,
+          targetAmount: data.targetAmount,
+          endsAt: data.endsAt,
+        },
+      },
       {
         onSuccess: () => {
           setOpenCreate(false);
@@ -165,13 +189,25 @@ export default function Goals() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="department"
+                      name="departmentId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Target Department</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Leave blank for all" {...field} />
-                          </FormControl>
+                          <Select onValueChange={field.onChange} value={field.value || NO_DEPARTMENT}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Company-wide" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={NO_DEPARTMENT}>Company-wide</SelectItem>
+                              {departments?.map((d) => (
+                                <SelectItem key={d.id} value={String(d.id)}>
+                                  {d.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -265,7 +301,7 @@ export default function Goals() {
                 </div>
               </CardContent>
               
-              <CardFooter className="pt-0 border-t border-border/50 mt-auto px-6 py-4">
+              <CardFooter className="pt-0 border-t border-border/50 mt-auto px-6 py-4 flex flex-col gap-2 items-stretch">
                 <Dialog open={contributeGoalId === goal.id} onOpenChange={(open) => !open && setContributeGoalId(null)}>
                   <DialogTrigger asChild>
                     <Button 
@@ -330,11 +366,108 @@ export default function Goals() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                <AwardFromBudgetButton goal={goal} user={user} />
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// Distinct from personal contribution: managers (of the goal's own department)
+// and admins can award from the department's team budget pool. This funds the
+// goal only and never touches anyone's personal balance.
+function AwardFromBudgetButton({ goal, user }: { goal: any; user: any }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState<number>(100);
+
+  const canAward =
+    goal.departmentId != null &&
+    (user?.role === "admin" || (user?.role === "manager" && user?.departmentId === goal.departmentId));
+
+  // Only fetch the pool when this manager/admin can actually award from it.
+  const { data: budget } = useGetTeamBudget(goal.departmentId ?? 0, {
+    query: { queryKey: getGetTeamBudgetQueryKey(goal.departmentId ?? 0), enabled: canAward && open },
+  });
+  const awardMut = useAwardFromTeamBudget();
+
+  if (!canAward) return null;
+
+  const remaining = budget?.remaining ?? 0;
+  const goalOpen = (goal.progressPercent ?? 0) < 100 && goal.active;
+
+  const handleAward = () => {
+    if (amount <= 0) {
+      toast({ title: "Invalid amount", variant: "destructive" });
+      return;
+    }
+    awardMut.mutate(
+      { id: goal.id, data: { amount } },
+      {
+        onSuccess: () => {
+          setOpen(false);
+          toast({ title: "Awarded from team budget", description: `${amount} LB added to ${goal.name}.` });
+          queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/team-budgets"] });
+        },
+        onError: (err: any) => {
+          toast({ title: "Failed to award", description: err?.message, variant: "destructive" });
+        },
+      },
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="secondary"
+          className="w-full"
+          disabled={!goalOpen}
+          onClick={() => setOpen(true)}
+        >
+          <Wallet className="h-4 w-4 mr-2" />
+          Award from Team Budget
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Award to {goal.name}</DialogTitle>
+          <DialogDescription>
+            Draw from the {goal.department} team budget. Remaining pool: <strong>{remaining.toLocaleString()} LB</strong>.
+            This funds the goal only — it does not credit anyone's balance.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-6 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Award Amount (LB)</label>
+            <div className="relative">
+              <Coins className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="number"
+                min="1"
+                max={remaining}
+                value={amount}
+                onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleAward} disabled={awardMut.isPending || amount <= 0 || amount > remaining}>
+            {awardMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Confirm Award
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

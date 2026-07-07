@@ -37,7 +37,6 @@ export default function Settings() {
   // Local mirror of the user's notification toggles, seeded from the server.
   const [prefs, setPrefs] = useState({
     notifyBucksReceived: true,
-    notifyBudgetAssigned: true,
     notifyRedemptionUpdates: true,
   });
 
@@ -58,7 +57,6 @@ export default function Settings() {
       });
       setPrefs({
         notifyBucksReceived: user.notifyBucksReceived,
-        notifyBudgetAssigned: user.notifyBudgetAssigned,
         notifyRedemptionUpdates: user.notifyRedemptionUpdates,
       });
     }
@@ -207,11 +205,6 @@ export default function Settings() {
                   key: "notifyBucksReceived" as const,
                   title: "Legend Bucks received",
                   desc: "When a colleague or manager awards you Legend Bucks.",
-                },
-                {
-                  key: "notifyBudgetAssigned" as const,
-                  title: "Budget assigned",
-                  desc: "When you're given a monthly budget to recognize your team.",
                 },
                 {
                   key: "notifyRedemptionUpdates" as const,

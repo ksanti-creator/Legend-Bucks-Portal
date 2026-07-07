@@ -1,12 +1,18 @@
 import { pgTable, serial, timestamp, integer, text, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { departmentsTable } from "./departments";
 
 export const goalsTable = pgTable("goals", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  // Legacy free-text department label, kept for display continuity. New code
+  // should rely on departmentId (the real department link) instead.
   department: text("department"),
+  // Links a goal to a real department so it maps to that department's team
+  // budget pool. Nullable = company-wide goal (no team budget).
+  departmentId: integer("department_id").references(() => departmentsTable.id),
   targetAmount: integer("target_amount").notNull(),
   currentAmount: integer("current_amount").notNull().default(0),
   active: boolean("active").notNull().default(true),

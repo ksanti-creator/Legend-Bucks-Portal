@@ -10,8 +10,11 @@ export interface GoalUpdate {
   name?: string;
   /** @nullable */
   description?: string | null;
-  /** @nullable */
-  department?: string | null;
+  /**
+     * Department this goal belongs to, or null for company-wide.
+     * @nullable
+     */
+  departmentId?: number | null;
   targetAmount?: number;
   active?: boolean;
   /** @nullable */
