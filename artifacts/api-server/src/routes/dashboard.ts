@@ -110,7 +110,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res): Promise<void> =
       items.push({
         id: tx.id,
         type: "award",
-        description: `${fromName ?? "Someone"} sent ${tx.amount} bucks to ${toName ?? "someone"}`,
+        description: `sent ${tx.amount} bucks to`,
         actorName: fromName,
         targetName: toName,
         amount: tx.amount,
@@ -125,7 +125,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res): Promise<void> =
       items.push({
         id: tx.id + 10000,
         type: "goal_contribution",
-        description: `${fromName ?? "Someone"} contributed ${tx.amount} bucks to a team goal`,
+        description: `contributed ${tx.amount} bucks to a team goal`,
         actorName: fromName,
         targetName: null,
         amount: tx.amount,
@@ -146,7 +146,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res): Promise<void> =
     items.push({
       id: r.id + 20000,
       type: "redemption",
-      description: `${emp ? `${emp.firstName} ${emp.lastName}` : "Someone"} redeemed a reward (${r.buckCost} bucks)`,
+      description: `redeemed a reward (${r.buckCost} bucks)`,
       actorName: emp ? `${emp.firstName} ${emp.lastName}` : null,
       targetName: null,
       amount: r.buckCost,
