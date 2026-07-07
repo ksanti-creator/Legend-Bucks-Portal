@@ -13,7 +13,8 @@ import {
   Send,
   Loader2,
   Ship,
-  Building2
+  Building2,
+  HelpCircle
 } from "lucide-react";
 
 import { cn, getInitials } from "@/lib/utils";
@@ -74,6 +75,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
     navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
   }
+
+  navItems.push({ href: "/help", label: "Help", icon: HelpCircle });
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">

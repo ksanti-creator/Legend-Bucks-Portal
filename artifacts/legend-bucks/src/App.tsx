@@ -19,6 +19,7 @@ import Redemptions from '@/pages/redemptions';
 import Goals from '@/pages/goals';
 import Budgets from '@/pages/budgets';
 import Settings from '@/pages/settings';
+import Help from '@/pages/help';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +62,7 @@ function Router() {
             <Route path="/goals" component={Goals} />
             <Route path="/budgets" component={Budgets} />
             <Route path="/settings" component={Settings} />
+            <Route path="/help" component={Help} />
             <Route component={NotFound} />
           </Switch>
         </Shell>
