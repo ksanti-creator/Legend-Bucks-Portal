@@ -58,22 +58,34 @@ export function Shell({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/rewards", label: "Rewards", icon: Gift },
-    { href: "/employees", label: "Team Directory", icon: Users },
-    { href: "/transactions", label: "Ledger", icon: ArrowRightLeft },
-    { href: "/goals", label: "Goals", icon: Target },
-  ];
+  // The read-only accounting_admin role only sees finance surfaces — the ledger
+  // and redemptions (read-only) — never the action-oriented pages.
+  let navItems: { href: string; label: string; icon: typeof LayoutDashboard }[];
 
-  if (user.role === "admin" || user.role === "manager") {
-    navItems.splice(1, 0, { href: "/send", label: "Send Bucks", icon: Send });
-    navItems.push({ href: "/budgets", label: "Budgets", icon: PieChart });
-  }
+  if (user.role === "accounting_admin") {
+    navItems = [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/transactions", label: "Ledger", icon: ArrowRightLeft },
+      { href: "/redemptions", label: "Redemptions", icon: Ship },
+    ];
+  } else {
+    navItems = [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/rewards", label: "Rewards", icon: Gift },
+      { href: "/employees", label: "Team Directory", icon: Users },
+      { href: "/transactions", label: "Ledger", icon: ArrowRightLeft },
+      { href: "/goals", label: "Goals", icon: Target },
+    ];
 
-  if (user.role === "admin") {
-    navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
-    navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
+    if (user.role === "admin" || user.role === "manager") {
+      navItems.splice(1, 0, { href: "/send", label: "Send Bucks", icon: Send });
+      navItems.push({ href: "/budgets", label: "Budgets", icon: PieChart });
+    }
+
+    if (user.role === "admin") {
+      navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
+      navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
+    }
   }
 
   navItems.push({ href: "/help", label: "Help", icon: HelpCircle });

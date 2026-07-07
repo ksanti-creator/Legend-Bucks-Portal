@@ -1192,7 +1192,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, manager, team_member]
+          enum: [admin, manager, team_member, accounting_admin]
         department:
           type: ["string", "null"]
         location:
@@ -1240,7 +1240,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, manager, team_member]
+          enum: [admin, manager, team_member, accounting_admin]
         department:
           type: ["string", "null"]
         location:
@@ -1334,7 +1334,7 @@ components:
           type: ["string", "null"]
         role:
           type: string
-          enum: [admin, manager, team_member]
+          enum: [admin, manager, team_member, accounting_admin]
         status:
           type: string
           enum: [active, inactive, invited]
@@ -1358,7 +1358,7 @@ components:
           type: ["integer", "null"]
         role:
           type: string
-          enum: [admin, manager, team_member]
+          enum: [admin, manager, team_member, accounting_admin]
         status:
           type: string
           enum: [active, inactive]
@@ -1414,7 +1414,7 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, manager, team_member]
+          enum: [admin, manager, team_member, accounting_admin]
         departmentId:
           type: ["integer", "null"]
         locationId:

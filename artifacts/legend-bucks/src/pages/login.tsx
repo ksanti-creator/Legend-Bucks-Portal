@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Mail, KeyRound, Loader2, FlaskConical, ShieldCheck, Users, User } from "lucide-react";
+import { Mail, KeyRound, Loader2, FlaskConical, ShieldCheck, Users, User, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { setSessionToken } from "@/lib/auth-token";
 
@@ -42,6 +42,13 @@ const DEV_ACCOUNTS = [
     role: "Team Member",
     icon: User,
     color: "text-sidebar-foreground/60",
+  },
+  {
+    email: "fiona.chen@legendboats.com",
+    name: "Fiona Chen",
+    role: "Accounting Admin",
+    icon: Calculator,
+    color: "text-amber-400",
   },
 ] as const;
 

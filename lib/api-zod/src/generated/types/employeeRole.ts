@@ -13,4 +13,5 @@ export const EmployeeRole = {
   admin: 'admin',
   manager: 'manager',
   team_member: 'team_member',
+  accounting_admin: 'accounting_admin',
 } as const;

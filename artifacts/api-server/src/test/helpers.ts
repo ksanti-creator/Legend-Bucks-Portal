@@ -14,7 +14,7 @@ export function uniq(prefix = "test"): string {
   return `${prefix}-${crypto.randomBytes(6).toString("hex")}`;
 }
 
-type Role = "admin" | "manager" | "team_member";
+type Role = "admin" | "manager" | "team_member" | "accounting_admin";
 
 /**
  * Tracks every row a suite creates so afterAll can delete exactly those,

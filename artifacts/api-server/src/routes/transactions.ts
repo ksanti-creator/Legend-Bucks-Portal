@@ -13,7 +13,7 @@ import {
   GetTransactionSummaryQueryParams,
   GetTransactionSummaryResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting } from "../lib/auth";
 import { sendBucksReceivedEmail } from "../lib/email";
 
 const router: IRouter = Router();
@@ -106,15 +106,17 @@ router.get("/transactions", requireAuth, async (req, res): Promise<void> => {
 
   const total = all.length;
   const page = all.slice(offset, offset + limit);
-  const enriched = await Promise.all(page.map((tx) => enrichTransaction(tx, user.role === "admin")));
+  const enriched = await Promise.all(page.map((tx) => enrichTransaction(tx, canViewAccounting(user.role))));
 
   res.json(ListTransactionsResponse.parse({ items: enriched, total, offset, limit }));
 });
 
 router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role === "team_member") {
-    res.status(403).json({ error: "Team members cannot send bucks" });
+  // Only admins and managers can award bucks. accounting_admin is a read-only
+  // finance role and must never be able to move bucks.
+  if (user.role !== "admin" && user.role !== "manager") {
+    res.status(403).json({ error: "You are not allowed to send bucks" });
     return;
   }
 
@@ -205,7 +207,7 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
 
 router.get("/transactions/export", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role !== "admin") {
+  if (!canViewAccounting(user.role)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -313,7 +315,7 @@ router.get("/transactions/:id", requireAuth, async (req, res): Promise<void> => 
     return;
   }
 
-  res.json(GetTransactionResponse.parse(await enrichTransaction(tx, user.role === "admin")));
+  res.json(GetTransactionResponse.parse(await enrichTransaction(tx, canViewAccounting(user.role))));
 });
 
 export default router;

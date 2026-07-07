@@ -106,6 +106,16 @@ export function requireRole(roles: string[]) {
   };
 }
 
+/**
+ * Roles allowed to see accounting data — the full ledger, CSV export, and
+ * dollar-cost (CAD) values. This is a read-only capability: full admins have it
+ * as part of their broader powers, and the read-only accounting_admin role has
+ * it too. It grants NO write access; every write endpoint stays admin-only.
+ */
+export function canViewAccounting(role: string): boolean {
+  return role === "admin" || role === "accounting_admin";
+}
+
 export function getCurrentUser(req: Request): Employee {
   const user = req.currentUser;
   if (!user) throw new Error("getCurrentUser called outside auth middleware");

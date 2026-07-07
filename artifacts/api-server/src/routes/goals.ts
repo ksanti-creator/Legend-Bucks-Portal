@@ -140,6 +140,11 @@ router.patch("/goals/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/goals/:id/contribute", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
+  // accounting_admin is a read-only finance role and must never move bucks.
+  if (user.role === "accounting_admin") {
+    res.status(403).json({ error: "Accounting admins cannot contribute to goals" });
+    return;
+  }
   const params = ContributeToGoalParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

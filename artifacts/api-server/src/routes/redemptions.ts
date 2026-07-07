@@ -19,7 +19,7 @@ import {
   FulfillRedemptionParams,
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting } from "../lib/auth";
 import {
   sendRedemptionReceiptEmail,
   sendRedemptionApprovedEmail,
@@ -69,12 +69,18 @@ router.get("/redemptions", requireAuth, async (req, res): Promise<void> => {
   if (params.data.status) all = all.filter((r) => r.status === params.data.status);
   if (params.data.pendingApproval) all = all.filter((r) => r.status === "requested");
 
-  const enriched = await Promise.all(all.map((r) => enrichRedemption(r, user.role === "admin")));
+  const enriched = await Promise.all(all.map((r) => enrichRedemption(r, canViewAccounting(user.role))));
   res.json(ListRedemptionsResponse.parse(enriched));
 });
 
 router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
+  // accounting_admin is a read-only finance role: redeeming a reward spends
+  // bucks and writes ledger rows, so it must never be allowed here.
+  if (user.role === "accounting_admin") {
+    res.status(403).json({ error: "Accounting admins cannot redeem rewards" });
+    return;
+  }
   const body = CreateRedemptionBody.safeParse(req.body);
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
@@ -169,7 +175,7 @@ router.get("/redemptions/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));
+  res.json(GetRedemptionResponse.parse(await enrichRedemption(redemption, canViewAccounting(user.role))));
 });
 
 router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<void> => {
@@ -279,6 +285,13 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
   const [redemption] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, params.data.id)).limit(1);
   if (!redemption) {
     res.status(404).json({ error: "Redemption not found" });
+    return;
+  }
+
+  // Cancelling refunds bucks (a write), so the read-only accounting_admin role
+  // is never allowed — even for a redemption that somehow belongs to them.
+  if (user.role === "accounting_admin") {
+    res.status(403).json({ error: "Accounting admins cannot cancel redemptions" });
     return;
   }
 

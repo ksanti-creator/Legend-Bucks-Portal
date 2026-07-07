@@ -24,7 +24,7 @@ export const GetMeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
   "managerId": zod.number().nullish(),
@@ -77,7 +77,7 @@ export const VerifyMagicLinkResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
   "managerId": zod.number().nullish(),
@@ -100,7 +100,7 @@ export const InviteEmployeeBody = zod.object({
   "email": zod.string().email(),
   "firstName": zod.string(),
   "lastName": zod.string(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish()
@@ -117,7 +117,7 @@ export const InviteEmployeeResponse = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
   "createdAt": zod.string()
@@ -146,7 +146,7 @@ export const ListEmployeesResponseItem = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
   "createdAt": zod.string()
@@ -172,7 +172,7 @@ export const GetEmployeeResponse = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
   "createdAt": zod.string()
@@ -192,7 +192,7 @@ export const UpdateEmployeeBody = zod.object({
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
-  "role": zod.enum(['admin', 'manager', 'team_member']).optional(),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']).optional(),
   "status": zod.enum(['active', 'inactive']).optional()
 })
 
@@ -207,7 +207,7 @@ export const UpdateEmployeeResponse = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
   "createdAt": zod.string()
@@ -247,7 +247,7 @@ export const DeactivateEmployeeResponse = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
-  "role": zod.enum(['admin', 'manager', 'team_member']),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
   "createdAt": zod.string()

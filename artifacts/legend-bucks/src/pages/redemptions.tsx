@@ -12,15 +12,19 @@ import { useToast } from "@/hooks/use-toast";
 export default function Redemptions() {
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
+  // accounting_admin can view all redemptions (for cost reconciliation) but
+  // cannot process them — only full admins get the approve/reject/fulfil actions.
+  const canViewAll = user?.role === "admin" || user?.role === "accounting_admin";
+  const canManage = isAdmin;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [statusTab, setStatusTab] = useState("requested");
 
-  // Admins see all, users see their own
+  // Privileged roles see all, users see their own
   const { data: redemptions, isLoading } = useListRedemptions({ 
     status: statusTab !== "all" ? statusTab : undefined,
-    employeeId: !isAdmin ? user?.id : undefined
+    employeeId: !canViewAll ? user?.id : undefined
   });
 
   const approveMut = useApproveRedemption();
@@ -42,7 +46,7 @@ export default function Redemptions() {
     });
   };
 
-  if (!isAdmin && user) {
+  if (!canViewAll && user) {
     // If regular user, just show simple list
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -127,7 +131,14 @@ export default function Redemptions() {
                   
                   {/* Action Area based on status */}
                   <div className="bg-muted/30 p-6 flex items-center justify-end md:justify-center md:w-[200px] border-t md:border-t-0 md:border-l border-border">
-                    {item.status === 'requested' && (
+                    {!canManage && (
+                      <span className="text-sm text-muted-foreground font-medium capitalize flex items-center">
+                        {item.status === 'fulfilled' && <Check className="h-4 w-4 mr-2 text-green-600" />}
+                        {item.status === 'rejected' && <X className="h-4 w-4 mr-2 text-destructive" />}
+                        {item.status}
+                      </span>
+                    )}
+                    {canManage && item.status === 'requested' && (
                       <div className="flex gap-2 w-full">
                         <Button 
                           variant="outline" 
@@ -149,7 +160,7 @@ export default function Redemptions() {
                       </div>
                     )}
                     
-                    {item.status === 'approved' && (
+                    {canManage && item.status === 'approved' && (
                       <Button 
                         className="w-full bg-primary hover:bg-primary/90"
                         onClick={() => handleAction(item.id, 'fulfill')}
@@ -160,7 +171,7 @@ export default function Redemptions() {
                       </Button>
                     )}
 
-                    {item.status !== 'requested' && item.status !== 'approved' && (
+                    {canManage && item.status !== 'requested' && item.status !== 'approved' && (
                       <span className="text-sm text-muted-foreground font-medium flex items-center">
                         {item.status === 'fulfilled' && <Check className="h-4 w-4 mr-2 text-green-600" />}
                         {item.status === 'rejected' && <X className="h-4 w-4 mr-2 text-destructive" />}

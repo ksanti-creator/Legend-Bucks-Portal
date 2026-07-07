@@ -16,6 +16,7 @@ export const CurrentUserRole = {
   admin: 'admin',
   manager: 'manager',
   team_member: 'team_member',
+  accounting_admin: 'accounting_admin',
 } as const;
 
 export type CurrentUserStatus = typeof CurrentUserStatus[keyof typeof CurrentUserStatus];
@@ -63,6 +64,7 @@ export const AuthSessionRole = {
   admin: 'admin',
   manager: 'manager',
   team_member: 'team_member',
+  accounting_admin: 'accounting_admin',
 } as const;
 
 export type AuthSessionStatus = typeof AuthSessionStatus[keyof typeof AuthSessionStatus];
@@ -129,6 +131,7 @@ export const EmployeeRole = {
   admin: 'admin',
   manager: 'manager',
   team_member: 'team_member',
+  accounting_admin: 'accounting_admin',
 } as const;
 
 export type EmployeeStatus = typeof EmployeeStatus[keyof typeof EmployeeStatus];
@@ -171,6 +174,7 @@ export const EmployeeUpdateRole = {
   admin: 'admin',
   manager: 'manager',
   team_member: 'team_member',
+  accounting_admin: 'accounting_admin',
 } as const;
 
 export type EmployeeUpdateStatus = typeof EmployeeUpdateStatus[keyof typeof EmployeeUpdateStatus];
@@ -225,6 +229,7 @@ export const InviteInputRole = {
   admin: 'admin',
   manager: 'manager',
   team_member: 'team_member',
+  accounting_admin: 'accounting_admin',
 } as const;
 
 export interface InviteInput {

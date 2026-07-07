@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 import { departmentsTable } from "./departments";
 import { locationsTable } from "./locations";
 
-export const roleEnum = pgEnum("employee_role", ["admin", "manager", "team_member"]);
+export const roleEnum = pgEnum("employee_role", ["admin", "manager", "team_member", "accounting_admin"]);
 export const statusEnum = pgEnum("employee_status", ["active", "inactive", "invited"]);
 
 export const employeesTable = pgTable("employees", {

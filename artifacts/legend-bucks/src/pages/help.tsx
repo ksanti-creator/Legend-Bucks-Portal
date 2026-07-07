@@ -13,7 +13,10 @@ import {
   User,
   ShieldCheck,
   Briefcase,
+  Calculator,
 } from "lucide-react";
+
+type Role = "team_member" | "manager" | "admin" | "accounting_admin";
 
 type Flow = {
   title: string;
@@ -25,7 +28,7 @@ type Flow = {
  * Help content is scoped per role. A viewer only ever sees the flows for their
  * own role — in particular, team-member flows are visible to team members only.
  */
-const FLOWS: Record<"team_member" | "manager" | "admin", Flow[]> = {
+const FLOWS: Record<Role, Flow[]> = {
   team_member: [
     {
       title: "Check your balance",
@@ -185,10 +188,45 @@ const FLOWS: Record<"team_member" | "manager" | "admin", Flow[]> = {
       ],
     },
   ],
+  accounting_admin: [
+    {
+      title: "Review the full ledger",
+      summary: "See every transaction across the organization.",
+      steps: [
+        "Open Ledger in the sidebar.",
+        "Switch the view to All Organization to see everyone's transactions.",
+        "Filter by type to focus on awards, redemptions, or refunds.",
+      ],
+    },
+    {
+      title: "Export the ledger for accounting",
+      summary: "Download a CSV of transactions for reconciliation.",
+      steps: [
+        "Open Ledger and click Export CSV.",
+        "The file downloads with all transaction detail for the period.",
+      ],
+    },
+    {
+      title: "See dollar (CAD) cost values",
+      summary: "View the real-money cost behind bucks activity.",
+      steps: [
+        "CAD values appear on the Ledger and on Redemptions.",
+        "Use these accounting-only figures to reconcile program spend.",
+      ],
+    },
+    {
+      title: "Review redemptions (read-only)",
+      summary: "See reward requests and their cost, without processing them.",
+      steps: [
+        "Open Redemptions to view all reward requests and their status.",
+        "Approving, rejecting, and fulfilling are handled by admins — you have view-only access.",
+      ],
+    },
+  ],
 };
 
 const ROLE_META: Record<
-  "team_member" | "manager" | "admin",
+  Role,
   { label: string; icon: typeof User; blurb: string }
 > = {
   team_member: {
@@ -206,6 +244,11 @@ const ROLE_META: Record<
     icon: ShieldCheck,
     blurb: "Run the program end to end.",
   },
+  accounting_admin: {
+    label: "Accounting Admin",
+    icon: Calculator,
+    blurb: "View and export the ledger and cost reports — read-only.",
+  },
 };
 
 export default function Help() {
@@ -221,7 +264,7 @@ export default function Help() {
 
   if (!user) return null;
 
-  const role = user.role as "team_member" | "manager" | "admin";
+  const role = user.role as Role;
   const flows = FLOWS[role] ?? [];
   const meta = ROLE_META[role];
   const RoleIcon = meta?.icon ?? User;

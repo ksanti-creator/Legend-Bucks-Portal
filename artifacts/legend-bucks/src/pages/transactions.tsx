@@ -1,22 +1,47 @@
 import { useState } from "react";
-import { useListTransactions, useGetMe } from "@workspace/api-client-react";
+import { useListTransactions, useGetMe, exportTransactions } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatDateTime } from "@/lib/utils";
-import { ArrowRightLeft, Download } from "lucide-react";
+import { ArrowRightLeft, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Transactions() {
   const { data: user } = useGetMe();
-  const isAdmin = user?.role === "admin";
-  
+  const { toast } = useToast();
+  // Full admins and the read-only accounting_admin role can see the whole
+  // organization's ledger and export it; everyone else sees only their own.
+  const canViewAll = user?.role === "admin" || user?.role === "accounting_admin";
+  const [exporting, setExporting] = useState(false);
+
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewFilter, setViewFilter] = useState<string>("my"); // 'all' or 'my'
 
-  // Admin can see all, regular users only their own
-  const effectiveEmployeeId = (isAdmin && viewFilter === "all") ? undefined : user?.id;
+  // Privileged roles can see all, regular users only their own
+  const effectiveEmployeeId = (canViewAll && viewFilter === "all") ? undefined : user?.id;
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const csv = await exportTransactions();
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "transactions.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Export failed", description: "Could not download the ledger. Try again.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const { data: txPage, isLoading } = useListTransactions({
     employeeId: effectiveEmployeeId,
@@ -32,12 +57,14 @@ export default function Transactions() {
           <p className="text-muted-foreground mt-1">Record of all Legend Bucks transactions.</p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
+        {canViewAll && (
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleExport} disabled={exporting}>
+              {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              Export CSV
+            </Button>
+          </div>
+        )}
       </div>
 
       <Card className="border-none shadow-sm">
@@ -49,7 +76,7 @@ export default function Transactions() {
             </CardTitle>
             
             <div className="flex flex-1 justify-end gap-4 w-full sm:w-auto">
-              {isAdmin && (
+              {canViewAll && (
                 <Select value={viewFilter} onValueChange={setViewFilter}>
                   <SelectTrigger className="w-[150px] bg-background">
                     <SelectValue placeholder="View" />
@@ -83,18 +110,18 @@ export default function Transactions() {
                 <TableHead>Type</TableHead>
                 <TableHead>From / To</TableHead>
                 <TableHead>Note</TableHead>
-                {isAdmin && <TableHead className="text-right">CAD Value</TableHead>}
+                {canViewAll && <TableHead className="text-right">CAD Value</TableHead>}
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">Loading transactions...</TableCell>
+                  <TableCell colSpan={canViewAll ? 6 : 5} className="text-center py-8 text-muted-foreground">Loading transactions...</TableCell>
                 </TableRow>
               ) : !txPage?.items || txPage.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">No transactions found.</TableCell>
+                  <TableCell colSpan={canViewAll ? 6 : 5} className="text-center py-8 text-muted-foreground">No transactions found.</TableCell>
                 </TableRow>
               ) : (
                 txPage.items.map((tx) => {
@@ -133,7 +160,7 @@ export default function Transactions() {
                       <TableCell className="max-w-[300px] truncate text-sm">
                         {tx.note}
                       </TableCell>
-                      {isAdmin && (
+                      {canViewAll && (
                         <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
                           {tx.cadValueCents != null ? `${(tx.cadValueCents / 100).toFixed(2)}` : '—'}
                         </TableCell>
