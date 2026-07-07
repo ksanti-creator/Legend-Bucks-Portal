@@ -54,6 +54,8 @@ import type {
   MagicLinkResponse,
   MagicLinkVerify,
   OrgUnitInput,
+  ReassignInput,
+  ReassignResult,
   Redemption,
   RedemptionDecision,
   RedemptionInput,
@@ -1901,6 +1903,78 @@ export const useDeleteDepartment = <TError = ErrorType<void>,
       return useMutation(getDeleteDepartmentMutationOptions(options));
     }
 
+export const getReassignDepartmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/departments/${id}/reassign`
+}
+
+/**
+ * Reassigns every employee currently in this department to the target department (or clears their department when reassignTo is null). Used to empty a department before deleting it.
+ * @summary Move all employees from one department to another, or clear them (admin only)
+ */
+export const reassignDepartment = async (id: number,
+    reassignInput: ReassignInput, options?: RequestInit): Promise<ReassignResult> => {
+
+  return customFetch<ReassignResult>(getReassignDepartmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reassignInput)
+  }
+);}
+
+
+
+
+export const getReassignDepartmentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reassignDepartment>>, TError,{id: number;data: BodyType<ReassignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reassignDepartment>>, TError,{id: number;data: BodyType<ReassignInput>}, TContext> => {
+
+const mutationKey = ['reassignDepartment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reassignDepartment>>, {id: number;data: BodyType<ReassignInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reassignDepartment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReassignDepartmentMutationResult = NonNullable<Awaited<ReturnType<typeof reassignDepartment>>>
+    export type ReassignDepartmentMutationBody = BodyType<ReassignInput>
+    export type ReassignDepartmentMutationError = ErrorType<void>
+
+    /**
+ * @summary Move all employees from one department to another, or clear them (admin only)
+ */
+export const useReassignDepartment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reassignDepartment>>, TError,{id: number;data: BodyType<ReassignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reassignDepartment>>,
+        TError,
+        {id: number;data: BodyType<ReassignInput>},
+        TContext
+      > => {
+      return useMutation(getReassignDepartmentMutationOptions(options));
+    }
+
 export const getListLocationsUrl = () => {
 
 
@@ -2187,6 +2261,78 @@ export const useDeleteLocation = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteLocationMutationOptions(options));
+    }
+
+export const getReassignLocationUrl = (id: number,) => {
+
+
+
+
+  return `/api/locations/${id}/reassign`
+}
+
+/**
+ * Reassigns every employee currently in this location to the target location (or clears their location when reassignTo is null). Used to empty a location before deleting it.
+ * @summary Move all employees from one location to another, or clear them (admin only)
+ */
+export const reassignLocation = async (id: number,
+    reassignInput: ReassignInput, options?: RequestInit): Promise<ReassignResult> => {
+
+  return customFetch<ReassignResult>(getReassignLocationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reassignInput)
+  }
+);}
+
+
+
+
+export const getReassignLocationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reassignLocation>>, TError,{id: number;data: BodyType<ReassignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reassignLocation>>, TError,{id: number;data: BodyType<ReassignInput>}, TContext> => {
+
+const mutationKey = ['reassignLocation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reassignLocation>>, {id: number;data: BodyType<ReassignInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reassignLocation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReassignLocationMutationResult = NonNullable<Awaited<ReturnType<typeof reassignLocation>>>
+    export type ReassignLocationMutationBody = BodyType<ReassignInput>
+    export type ReassignLocationMutationError = ErrorType<void>
+
+    /**
+ * @summary Move all employees from one location to another, or clear them (admin only)
+ */
+export const useReassignLocation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reassignLocation>>, TError,{id: number;data: BodyType<ReassignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reassignLocation>>,
+        TError,
+        {id: number;data: BodyType<ReassignInput>},
+        TContext
+      > => {
+      return useMutation(getReassignLocationMutationOptions(options));
     }
 
 export const getListRewardsUrl = (params?: ListRewardsParams,) => {

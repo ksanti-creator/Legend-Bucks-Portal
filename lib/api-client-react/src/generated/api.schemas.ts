@@ -100,6 +100,16 @@ export interface OrgUnitInput {
   name: string;
 }
 
+export interface ReassignInput {
+  /** Target department/location id to move employees to, or null to clear their assignment. */
+  reassignTo: number | null;
+}
+
+export interface ReassignResult {
+  /** Number of employees that were reassigned */
+  reassigned: number;
+}
+
 export type EmployeeRole = typeof EmployeeRole[keyof typeof EmployeeRole];
 
 

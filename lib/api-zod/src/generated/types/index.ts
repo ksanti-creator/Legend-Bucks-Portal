@@ -50,6 +50,8 @@ export * from './magicLinkRequest';
 export * from './magicLinkResponse';
 export * from './magicLinkVerify';
 export * from './orgUnitInput';
+export * from './reassignInput';
+export * from './reassignResult';
 export * from './redemption';
 export * from './redemptionDecision';
 export * from './redemptionInput';

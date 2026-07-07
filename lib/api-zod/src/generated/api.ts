@@ -486,6 +486,23 @@ export const DeleteDepartmentResponse = zod.void()
 
 
 /**
+ * Reassigns every employee currently in this department to the target department (or clears their department when reassignTo is null). Used to empty a department before deleting it.
+ * @summary Move all employees from one department to another, or clear them (admin only)
+ */
+export const ReassignDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReassignDepartmentBody = zod.object({
+  "reassignTo": zod.number().nullable().describe('Target department\/location id to move employees to, or null to clear their assignment.')
+})
+
+export const ReassignDepartmentResponse = zod.object({
+  "reassigned": zod.number().describe('Number of employees that were reassigned')
+})
+
+
+/**
  * @summary List all locations
  */
 export const ListLocationsResponseItem = zod.object({
@@ -542,6 +559,23 @@ export const DeleteLocationParams = zod.object({
 })
 
 export const DeleteLocationResponse = zod.void()
+
+
+/**
+ * Reassigns every employee currently in this location to the target location (or clears their location when reassignTo is null). Used to empty a location before deleting it.
+ * @summary Move all employees from one location to another, or clear them (admin only)
+ */
+export const ReassignLocationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReassignLocationBody = zod.object({
+  "reassignTo": zod.number().nullable().describe('Target department\/location id to move employees to, or null to clear their assignment.')
+})
+
+export const ReassignLocationResponse = zod.object({
+  "reassigned": zod.number().describe('Number of employees that were reassigned')
+})
 
 
 /**

@@ -543,6 +543,41 @@ paths:
         "409":
           description: Department still has employees assigned
 
+  /departments/{id}/reassign:
+    post:
+      operationId: reassignDepartment
+      tags: [departments]
+      summary: Move all employees from one department to another, or clear them (admin only)
+      description: >-
+        Reassigns every employee currently in this department to the target
+        department (or clears their department when reassignTo is null). Used
+        to empty a department before deleting it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReassignInput"
+      responses:
+        "200":
+          description: Reassignment complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReassignResult"
+        "400":
+          description: Invalid reassignment target
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
+
   # Locations
   /locations:
     get:
@@ -625,6 +660,41 @@ paths:
           description: Not found
         "409":
           description: Location still has employees assigned
+
+  /locations/{id}/reassign:
+    post:
+      operationId: reassignLocation
+      tags: [locations]
+      summary: Move all employees from one location to another, or clear them (admin only)
+      description: >-
+        Reassigns every employee currently in this location to the target
+        location (or clears their location when reassignTo is null). Used to
+        empty a location before deleting it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReassignInput"
+      responses:
+        "200":
+          description: Reassignment complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReassignResult"
+        "400":
+          description: Invalid reassignment target
+        "403":
+          description: Forbidden
+        "404":
+          description: Not found
 
   # Rewards
   /rewards:
@@ -1177,6 +1247,25 @@ components:
         name:
           type: string
           minLength: 1
+
+    ReassignInput:
+      type: object
+      required: [reassignTo]
+      properties:
+        reassignTo:
+          type: integer
+          nullable: true
+          description: >-
+            Target department/location id to move employees to, or null to
+            clear their assignment.
+
+    ReassignResult:
+      type: object
+      required: [reassigned]
+      properties:
+        reassigned:
+          type: integer
+          description: Number of employees that were reassigned
 
     Employee:
       type: object

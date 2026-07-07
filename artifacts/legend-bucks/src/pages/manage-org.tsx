@@ -5,10 +5,12 @@ import {
   useCreateDepartment,
   useUpdateDepartment,
   useDeleteDepartment,
+  useReassignDepartment,
   useListLocations,
   useCreateLocation,
   useUpdateLocation,
   useDeleteLocation,
+  useReassignLocation,
   useGetMe,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +19,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2, ArrowLeft, Pencil, Trash2, Check, X, Building2, MapPin } from "lucide-react";
 
@@ -198,10 +210,16 @@ export default function ManageOrg() {
   const createDept = useCreateDepartment();
   const updateDept = useUpdateDepartment();
   const deleteDept = useDeleteDepartment();
+  const reassignDept = useReassignDepartment();
 
   const createLoc = useCreateLocation();
   const updateLoc = useUpdateLocation();
   const deleteLoc = useDeleteLocation();
+  const reassignLoc = useReassignLocation();
+
+  type Kind = "department" | "location";
+  const [reassignState, setReassignState] = useState<{ item: OrgUnit; kind: Kind } | null>(null);
+  const [reassignTo, setReassignTo] = useState<string>("none");
 
   if (!isAdmin && user) {
     return <div className="p-8 text-center text-destructive">Unauthorized. Admins only.</div>;
@@ -216,6 +234,76 @@ export default function ManageOrg() {
   const errMessage = (err: any, fallback: string) => {
     const msg = err?.response?.data?.error || err?.data?.error || err?.message;
     return typeof msg === "string" ? msg : fallback;
+  };
+
+  const keyFor = (kind: Kind) => (kind === "department" ? "/api/departments" : "/api/locations");
+  const labelFor = (kind: Kind) => (kind === "department" ? "Department" : "Location");
+
+  // Delete a unit that has no employees assigned.
+  const performDelete = (item: OrgUnit, kind: Kind) => {
+    const mut = kind === "department" ? deleteDept : deleteLoc;
+    mut.mutate(
+      { id: item.id },
+      {
+        onSuccess: () => {
+          toast({ title: `${labelFor(kind)} deleted` });
+          invalidate(keyFor(kind));
+        },
+        onError: (err) =>
+          toast({ title: errMessage(err, `Failed to delete ${kind}`), variant: "destructive" }),
+      },
+    );
+  };
+
+  // Entry point for the delete button: reassign first if employees are still assigned.
+  const requestDelete = (item: OrgUnit, kind: Kind) => {
+    if (item.employeeCount > 0) {
+      setReassignTo("none");
+      setReassignState({ item, kind });
+      return;
+    }
+    if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+    performDelete(item, kind);
+  };
+
+  const reassignOptions = reassignState
+    ? ((reassignState.kind === "department" ? departments : locations) ?? []).filter(
+        (u) => u.id !== reassignState.item.id,
+      )
+    : [];
+
+  const reassignPending =
+    reassignDept.isPending || reassignLoc.isPending || deleteDept.isPending || deleteLoc.isPending;
+
+  // Reassign all employees off the unit, then delete it.
+  const handleReassignAndDelete = () => {
+    if (!reassignState) return;
+    const { item, kind } = reassignState;
+    const target = reassignTo === "none" ? null : parseInt(reassignTo);
+    const reassignMut = kind === "department" ? reassignDept : reassignLoc;
+    reassignMut.mutate(
+      { id: item.id, data: { reassignTo: target } },
+      {
+        onSuccess: () => {
+          invalidate(keyFor(kind));
+          const delMut = kind === "department" ? deleteDept : deleteLoc;
+          delMut.mutate(
+            { id: item.id },
+            {
+              onSuccess: () => {
+                toast({ title: `${labelFor(kind)} deleted` });
+                invalidate(keyFor(kind));
+                setReassignState(null);
+              },
+              onError: (err) =>
+                toast({ title: errMessage(err, `Failed to delete ${kind}`), variant: "destructive" }),
+            },
+          );
+        },
+        onError: (err) =>
+          toast({ title: errMessage(err, "Failed to reassign employees"), variant: "destructive" }),
+      },
+    );
   };
 
   return (
@@ -270,20 +358,7 @@ export default function ManageOrg() {
               },
             )
           }
-          onDelete={(item) => {
-            if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-            deleteDept.mutate(
-              { id: item.id },
-              {
-                onSuccess: () => {
-                  toast({ title: "Department deleted" });
-                  invalidate("/api/departments");
-                },
-                onError: (err) =>
-                  toast({ title: errMessage(err, "Failed to delete department"), variant: "destructive" }),
-              },
-            );
-          }}
+          onDelete={(item) => requestDelete(item, "department")}
         />
 
         <OrgSection
@@ -321,22 +396,54 @@ export default function ManageOrg() {
               },
             )
           }
-          onDelete={(item) => {
-            if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
-            deleteLoc.mutate(
-              { id: item.id },
-              {
-                onSuccess: () => {
-                  toast({ title: "Location deleted" });
-                  invalidate("/api/locations");
-                },
-                onError: (err) =>
-                  toast({ title: errMessage(err, "Failed to delete location"), variant: "destructive" }),
-              },
-            );
-          }}
+          onDelete={(item) => requestDelete(item, "location")}
         />
       </div>
+
+      <Dialog open={reassignState !== null} onOpenChange={(open) => !open && setReassignState(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign employees before deleting</DialogTitle>
+            <DialogDescription>
+              {reassignState && (
+                <>
+                  <span className="font-medium text-foreground">{reassignState.item.name}</span> still has{" "}
+                  {reassignState.item.employeeCount} employee(s). Choose where to move them, then it will be
+                  deleted.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Move employees to</Label>
+            <Select value={reassignTo} onValueChange={setReassignTo}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a destination" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No {reassignState?.kind ?? "assignment"} (leave blank)</SelectItem>
+                {reassignOptions.map((u) => (
+                  <SelectItem key={u.id} value={u.id.toString()}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignState(null)} disabled={reassignPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReassignAndDelete}
+              disabled={reassignPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {reassignPending ? "Working..." : "Reassign & Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

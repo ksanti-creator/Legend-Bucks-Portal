@@ -10,6 +10,9 @@ import {
   UpdateDepartmentBody,
   UpdateDepartmentResponse,
   DeleteDepartmentParams,
+  ReassignDepartmentParams,
+  ReassignDepartmentBody,
+  ReassignDepartmentResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser } from "../lib/auth";
 
@@ -145,6 +148,54 @@ router.delete("/departments/:id", requireAuth, async (req, res): Promise<void> =
 
   await db.delete(departmentsTable).where(eq(departmentsTable.id, params.data.id));
   res.status(204).send();
+});
+
+// Move all employees out of a department (to another one, or clear them) so it
+// can be deleted. reassignTo === null clears the assignment.
+router.post("/departments/:id/reassign", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const params = ReassignDepartmentParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = ReassignDepartmentBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [existing] = await db.select().from(departmentsTable).where(eq(departmentsTable.id, params.data.id)).limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Department not found" });
+    return;
+  }
+
+  const target = body.data.reassignTo;
+  if (target !== null) {
+    if (target === params.data.id) {
+      res.status(400).json({ error: "Cannot reassign employees to the same department" });
+      return;
+    }
+    const [targetDept] = await db.select().from(departmentsTable).where(eq(departmentsTable.id, target)).limit(1);
+    if (!targetDept) {
+      res.status(400).json({ error: "Target department not found" });
+      return;
+    }
+  }
+
+  const updated = await db
+    .update(employeesTable)
+    .set({ departmentId: target })
+    .where(eq(employeesTable.departmentId, params.data.id))
+    .returning({ id: employeesTable.id });
+
+  res.json(ReassignDepartmentResponse.parse({ reassigned: updated.length }));
 });
 
 export default router;
