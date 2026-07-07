@@ -126,6 +126,13 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
 
   const { toEmployeeId, amount, note } = body.data;
 
+  // Nobody can award bucks to themselves — enforced server-side so the rule
+  // holds regardless of the client (the UI also hides self from the picker).
+  if (toEmployeeId === user.id) {
+    res.status(400).json({ error: "You can't send bucks to yourself" });
+    return;
+  }
+
   // Check recipient exists
   const [recipient] = await db
     .select()
