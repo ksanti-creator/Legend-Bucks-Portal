@@ -1,11 +1,53 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 
-const FROM_ADDRESS = "Legend Bucks <noreply@legendboats.com>";
 const APP_URL = process.env.APP_URL ?? "https://legendbucks.replit.app";
+// Optional display From header, e.g. `Legend Bucks <rewards@legendboats.com>`.
+// Gmail only honors it if the address is the authorized account or a configured
+// "send as" alias; otherwise Gmail sends from the authenticated account.
+const GMAIL_FROM = process.env.GMAIL_FROM;
 
-interface ResendResponse {
+interface GmailSendResponse {
   id?: string;
-  message?: string;
+  error?: { message?: string };
+}
+
+/** Encode a UTF-8 string as base64url (RFC 4648 §5) for the Gmail `raw` field. */
+function toBase64Url(input: string): string {
+  return Buffer.from(input, "utf-8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+/**
+ * Send an HTML email via the Gmail API (connector proxy). The message is sent
+ * from the authorized Google account.
+ */
+async function sendGmail(to: string, subject: string, html: string): Promise<void> {
+  const connectors = new ReplitConnectors();
+
+  const headers = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/html; charset="UTF-8"',
+  ];
+  if (GMAIL_FROM) headers.unshift(`From: ${GMAIL_FROM}`);
+
+  const raw = toBase64Url(`${headers.join("\r\n")}\r\n\r\n${html}`);
+
+  const response = await connectors.proxy("google-mail", "/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ raw }),
+  });
+
+  const data = (await response.json()) as GmailSendResponse;
+
+  if (!response.ok) {
+    throw new Error(`Failed to send email: ${data.error?.message ?? response.status}`);
+  }
 }
 
 /**
@@ -23,15 +65,13 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Send a magic-link login email via Resend.
+ * Send a magic-link login email via Gmail.
  */
 export async function sendMagicLinkEmail(
   to: string,
   firstName: string,
   token: string,
 ): Promise<void> {
-  const connectors = new ReplitConnectors();
-
   const loginUrl = `${APP_URL}/login?token=${encodeURIComponent(token)}`;
 
   const html = `
@@ -99,21 +139,7 @@ export async function sendMagicLinkEmail(
 </body>
 </html>`;
 
-  const response = await connectors.proxy("resend", "/emails", {
-    method: "POST",
-    body: JSON.stringify({
-      from: FROM_ADDRESS,
-      to: [to],
-      subject: "Your Legend Bucks sign-in link",
-      html,
-    }),
-  });
-
-  const data = (await response.json()) as ResendResponse;
-
-  if (!response.ok) {
-    throw new Error(`Failed to send email: ${data.message ?? response.status}`);
-  }
+  await sendGmail(to, "Your Legend Bucks sign-in link", html);
 }
 
 /**
@@ -125,8 +151,6 @@ export async function sendInviteEmail(
   invitedBy: string,
   token: string,
 ): Promise<void> {
-  const connectors = new ReplitConnectors();
-
   const acceptUrl = `${APP_URL}/login?token=${encodeURIComponent(token)}`;
 
   const html = `
@@ -197,21 +221,7 @@ export async function sendInviteEmail(
 </body>
 </html>`;
 
-  const response = await connectors.proxy("resend", "/emails", {
-    method: "POST",
-    body: JSON.stringify({
-      from: FROM_ADDRESS,
-      to: [to],
-      subject: `${invitedBy} invited you to Legend Bucks`,
-      html,
-    }),
-  });
-
-  const data = (await response.json()) as ResendResponse;
-
-  if (!response.ok) {
-    throw new Error(`Failed to send invite email: ${data.message ?? response.status}`);
-  }
+  await sendGmail(to, `${invitedBy} invited you to Legend Bucks`, html);
 }
 
 /**
@@ -261,19 +271,14 @@ function emailShell(title: string, bodyHtml: string): string {
 }
 
 /**
- * Send an already-rendered HTML email via Resend, throwing on failure.
+ * Send an already-rendered branded HTML email via Gmail, throwing on failure
+ * with a contextual label.
  */
-async function sendViaResend(to: string, subject: string, html: string, errorLabel: string): Promise<void> {
-  const connectors = new ReplitConnectors();
-  const response = await connectors.proxy("resend", "/emails", {
-    method: "POST",
-    body: JSON.stringify({ from: FROM_ADDRESS, to: [to], subject, html }),
-  });
-
-  const data = (await response.json()) as ResendResponse;
-
-  if (!response.ok) {
-    throw new Error(`${errorLabel}: ${data.message ?? response.status}`);
+async function sendBrandedEmail(to: string, subject: string, html: string, errorLabel: string): Promise<void> {
+  try {
+    await sendGmail(to, subject, html);
+  } catch (err) {
+    throw new Error(`${errorLabel}: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -335,7 +340,7 @@ export async function sendBucksReceivedEmail(
      </p>`,
   );
 
-  await sendViaResend(to, `You received ${formatBucks(amount)}! 🎉`, html, "Failed to send bucks-received email");
+  await sendBrandedEmail(to, `You received ${formatBucks(amount)}! 🎉`, html, "Failed to send bucks-received email");
 }
 
 /**
@@ -370,7 +375,7 @@ export async function sendBudgetAssignedEmail(
      </p>`,
   );
 
-  await sendViaResend(to, `Your ${monthLabel} Legend Bucks budget is ready`, html, "Failed to send budget-assigned email");
+  await sendBrandedEmail(to, `Your ${monthLabel} Legend Bucks budget is ready`, html, "Failed to send budget-assigned email");
 }
 
 /**
@@ -422,7 +427,7 @@ export async function sendRedemptionReceiptEmail(
      </p>`,
   );
 
-  await sendViaResend(to, `Redemption receipt: ${rewardName}`, html, "Failed to send redemption receipt email");
+  await sendBrandedEmail(to, `Redemption receipt: ${rewardName}`, html, "Failed to send redemption receipt email");
 }
 
 /**
@@ -446,7 +451,7 @@ export async function sendRedemptionApprovedEmail(
      </p>`,
   );
 
-  await sendViaResend(to, `Approved: ${rewardName}`, html, "Failed to send redemption approved email");
+  await sendBrandedEmail(to, `Approved: ${rewardName}`, html, "Failed to send redemption approved email");
 }
 
 /**
@@ -480,7 +485,7 @@ export async function sendRedemptionRejectedEmail(
      </p>`,
   );
 
-  await sendViaResend(to, `Update on your redemption: ${rewardName}`, html, "Failed to send redemption rejected email");
+  await sendBrandedEmail(to, `Update on your redemption: ${rewardName}`, html, "Failed to send redemption rejected email");
 }
 
 /**
@@ -504,5 +509,5 @@ export async function sendRedemptionFulfilledEmail(
      </p>`,
   );
 
-  await sendViaResend(to, `On its way: ${rewardName}`, html, "Failed to send redemption fulfilled email");
+  await sendBrandedEmail(to, `On its way: ${rewardName}`, html, "Failed to send redemption fulfilled email");
 }

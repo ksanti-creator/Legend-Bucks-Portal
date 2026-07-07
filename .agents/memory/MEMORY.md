@@ -8,3 +8,4 @@
 - [api-server test harness](legend-bucks-api-tests.md) — vitest+supertest drive imported app; auth via createSession; tests hit the ONE shared dev DB, so clean up only owned ids, run serial.
 - [Role-guard fallthrough](legend-bucks-role-guards.md) — authorize every bucks-moving write with a positive allow-list; exclusion guards silently grant new roles spend power.
 - [Postgres UPDATE no ORDER BY/LIMIT](postgres-update-order-limit.md) — Postgres rejects ORDER BY/LIMIT on UPDATE; such raw SQL 500s at runtime, invisible until a test hits the real path.
+- [Email provider](legend-bucks-email-provider.md) — transactional email sends via Gmail connector (not Resend); Gmail sends from the authorized account, From only honored for that account/alias.

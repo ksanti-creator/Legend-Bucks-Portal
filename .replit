@@ -21,3 +21,11 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.development]
+APP_URL = "https://10ede099-f36a-45fd-ab95-9563f0cca0ce-00-3u26dn923lkkz-21jzdhnl.picard.replit.dev"
+
+[userenv.shared]
+GMAIL_FROM = "Legend Bucks <ksanti@legendboats.com>"

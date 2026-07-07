@@ -174,44 +174,48 @@ export default function Login() {
         </div>
 
         <div className="w-full max-w-sm space-y-5">
-          {/* ── Dev Quick Login ─────────────────────────────────── */}
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20">
-              <FlaskConical className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-              <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">Dev — Quick Login</span>
-            </div>
-            <div className="p-3 space-y-2">
-              {DEV_ACCOUNTS.map((account) => {
-                const Icon = account.icon;
-                const isLoading = quickLoggingIn === account.email;
-                return (
-                  <button
-                    key={account.email}
-                    onClick={() => quickLogin(account.email)}
-                    disabled={quickLoggingIn !== null}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md bg-sidebar-accent/40 hover:bg-sidebar-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading
-                      ? <Loader2 className="h-4 w-4 animate-spin text-sidebar-foreground/50 shrink-0" />
-                      : <Icon className={`h-4 w-4 shrink-0 ${account.color}`} />
-                    }
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{account.name}</p>
-                      <p className="text-xs text-sidebar-foreground/50 truncate">{account.role}</p>
-                    </div>
-                    <span className="text-xs text-sidebar-foreground/30 shrink-0">→</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* ── Dev Quick Login (development only) ───────────────── */}
+          {import.meta.env.DEV && (
+            <>
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20">
+                  <FlaskConical className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">Dev — Quick Login</span>
+                </div>
+                <div className="p-3 space-y-2">
+                  {DEV_ACCOUNTS.map((account) => {
+                    const Icon = account.icon;
+                    const isLoading = quickLoggingIn === account.email;
+                    return (
+                      <button
+                        key={account.email}
+                        onClick={() => quickLogin(account.email)}
+                        disabled={quickLoggingIn !== null}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md bg-sidebar-accent/40 hover:bg-sidebar-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoading
+                          ? <Loader2 className="h-4 w-4 animate-spin text-sidebar-foreground/50 shrink-0" />
+                          : <Icon className={`h-4 w-4 shrink-0 ${account.color}`} />
+                        }
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{account.name}</p>
+                          <p className="text-xs text-sidebar-foreground/50 truncate">{account.role}</p>
+                        </div>
+                        <span className="text-xs text-sidebar-foreground/30 shrink-0">→</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 border-t border-sidebar-border" />
-            <span className="text-xs text-sidebar-foreground/30 uppercase tracking-wider">or sign in with email</span>
-            <div className="flex-1 border-t border-sidebar-border" />
-          </div>
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-sidebar-border" />
+                <span className="text-xs text-sidebar-foreground/30 uppercase tracking-wider">or sign in with email</span>
+                <div className="flex-1 border-t border-sidebar-border" />
+              </div>
+            </>
+          )}
 
           {/* ── Sign-in form ────────────────────────────────────── */}
           <div>
