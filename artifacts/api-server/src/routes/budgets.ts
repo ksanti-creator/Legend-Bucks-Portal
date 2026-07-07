@@ -12,6 +12,7 @@ import {
   GetMyBudgetRemainingResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser } from "../lib/auth";
+import { sendBudgetAssignedEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -116,6 +117,22 @@ router.post("/budgets", requireAuth, async (req, res): Promise<void> => {
       })
       .returning();
     budget = inserted;
+  }
+
+  // Notify the manager by email — best-effort, never blocks the assignment
+  // (the lookup is inside the try so no email-related step can fail the route).
+  try {
+    const [manager] = await db
+      .select()
+      .from(employeesTable)
+      .where(eq(employeesTable.id, budget.managerId))
+      .limit(1);
+    if (manager?.email) {
+      await sendBudgetAssignedEmail(manager.email, manager.firstName, budget.totalAmount, budget.month);
+      req.log.info({ managerId: budget.managerId }, "Budget-assigned email sent");
+    }
+  } catch (err) {
+    req.log.error({ err, managerId: budget.managerId }, "Failed to send budget-assigned email");
   }
 
   res.status(201).json(AssignBudgetResponse.parse(await buildBudgetResponse(budget)));

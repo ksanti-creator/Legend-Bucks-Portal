@@ -14,6 +14,7 @@ import {
   GetTransactionSummaryResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { sendBucksReceivedEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -174,6 +175,22 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
       note: note ?? null,
     })
     .returning();
+
+  // Notify the recipient by email — best-effort, never blocks the award.
+  if (recipient.email) {
+    try {
+      await sendBucksReceivedEmail(
+        recipient.email,
+        recipient.firstName,
+        `${user.firstName} ${user.lastName}`,
+        amount,
+        note ?? null,
+      );
+      req.log.info({ toEmployeeId }, "Bucks-received email sent");
+    } catch (err) {
+      req.log.error({ err, toEmployeeId }, "Failed to send bucks-received email");
+    }
+  }
 
   res.status(201).json(SendBucksResponse.parse(await enrichTransaction(tx, user.role === "admin")));
 });

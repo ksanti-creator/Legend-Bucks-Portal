@@ -20,6 +20,7 @@ import {
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { sendRedemptionReceiptEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -123,6 +124,23 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   await db.execute(
     `UPDATE transactions SET redemption_id = ${redemption.id} WHERE type = 'redemption_debit' AND from_employee_id = ${user.id} AND redemption_id IS NULL ORDER BY created_at DESC LIMIT 1`
   );
+
+  // Email the employee a redemption receipt — best-effort, never blocks.
+  if (user.email) {
+    try {
+      await sendRedemptionReceiptEmail(
+        user.email,
+        user.firstName,
+        reward.name,
+        redemption.buckCost,
+        redemption.createdAt,
+        redemption.status,
+      );
+      req.log.info({ redemptionId: redemption.id }, "Redemption receipt email sent");
+    } catch (err) {
+      req.log.error({ err, redemptionId: redemption.id }, "Failed to send redemption receipt email");
+    }
+  }
 
   res.status(201).json(CreateRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));
 });
