@@ -5,3 +5,4 @@
 - [Legend Bucks local API testing](legend-bucks-local-api-testing.md) — curl the API at http://127.0.0.1:80/api (shared proxy), NOT $REPLIT_DEV_DOMAIN/api; login→verify for a Bearer token.
 - [orval path+query param collision](orval-param-name-collision.md) — never add a query param to an endpoint with a path param (zod codegen name clash); use a POST sub-resource with a body instead.
 - [Notification prefs & email gating](legend-bucks-notification-prefs.md) — opt-outs are boolean cols checked at each send call site; magic-link/invite are always sent, never gated.
+- [api-server test harness](legend-bucks-api-tests.md) — vitest+supertest drive imported app; auth via createSession; tests hit the ONE shared dev DB, so clean up only owned ids, run serial.
