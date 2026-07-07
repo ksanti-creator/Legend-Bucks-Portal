@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { departmentsTable } from "./departments";
@@ -17,6 +17,10 @@ export const employeesTable = pgTable("employees", {
   managerId: integer("manager_id"),
   role: roleEnum("role").notNull().default("team_member"),
   status: statusEnum("status").notNull().default("invited"),
+  // Per-user email notification opt-outs. Default true = opted in.
+  notifyBucksReceived: boolean("notify_bucks_received").notNull().default(true),
+  notifyBudgetAssigned: boolean("notify_budget_assigned").notNull().default(true),
+  notifyRedemptionUpdates: boolean("notify_redemption_updates").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

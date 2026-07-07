@@ -177,7 +177,8 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
     .returning();
 
   // Notify the recipient by email — best-effort, never blocks the award.
-  if (recipient.email) {
+  // Respect the recipient's notification preference.
+  if (recipient.email && recipient.notifyBucksReceived) {
     try {
       await sendBucksReceivedEmail(
         recipient.email,

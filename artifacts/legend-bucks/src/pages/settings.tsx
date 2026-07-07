@@ -2,12 +2,14 @@ import {
   useGetMe, 
   useLogout, 
   useUpdateEmployee,
+  useUpdateNotificationPreferences,
   getGetMeQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,8 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { clearSessionToken } from "@/lib/auth-token";
-import { LogOut, Loader2, Save } from "lucide-react";
-import { useEffect } from "react";
+import { LogOut, Loader2, Save, Bell } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const profileSchema = z.object({
   firstName: z.string().min(2, "First name required"),
@@ -30,6 +32,14 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const updateMut = useUpdateEmployee();
+  const notifyMut = useUpdateNotificationPreferences();
+
+  // Local mirror of the user's notification toggles, seeded from the server.
+  const [prefs, setPrefs] = useState({
+    notifyBucksReceived: true,
+    notifyBudgetAssigned: true,
+    notifyRedemptionUpdates: true,
+  });
 
   const form = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
@@ -46,8 +56,32 @@ export default function Settings() {
         firstName: user.firstName,
         lastName: user.lastName,
       });
+      setPrefs({
+        notifyBucksReceived: user.notifyBucksReceived,
+        notifyBudgetAssigned: user.notifyBudgetAssigned,
+        notifyRedemptionUpdates: user.notifyRedemptionUpdates,
+      });
     }
   }, [user, form]);
+
+  // Toggle a single preference and persist the whole set immediately.
+  const togglePref = (key: keyof typeof prefs, value: boolean) => {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    notifyMut.mutate(
+      { data: next },
+      {
+        onSuccess: () => {
+          toast({ title: "Notification preferences saved" });
+          queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        },
+        onError: () => {
+          setPrefs(prefs); // revert on failure
+          toast({ title: "Failed to save preferences", variant: "destructive" });
+        },
+      },
+    );
+  };
 
   const onSubmit = (data: z.infer<typeof profileSchema>) => {
     if (!user) return;
@@ -154,6 +188,49 @@ export default function Settings() {
                   </div>
                 </form>
               </Form>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm">
+            <CardHeader className="border-b bg-muted/20">
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary" />
+                Email Notifications
+              </CardTitle>
+              <CardDescription>
+                Choose which emails you'd like to receive. Sign-in links are always sent.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 divide-y divide-border/60">
+              {[
+                {
+                  key: "notifyBucksReceived" as const,
+                  title: "Legend Bucks received",
+                  desc: "When a colleague or manager awards you Legend Bucks.",
+                },
+                {
+                  key: "notifyBudgetAssigned" as const,
+                  title: "Budget assigned",
+                  desc: "When you're given a monthly budget to recognize your team.",
+                },
+                {
+                  key: "notifyRedemptionUpdates" as const,
+                  title: "Redemption updates",
+                  desc: "Receipts and status changes for rewards you redeem.",
+                },
+              ].map((row) => (
+                <div key={row.key} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">{row.title}</p>
+                    <p className="text-xs text-muted-foreground">{row.desc}</p>
+                  </div>
+                  <Switch
+                    checked={prefs[row.key]}
+                    disabled={notifyMut.isPending}
+                    onCheckedChange={(v) => togglePref(row.key, v)}
+                  />
+                </div>
+              ))}
             </CardContent>
           </Card>
 

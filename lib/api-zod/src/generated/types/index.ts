@@ -49,6 +49,7 @@ export * from './location';
 export * from './magicLinkRequest';
 export * from './magicLinkResponse';
 export * from './magicLinkVerify';
+export * from './notificationPreferences';
 export * from './orgUnitInput';
 export * from './reassignInput';
 export * from './reassignResult';

@@ -29,7 +29,26 @@ export const GetMeResponse = zod.object({
   "location": zod.string().nullish(),
   "managerId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive', 'invited']),
-  "balance": zod.number().optional().describe('Current Legend Bucks balance')
+  "balance": zod.number().optional().describe('Current Legend Bucks balance'),
+  "notifyBucksReceived": zod.boolean().describe('Receive an email when awarded Legend Bucks'),
+  "notifyBudgetAssigned": zod.boolean().describe('Receive an email when a monthly budget is assigned'),
+  "notifyRedemptionUpdates": zod.boolean().describe('Receive emails about reward redemption status')
+})
+
+
+/**
+ * @summary Update the current user's email notification preferences
+ */
+export const UpdateNotificationPreferencesBody = zod.object({
+  "notifyBucksReceived": zod.boolean(),
+  "notifyBudgetAssigned": zod.boolean(),
+  "notifyRedemptionUpdates": zod.boolean()
+})
+
+export const UpdateNotificationPreferencesResponse = zod.object({
+  "notifyBucksReceived": zod.boolean(),
+  "notifyBudgetAssigned": zod.boolean(),
+  "notifyRedemptionUpdates": zod.boolean()
 })
 
 

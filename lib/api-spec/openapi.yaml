@@ -57,6 +57,27 @@ paths:
         "401":
           description: Unauthenticated
 
+  /auth/me/notifications:
+    patch:
+      operationId: updateNotificationPreferences
+      tags: [auth]
+      summary: Update the current user's email notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferences"
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "401":
+          description: Unauthenticated
+
   /auth/login:
     post:
       operationId: requestMagicLink
@@ -1159,7 +1180,7 @@ components:
 
     CurrentUser:
       type: object
-      required: [id, firstName, lastName, email, role, status]
+      required: [id, firstName, lastName, email, role, status, notifyBucksReceived, notifyBudgetAssigned, notifyRedemptionUpdates]
       properties:
         id:
           type: integer
@@ -1184,6 +1205,26 @@ components:
         balance:
           type: integer
           description: Current Legend Bucks balance
+        notifyBucksReceived:
+          type: boolean
+          description: Receive an email when awarded Legend Bucks
+        notifyBudgetAssigned:
+          type: boolean
+          description: Receive an email when a monthly budget is assigned
+        notifyRedemptionUpdates:
+          type: boolean
+          description: Receive emails about reward redemption status
+
+    NotificationPreferences:
+      type: object
+      required: [notifyBucksReceived, notifyBudgetAssigned, notifyRedemptionUpdates]
+      properties:
+        notifyBucksReceived:
+          type: boolean
+        notifyBudgetAssigned:
+          type: boolean
+        notifyRedemptionUpdates:
+          type: boolean
 
     AuthSession:
       type: object

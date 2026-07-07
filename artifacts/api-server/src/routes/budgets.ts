@@ -127,7 +127,7 @@ router.post("/budgets", requireAuth, async (req, res): Promise<void> => {
       .from(employeesTable)
       .where(eq(employeesTable.id, budget.managerId))
       .limit(1);
-    if (manager?.email) {
+    if (manager?.email && manager.notifyBudgetAssigned) {
       await sendBudgetAssignedEmail(manager.email, manager.firstName, budget.totalAmount, budget.month);
       req.log.info({ managerId: budget.managerId }, "Budget-assigned email sent");
     }

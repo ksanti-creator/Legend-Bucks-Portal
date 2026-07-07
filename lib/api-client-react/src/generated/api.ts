@@ -53,6 +53,7 @@ import type {
   MagicLinkRequest,
   MagicLinkResponse,
   MagicLinkVerify,
+  NotificationPreferences,
   OrgUnitInput,
   ReassignInput,
   ReassignResult,
@@ -248,6 +249,76 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+
+export const getUpdateNotificationPreferencesUrl = () => {
+
+
+
+
+  return `/api/auth/me/notifications`
+}
+
+/**
+ * @summary Update the current user's email notification preferences
+ */
+export const updateNotificationPreferences = async (notificationPreferences: NotificationPreferences, options?: RequestInit): Promise<NotificationPreferences> => {
+
+  return customFetch<NotificationPreferences>(getUpdateNotificationPreferencesUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(notificationPreferences)
+  }
+);}
+
+
+
+
+export const getUpdateNotificationPreferencesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNotificationPreferences>>, TError,{data: BodyType<NotificationPreferences>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateNotificationPreferences>>, TError,{data: BodyType<NotificationPreferences>}, TContext> => {
+
+const mutationKey = ['updateNotificationPreferences'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateNotificationPreferences>>, {data: BodyType<NotificationPreferences>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateNotificationPreferences(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateNotificationPreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updateNotificationPreferences>>>
+    export type UpdateNotificationPreferencesMutationBody = BodyType<NotificationPreferences>
+    export type UpdateNotificationPreferencesMutationError = ErrorType<void>
+
+    /**
+ * @summary Update the current user's email notification preferences
+ */
+export const useUpdateNotificationPreferences = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNotificationPreferences>>, TError,{data: BodyType<NotificationPreferences>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateNotificationPreferences>>,
+        TError,
+        {data: BodyType<NotificationPreferences>},
+        TContext
+      > => {
+      return useMutation(getUpdateNotificationPreferencesMutationOptions(options));
+    }
 
 export const getRequestMagicLinkUrl = () => {
 

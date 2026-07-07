@@ -10,6 +10,8 @@ import {
   RequestMagicLinkResponse,
   VerifyMagicLinkResponse,
   InviteEmployeeResponse,
+  UpdateNotificationPreferencesBody,
+  UpdateNotificationPreferencesResponse,
 } from "@workspace/api-zod";
 import {
   createMagicToken,
@@ -42,6 +44,37 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       managerId: user.managerId,
       status: user.status,
       balance,
+      notifyBucksReceived: user.notifyBucksReceived,
+      notifyBudgetAssigned: user.notifyBudgetAssigned,
+      notifyRedemptionUpdates: user.notifyRedemptionUpdates,
+    }),
+  );
+});
+
+// Any authenticated user can manage their own email notification preferences.
+router.patch("/auth/me/notifications", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const body = UpdateNotificationPreferencesBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const [updated] = await db
+    .update(employeesTable)
+    .set({
+      notifyBucksReceived: body.data.notifyBucksReceived,
+      notifyBudgetAssigned: body.data.notifyBudgetAssigned,
+      notifyRedemptionUpdates: body.data.notifyRedemptionUpdates,
+    })
+    .where(eq(employeesTable.id, user.id))
+    .returning();
+
+  res.json(
+    UpdateNotificationPreferencesResponse.parse({
+      notifyBucksReceived: updated.notifyBucksReceived,
+      notifyBudgetAssigned: updated.notifyBudgetAssigned,
+      notifyRedemptionUpdates: updated.notifyRedemptionUpdates,
     }),
   );
 });

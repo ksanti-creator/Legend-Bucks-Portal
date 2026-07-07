@@ -4,3 +4,4 @@
 - [Accounting-only reward fields](legend-bucks-accounting-fields.md) — an admin-only money field must be gated in every enrich* fn (rewards, redemptions, transactions); redemptions endpoint is the easy leak.
 - [Legend Bucks local API testing](legend-bucks-local-api-testing.md) — curl the API at http://127.0.0.1:80/api (shared proxy), NOT $REPLIT_DEV_DOMAIN/api; login→verify for a Bearer token.
 - [orval path+query param collision](orval-param-name-collision.md) — never add a query param to an endpoint with a path param (zod codegen name clash); use a POST sub-resource with a body instead.
+- [Notification prefs & email gating](legend-bucks-notification-prefs.md) — opt-outs are boolean cols checked at each send call site; magic-link/invite are always sent, never gated.

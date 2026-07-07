@@ -131,7 +131,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   );
 
   // Email the employee a redemption receipt — best-effort, never blocks.
-  if (user.email) {
+  if (user.email && user.notifyRedemptionUpdates) {
     try {
       await sendRedemptionReceiptEmail(
         user.email,
@@ -201,7 +201,7 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
   try {
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
     const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, updated.rewardId)).limit(1);
-    if (emp?.email) {
+    if (emp?.email && emp.notifyRedemptionUpdates) {
       await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
       req.log.info({ redemptionId: updated.id }, "Redemption approved email sent");
     }
@@ -257,7 +257,7 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
   // Notify the employee their redemption was rejected (and refunded) — best-effort, never blocks.
   try {
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
-    if (emp?.email) {
+    if (emp?.email && emp.notifyRedemptionUpdates) {
       await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? "your reward", updated.buckCost, updated.adminNote);
       req.log.info({ redemptionId: updated.id }, "Redemption rejected email sent");
     }
@@ -349,7 +349,7 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
   try {
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
     const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, updated.rewardId)).limit(1);
-    if (emp?.email) {
+    if (emp?.email && emp.notifyRedemptionUpdates) {
       await sendRedemptionFulfilledEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
       req.log.info({ redemptionId: updated.id }, "Redemption fulfilled email sent");
     }

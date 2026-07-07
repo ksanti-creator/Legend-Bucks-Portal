@@ -42,6 +42,18 @@ export interface CurrentUser {
   status: CurrentUserStatus;
   /** Current Legend Bucks balance */
   balance?: number;
+  /** Receive an email when awarded Legend Bucks */
+  notifyBucksReceived: boolean;
+  /** Receive an email when a monthly budget is assigned */
+  notifyBudgetAssigned: boolean;
+  /** Receive emails about reward redemption status */
+  notifyRedemptionUpdates: boolean;
+}
+
+export interface NotificationPreferences {
+  notifyBucksReceived: boolean;
+  notifyBudgetAssigned: boolean;
+  notifyRedemptionUpdates: boolean;
 }
 
 export type AuthSessionRole = typeof AuthSessionRole[keyof typeof AuthSessionRole];
