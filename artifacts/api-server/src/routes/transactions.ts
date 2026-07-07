@@ -13,7 +13,7 @@ import {
   GetTransactionSummaryQueryParams,
   GetTransactionSummaryResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canAwardBucks } from "../lib/auth";
 import { sendBucksReceivedEmail } from "../lib/email";
 
 const router: IRouter = Router();
@@ -113,9 +113,9 @@ router.get("/transactions", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  // Only admins and managers can award bucks. accounting_admin is a read-only
-  // finance role and must never be able to move bucks.
-  if (user.role !== "admin" && user.role !== "manager") {
+  // Only roles on the award allow-list may send bucks (admins + managers).
+  // Anyone else — including read-only roles like accounting_admin — is denied.
+  if (!canAwardBucks(user.role)) {
     res.status(403).json({ error: "You are not allowed to send bucks" });
     return;
   }

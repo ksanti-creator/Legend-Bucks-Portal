@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../app";
-import { db, transactionsTable, rewardsTable, redemptionsTable } from "@workspace/db";
-import { inArray } from "drizzle-orm";
+import { db, transactionsTable, rewardsTable, redemptionsTable, goalsTable, goalContributionsTable } from "@workspace/db";
+import { inArray, or } from "drizzle-orm";
 import { Fixtures, bearer, uniq } from "./helpers";
 
 const fx = new Fixtures();
@@ -17,11 +17,13 @@ let memberId: number;
 const txIds: number[] = [];
 const rewardIds: number[] = [];
 const redemptionIds: number[] = [];
+const goalIds: number[] = [];
 
 // A ledger transaction between two OTHER employees, so we can prove the
 // accounting admin sees org-wide activity they're not a party to.
 let seededTxId: number;
 let seededRedemptionId: number;
+let activeGoalId: number;
 const CAD_CENTS = 12345;
 
 beforeAll(async () => {
@@ -57,10 +59,38 @@ beforeAll(async () => {
     .returning();
   seededRedemptionId = redemption.id;
   redemptionIds.push(redemption.id);
+
+  // Give the member a spendable balance so we can prove balance-holders can
+  // still contribute after the allow-list refactor.
+  const [balanceTx] = await db
+    .insert(transactionsTable)
+    .values({ type: "award", amount: 1000, fromEmployeeId: managerId, toEmployeeId: memberId, note: uniq("acct-balance") })
+    .returning();
+  txIds.push(balanceTx.id);
+
+  // An active goal the member can contribute to.
+  const [goal] = await db
+    .insert(goalsTable)
+    .values({ name: uniq("acct-goal"), targetAmount: 500, active: true })
+    .returning();
+  activeGoalId = goal.id;
+  goalIds.push(goal.id);
 });
 
 afterAll(async () => {
+  // Delete every ledger row that touches a fixture employee — this covers both
+  // rows we seeded and rows the endpoints created during positive-path tests.
+  const empIds = fx.employeeIds;
+  if (empIds.length) {
+    await db
+      .delete(transactionsTable)
+      .where(or(inArray(transactionsTable.fromEmployeeId, empIds), inArray(transactionsTable.toEmployeeId, empIds)));
+    await db.delete(goalContributionsTable).where(inArray(goalContributionsTable.employeeId, empIds));
+  }
   if (redemptionIds.length) await db.delete(redemptionsTable).where(inArray(redemptionsTable.id, redemptionIds));
+  // Redemptions created by the endpoint (positive path) reference fixture employees.
+  if (empIds.length) await db.delete(redemptionsTable).where(inArray(redemptionsTable.employeeId, empIds));
+  if (goalIds.length) await db.delete(goalsTable).where(inArray(goalsTable.id, goalIds));
   if (rewardIds.length) await db.delete(rewardsTable).where(inArray(rewardsTable.id, rewardIds));
   if (txIds.length) await db.delete(transactionsTable).where(inArray(transactionsTable.id, txIds));
   await fx.cleanup();
@@ -183,5 +213,17 @@ describe("Accounting admin — blocked from every write/admin action", () => {
     expect((await request(app).patch(`/api/redemptions/${seededRedemptionId}/approve`).set(bearer(accountingToken))).status).toBe(403);
     expect((await request(app).patch(`/api/redemptions/${seededRedemptionId}/reject`).set(bearer(accountingToken)).send({})).status).toBe(403);
     expect((await request(app).patch(`/api/redemptions/${seededRedemptionId}/fulfill`).set(bearer(accountingToken))).status).toBe(403);
+  });
+});
+
+// Guards against over-restricting: the allow-list must still let real
+// balance-holders (team members) move their own bucks.
+describe("Spend allow-list — balance holders can still move bucks", () => {
+  it("lets a team member contribute to a goal", async () => {
+    const res = await request(app)
+      .post(`/api/goals/${activeGoalId}/contribute`)
+      .set(bearer(memberToken))
+      .send({ amount: 5 });
+    expect(res.status).toBe(201);
   });
 });

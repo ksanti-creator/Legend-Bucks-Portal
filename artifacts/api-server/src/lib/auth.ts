@@ -116,6 +116,30 @@ export function canViewAccounting(role: string): boolean {
   return role === "admin" || role === "accounting_admin";
 }
 
+/**
+ * Roles allowed to AWARD/SEND bucks to other people (creates 'award' ledger
+ * rows). Managers are additionally budget-capped at the call site.
+ *
+ * This is deliberately a positive allow-list, not an exclusion check: any role
+ * NOT named here is denied by default, so a future view-only/finance role can
+ * never silently inherit the ability to move bucks.
+ */
+export function canAwardBucks(role: string): boolean {
+  return role === "admin" || role === "manager";
+}
+
+/**
+ * Roles allowed to SPEND their own balance — redeem rewards, contribute to
+ * goals, and cancel their own pending redemption (all of which write ledger
+ * rows). Every role that holds a spendable balance is named here.
+ *
+ * Positive allow-list on purpose: read-only roles like accounting_admin (and
+ * any future view-only role) are excluded by omission and can never move bucks.
+ */
+export function canSpendBucks(role: string): boolean {
+  return role === "admin" || role === "manager" || role === "team_member";
+}
+
 export function getCurrentUser(req: Request): Employee {
   const user = req.currentUser;
   if (!user) throw new Error("getCurrentUser called outside auth middleware");

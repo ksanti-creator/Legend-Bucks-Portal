@@ -18,7 +18,7 @@ import {
   ListGoalContributionsParams,
   ListGoalContributionsResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canSpendBucks } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -140,9 +140,10 @@ router.patch("/goals/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/goals/:id/contribute", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  // accounting_admin is a read-only finance role and must never move bucks.
-  if (user.role === "accounting_admin") {
-    res.status(403).json({ error: "Accounting admins cannot contribute to goals" });
+  // Contributing spends the employee's own bucks (a ledger write). Only roles on
+  // the spend allow-list may do it; read-only roles like accounting_admin can't.
+  if (!canSpendBucks(user.role)) {
+    res.status(403).json({ error: "You are not allowed to contribute bucks" });
     return;
   }
   const params = ContributeToGoalParams.safeParse(req.params);

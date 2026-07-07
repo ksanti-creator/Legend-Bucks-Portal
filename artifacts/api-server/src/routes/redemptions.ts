@@ -19,7 +19,7 @@ import {
   FulfillRedemptionParams,
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks } from "../lib/auth";
 import {
   sendRedemptionReceiptEmail,
   sendRedemptionApprovedEmail,
@@ -75,10 +75,10 @@ router.get("/redemptions", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  // accounting_admin is a read-only finance role: redeeming a reward spends
-  // bucks and writes ledger rows, so it must never be allowed here.
-  if (user.role === "accounting_admin") {
-    res.status(403).json({ error: "Accounting admins cannot redeem rewards" });
+  // Redeeming spends the employee's own bucks (a ledger write). Only roles on
+  // the spend allow-list may do it; read-only roles like accounting_admin can't.
+  if (!canSpendBucks(user.role)) {
+    res.status(403).json({ error: "You are not allowed to redeem rewards" });
     return;
   }
   const body = CreateRedemptionBody.safeParse(req.body);
@@ -288,17 +288,13 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
     return;
   }
 
-  // Cancelling refunds bucks (a write), so the read-only accounting_admin role
-  // is never allowed — even for a redemption that somehow belongs to them.
-  if (user.role === "accounting_admin") {
-    res.status(403).json({ error: "Accounting admins cannot cancel redemptions" });
-    return;
-  }
-
-  // Only the employee themselves OR an admin can cancel — managers cannot cancel others' redemptions
-  const isSelf = redemption.employeeId === user.id;
+  // Cancelling refunds bucks (a ledger write). An admin can cancel anyone's;
+  // otherwise only the owner may cancel their own — and only if their role is on
+  // the spend allow-list, so read-only roles (accounting_admin) never can, even
+  // for a redemption somehow attributed to them. Managers can't cancel others'.
   const isAdmin = user.role === "admin";
-  if (!isSelf && !isAdmin) {
+  const isSelf = redemption.employeeId === user.id && canSpendBucks(user.role);
+  if (!isAdmin && !isSelf) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

@@ -6,3 +6,5 @@
 - [orval path+query param collision](orval-param-name-collision.md) — never add a query param to an endpoint with a path param (zod codegen name clash); use a POST sub-resource with a body instead.
 - [Notification prefs & email gating](legend-bucks-notification-prefs.md) — opt-outs are boolean cols checked at each send call site; magic-link/invite are always sent, never gated.
 - [api-server test harness](legend-bucks-api-tests.md) — vitest+supertest drive imported app; auth via createSession; tests hit the ONE shared dev DB, so clean up only owned ids, run serial.
+- [Role-guard fallthrough](legend-bucks-role-guards.md) — authorize every bucks-moving write with a positive allow-list; exclusion guards silently grant new roles spend power.
+- [Postgres UPDATE no ORDER BY/LIMIT](postgres-update-order-limit.md) — Postgres rejects ORDER BY/LIMIT on UPDATE; such raw SQL 500s at runtime, invisible until a test hits the real path.
