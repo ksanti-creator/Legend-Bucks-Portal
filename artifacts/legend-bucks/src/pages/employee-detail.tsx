@@ -5,11 +5,17 @@ import {
   useGetEmployeeBalance, 
   useListTransactions, 
   useDeactivateEmployee,
+  useUpdateEmployee,
+  useListEmployees,
+  useListDepartments,
+  useListLocations,
   useGetMe,
   getGetEmployeeQueryKey,
   getGetEmployeeBalanceQueryKey,
   getListTransactionsQueryKey
 } from "@workspace/api-client-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,9 +60,49 @@ export default function EmployeeDetail() {
   const { data: transactions, isLoading: isLoadingTx } = useListTransactions({ employeeId: id }, { query: { queryKey: getListTransactionsQueryKey({ employeeId: id }), enabled: !!id } });
   
   const deactivateMut = useDeactivateEmployee();
+  const updateMut = useUpdateEmployee();
 
+  const { data: departments } = useListDepartments();
+  const { data: locations } = useListLocations();
+  const { data: allEmployees } = useListEmployees();
+  const managers = allEmployees?.filter((e) => (e.role === "manager" || e.role === "admin") && e.id !== id) || [];
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editDept, setEditDept] = useState<string>("none");
+  const [editLoc, setEditLoc] = useState<string>("none");
+  const [editManager, setEditManager] = useState<string>("none");
+
+  const isAdmin = currentUser?.role === "admin";
   const isAdminOrManager = currentUser?.role === "admin" || currentUser?.role === "manager";
   const canDeactivate = currentUser?.role === "admin" && employee?.status !== "inactive";
+
+  const openEdit = () => {
+    setEditDept(employee?.departmentId ? employee.departmentId.toString() : "none");
+    setEditLoc(employee?.locationId ? employee.locationId.toString() : "none");
+    setEditManager(employee?.managerId ? employee.managerId.toString() : "none");
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    updateMut.mutate(
+      {
+        id,
+        data: {
+          departmentId: editDept === "none" ? null : parseInt(editDept),
+          locationId: editLoc === "none" ? null : parseInt(editLoc),
+          managerId: editManager === "none" ? null : parseInt(editManager),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Employee updated" });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
+          setEditOpen(false);
+        },
+        onError: () => toast({ title: "Failed to update employee", variant: "destructive" }),
+      },
+    );
+  };
 
   const handleDeactivate = () => {
     setIsDeactivating(true);
@@ -147,6 +193,76 @@ export default function EmployeeDetail() {
                   Send Bucks
                 </Link>
               </Button>
+            )}
+
+            {isAdmin && (
+              <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full mt-3" onClick={openEdit}>
+                    Edit Details
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit Employee</DialogTitle>
+                    <DialogDescription>
+                      Update {employee.firstName}'s department, location, and manager.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label>Department</Label>
+                      <Select value={editDept} onValueChange={setEditDept}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {departments?.map((d) => (
+                            <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Location</Label>
+                      <Select value={editLoc} onValueChange={setEditLoc}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {locations?.map((l) => (
+                            <SelectItem key={l.id} value={l.id.toString()}>{l.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Manager</Label>
+                      <Select value={editManager} onValueChange={setEditManager}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {managers.map((m) => (
+                            <SelectItem key={m.id} value={m.id.toString()}>
+                              {m.firstName} {m.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveEdit} disabled={updateMut.isPending} className="bg-primary hover:bg-primary/90">
+                      {updateMut.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             )}
 
             {canDeactivate && (

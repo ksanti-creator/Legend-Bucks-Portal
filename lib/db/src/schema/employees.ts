@@ -1,6 +1,8 @@
 import { pgTable, text, serial, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { departmentsTable } from "./departments";
+import { locationsTable } from "./locations";
 
 export const roleEnum = pgEnum("employee_role", ["admin", "manager", "team_member"]);
 export const statusEnum = pgEnum("employee_status", ["active", "inactive", "invited"]);
@@ -10,8 +12,8 @@ export const employeesTable = pgTable("employees", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  department: text("department"),
-  location: text("location"),
+  departmentId: integer("department_id").references(() => departmentsTable.id),
+  locationId: integer("location_id").references(() => locationsTable.id),
   managerId: integer("manager_id"),
   role: roleEnum("role").notNull().default("team_member"),
   status: statusEnum("status").notNull().default("invited"),

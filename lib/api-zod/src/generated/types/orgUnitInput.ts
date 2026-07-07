@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListEmployeesParams = {
-departmentId?: number;
-locationId?: number;
-role?: string;
-status?: string;
-managerId?: number;
-};
+export interface OrgUnitInput {
+  /** @minLength 1 */
+  name: string;
+}

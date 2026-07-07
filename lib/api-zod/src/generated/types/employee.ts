@@ -18,6 +18,10 @@ export interface Employee {
   /** @nullable */
   location?: string | null;
   /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  locationId?: number | null;
+  /** @nullable */
   managerId?: number | null;
   /** @nullable */
   managerName?: string | null;

@@ -16,6 +16,7 @@ import {
   GetEmployeeBalanceResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
+import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
 const router: IRouter = Router();
 
@@ -33,13 +34,16 @@ async function buildEmployeeResponse(emp: any, withBalance = false) {
   if (withBalance) {
     balance = await getEmployeeBalance(emp.id);
   }
+  const { department, location } = await resolveOrgNames(emp.departmentId, emp.locationId);
   return {
     id: emp.id,
     firstName: emp.firstName,
     lastName: emp.lastName,
     email: emp.email,
-    department: emp.department,
-    location: emp.location,
+    department,
+    location,
+    departmentId: emp.departmentId ?? null,
+    locationId: emp.locationId ?? null,
     managerId: emp.managerId,
     managerName,
     role: emp.role,
@@ -58,9 +62,9 @@ router.get("/employees", requireAuth, async (req, res): Promise<void> => {
 
   let employees = await db.select().from(employeesTable).orderBy(employeesTable.lastName);
 
-  const { department, location, role, status, managerId } = params.data;
-  if (department) employees = employees.filter((e) => e.department === department);
-  if (location) employees = employees.filter((e) => e.location === location);
+  const { departmentId, locationId, role, status, managerId } = params.data;
+  if (departmentId !== undefined) employees = employees.filter((e) => e.departmentId === departmentId);
+  if (locationId !== undefined) employees = employees.filter((e) => e.locationId === locationId);
   if (role) employees = employees.filter((e) => e.role === role);
   if (status) employees = employees.filter((e) => e.status === status);
   if (managerId !== undefined) employees = employees.filter((e) => e.managerId === managerId);
@@ -109,11 +113,17 @@ router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const orgError = await validateOrgIds(body.data.departmentId, body.data.locationId);
+  if (orgError) {
+    res.status(400).json({ error: orgError });
+    return;
+  }
+
   const updates: Record<string, any> = {};
   if (body.data.firstName !== undefined) updates.firstName = body.data.firstName;
   if (body.data.lastName !== undefined) updates.lastName = body.data.lastName;
-  if (body.data.department !== undefined) updates.department = body.data.department;
-  if (body.data.location !== undefined) updates.location = body.data.location;
+  if ("departmentId" in body.data) updates.departmentId = body.data.departmentId;
+  if ("locationId" in body.data) updates.locationId = body.data.locationId;
   if ("managerId" in body.data) updates.managerId = body.data.managerId;
   if (body.data.role !== undefined) updates.role = body.data.role;
   if (body.data.status !== undefined) updates.status = body.data.status;

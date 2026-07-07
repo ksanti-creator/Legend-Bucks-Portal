@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListEmployees, useGetMe } from "@workspace/api-client-react";
+import { useListEmployees, useGetMe, useListDepartments } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,12 @@ export default function Employees() {
   const [department, setDepartment] = useState<string>("all");
   const [status, setStatus] = useState<string>("active");
 
+  const { data: departments } = useListDepartments();
+
   // Since filtering by search text isn't explicitly supported by the API params hook,
-  // we'll fetch list and filter locally for text, but pass department/status to API
+  // we'll fetch list and filter locally for text, but pass departmentId/status to API
   const apiParams = {
-    ...(department !== "all" && { department }),
+    ...(department !== "all" && { departmentId: parseInt(department) }),
     ...(status !== "all" && { status }),
   };
 
@@ -36,9 +38,6 @@ export default function Employees() {
     }
     return true;
   });
-
-  // Extract unique departments for filter
-  const departments = Array.from(new Set(employees?.map(e => e.department).filter(Boolean) as string[]));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
@@ -77,8 +76,8 @@ export default function Employees() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                {departments?.map(dept => (
+                  <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -81,6 +81,25 @@ export interface AuthSession {
   token: string;
 }
 
+export interface Department {
+  id: number;
+  name: string;
+  /** Number of employees currently assigned to this department */
+  employeeCount: number;
+}
+
+export interface Location {
+  id: number;
+  name: string;
+  /** Number of employees currently assigned to this location */
+  employeeCount: number;
+}
+
+export interface OrgUnitInput {
+  /** @minLength 1 */
+  name: string;
+}
+
 export type EmployeeRole = typeof EmployeeRole[keyof typeof EmployeeRole];
 
 
@@ -108,6 +127,10 @@ export interface Employee {
   department?: string | null;
   /** @nullable */
   location?: string | null;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
   /** @nullable */
@@ -139,8 +162,10 @@ export const EmployeeUpdateStatus = {
 export interface EmployeeUpdate {
   firstName?: string;
   lastName?: string;
-  department?: string;
-  location?: string;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
   role?: EmployeeUpdateRole;
@@ -185,8 +210,10 @@ export interface InviteInput {
   firstName: string;
   lastName: string;
   role: InviteInputRole;
-  department?: string;
-  location?: string;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
 }
@@ -479,8 +506,8 @@ export interface LeaderboardEntry {
 }
 
 export type ListEmployeesParams = {
-department?: string;
-location?: string;
+departmentId?: number;
+locationId?: number;
 role?: string;
 status?: string;
 managerId?: number;

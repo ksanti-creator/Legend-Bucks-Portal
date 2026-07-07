@@ -138,14 +138,14 @@ paths:
       tags: [employees]
       summary: List all employees
       parameters:
-        - name: department
+        - name: departmentId
           in: query
           schema:
-            type: string
-        - name: location
+            type: integer
+        - name: locationId
           in: query
           schema:
-            type: string
+            type: integer
         - name: role
           in: query
           schema:
@@ -459,6 +459,172 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TransactionSummary"
+
+  # Departments
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [departments]
+      summary: List all departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      operationId: createDepartment
+      tags: [departments]
+      summary: Create a department (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgUnitInput"
+      responses:
+        "201":
+          description: Created department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "403":
+          description: Forbidden
+        "409":
+          description: A department with that name already exists
+
+  /departments/{id}:
+    patch:
+      operationId: updateDepartment
+      tags: [departments]
+      summary: Rename a department (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgUnitInput"
+      responses:
+        "200":
+          description: Updated department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "404":
+          description: Not found
+        "409":
+          description: A department with that name already exists
+    delete:
+      operationId: deleteDepartment
+      tags: [departments]
+      summary: Delete a department (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Department still has employees assigned
+
+  # Locations
+  /locations:
+    get:
+      operationId: listLocations
+      tags: [locations]
+      summary: List all locations
+      responses:
+        "200":
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Location"
+    post:
+      operationId: createLocation
+      tags: [locations]
+      summary: Create a location (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgUnitInput"
+      responses:
+        "201":
+          description: Created location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "403":
+          description: Forbidden
+        "409":
+          description: A location with that name already exists
+
+  /locations/{id}:
+    patch:
+      operationId: updateLocation
+      tags: [locations]
+      summary: Rename a location (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgUnitInput"
+      responses:
+        "200":
+          description: Updated location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+        "404":
+          description: Not found
+        "409":
+          description: A location with that name already exists
+    delete:
+      operationId: deleteLocation
+      tags: [locations]
+      summary: Delete a location (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Location still has employees assigned
 
   # Rewards
   /rewards:
@@ -980,6 +1146,38 @@ components:
           type: string
           description: Session token to store client-side and send as Bearer auth
 
+    Department:
+      type: object
+      required: [id, name, employeeCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        employeeCount:
+          type: integer
+          description: Number of employees currently assigned to this department
+
+    Location:
+      type: object
+      required: [id, name, employeeCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        employeeCount:
+          type: integer
+          description: Number of employees currently assigned to this location
+
+    OrgUnitInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
     Employee:
       type: object
       required: [id, firstName, lastName, email, role, status, createdAt]
@@ -996,6 +1194,10 @@ components:
           type: ["string", "null"]
         location:
           type: ["string", "null"]
+        departmentId:
+          type: ["integer", "null"]
+        locationId:
+          type: ["integer", "null"]
         managerId:
           type: ["integer", "null"]
         managerName:
@@ -1018,10 +1220,10 @@ components:
           type: string
         lastName:
           type: string
-        department:
-          type: string
-        location:
-          type: string
+        departmentId:
+          type: ["integer", "null"]
+        locationId:
+          type: ["integer", "null"]
         managerId:
           type: ["integer", "null"]
         role:
@@ -1083,10 +1285,10 @@ components:
         role:
           type: string
           enum: [admin, manager, team_member]
-        department:
-          type: string
-        location:
-          type: string
+        departmentId:
+          type: ["integer", "null"]
+        locationId:
+          type: ["integer", "null"]
         managerId:
           type: ["integer", "null"]
 

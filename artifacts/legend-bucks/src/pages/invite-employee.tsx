@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useInviteEmployee, useGetMe, useListEmployees } from "@workspace/api-client-react";
+import { useInviteEmployee, useGetMe, useListEmployees, useListDepartments, useListLocations } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,8 @@ const inviteSchema = z.object({
   firstName: z.string().min(2, "First name required"),
   lastName: z.string().min(2, "Last name required"),
   role: z.enum(["admin", "manager", "team_member"]),
-  department: z.string().optional(),
-  location: z.string().optional(),
+  departmentId: z.coerce.number().optional().nullable(),
+  locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
 });
 
@@ -40,11 +40,14 @@ export default function InviteEmployee() {
       firstName: "",
       lastName: "",
       role: "team_member",
-      department: "",
-      location: "",
+      departmentId: null,
+      locationId: null,
       managerId: null,
     },
   });
+
+  const { data: departments } = useListDepartments();
+  const { data: locations } = useListLocations();
 
   if (user?.role !== "admin" && user?.role !== "manager") {
     return <div className="p-8 text-center text-destructive">Unauthorized. Admins and managers only.</div>;
@@ -197,13 +200,28 @@ export default function InviteEmployee() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="department"
+                  name="departmentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Production" {...field} value={field.value || ""} />
-                      </FormControl>
+                      <FormLabel>Department (Optional)</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))}
+                        value={field.value ? field.value.toString() : "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {departments?.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id.toString()}>
+                              {dept.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -211,13 +229,28 @@ export default function InviteEmployee() {
                 
                 <FormField
                   control={form.control}
-                  name="location"
+                  name="locationId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Plant 1" {...field} value={field.value || ""} />
-                      </FormControl>
+                      <FormLabel>Location (Optional)</FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))}
+                        value={field.value ? field.value.toString() : "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a location" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {locations?.map((loc) => (
+                            <SelectItem key={loc.id} value={loc.id.toString()}>
+                              {loc.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -12,7 +12,8 @@ import {
   Settings,
   Send,
   Loader2,
-  Ship
+  Ship,
+  Building2
 } from "lucide-react";
 
 import { cn, getInitials } from "@/lib/utils";
@@ -71,6 +72,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   if (user.role === "admin") {
     navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
+    navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
   }
 
   return (

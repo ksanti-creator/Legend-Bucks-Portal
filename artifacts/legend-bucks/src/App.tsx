@@ -12,6 +12,7 @@ import InviteEmployee from '@/pages/invite-employee';
 import Rewards from '@/pages/rewards';
 import RewardDetail from '@/pages/reward-detail';
 import ManageRewards from '@/pages/manage-rewards';
+import ManageOrg from '@/pages/manage-org';
 import SendBucks from '@/pages/send-bucks';
 import Transactions from '@/pages/transactions';
 import Redemptions from '@/pages/redemptions';
@@ -47,6 +48,7 @@ function Router() {
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/dashboard" component={Dashboard} />
+            <Route path="/employees/manage" component={ManageOrg} />
             <Route path="/employees/new" component={InviteEmployee} />
             <Route path="/employees/:id" component={EmployeeDetail} />
             <Route path="/employees" component={Employees} />

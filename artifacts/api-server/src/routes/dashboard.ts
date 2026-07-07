@@ -10,6 +10,7 @@ import {
   GetDashboardSummaryResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser } from "../lib/auth";
+import { resolveOrgNames } from "../lib/org";
 
 const router: IRouter = Router();
 
@@ -49,11 +50,12 @@ router.get("/dashboard/summary", requireAuth, async (req, res): Promise<void> =>
 
   // Top department by bucks received
   const { rows: deptRows } = await db.execute<{ department: string; total: string }>(
-    `SELECT e.department, COALESCE(SUM(t.amount), 0) AS total
+    `SELECT d.name AS department, COALESCE(SUM(t.amount), 0) AS total
      FROM transactions t
      JOIN employees e ON e.id = t.to_employee_id
-     WHERE t.type = 'award' AND e.department IS NOT NULL
-     GROUP BY e.department
+     JOIN departments d ON d.id = e.department_id
+     WHERE t.type = 'award' AND e.department_id IS NOT NULL
+     GROUP BY d.name
      ORDER BY total DESC
      LIMIT 1`
   ) as any;
@@ -183,11 +185,12 @@ router.get("/dashboard/leaderboard", requireAuth, async (req, res): Promise<void
   const entries = await Promise.all(
     rows.map(async (row: any, idx: number) => {
       const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, row.employee_id)).limit(1);
+      const { department } = await resolveOrgNames(emp?.departmentId ?? null, null);
       return {
         rank: idx + 1,
         employeeId: row.employee_id,
         employeeName: emp ? `${emp.firstName} ${emp.lastName}` : "Unknown",
-        department: emp?.department ?? null,
+        department,
         bucksReceived: parseInt(row.total, 10),
       };
     }),

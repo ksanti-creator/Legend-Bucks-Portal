@@ -1,3 +1,5 @@
+export * from "./departments";
+export * from "./locations";
 export * from "./employees";
 export * from "./sessions";
 export * from "./budgets";

@@ -82,8 +82,8 @@ export const InviteEmployeeBody = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "role": zod.enum(['admin', 'manager', 'team_member']),
-  "department": zod.string().optional(),
-  "location": zod.string().optional(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish()
 })
 
@@ -94,6 +94,8 @@ export const InviteEmployeeResponse = zod.object({
   "email": zod.string(),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member']),
@@ -107,8 +109,8 @@ export const InviteEmployeeResponse = zod.object({
  * @summary List all employees
  */
 export const ListEmployeesQueryParams = zod.object({
-  "department": zod.coerce.string().optional(),
-  "location": zod.coerce.string().optional(),
+  "departmentId": zod.coerce.number().optional(),
+  "locationId": zod.coerce.number().optional(),
   "role": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
   "managerId": zod.coerce.number().optional()
@@ -121,6 +123,8 @@ export const ListEmployeesResponseItem = zod.object({
   "email": zod.string(),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member']),
@@ -145,6 +149,8 @@ export const GetEmployeeResponse = zod.object({
   "email": zod.string(),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member']),
@@ -164,8 +170,8 @@ export const UpdateEmployeeParams = zod.object({
 export const UpdateEmployeeBody = zod.object({
   "firstName": zod.string().optional(),
   "lastName": zod.string().optional(),
-  "department": zod.string().optional(),
-  "location": zod.string().optional(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member']).optional(),
   "status": zod.enum(['active', 'inactive']).optional()
@@ -178,6 +184,8 @@ export const UpdateEmployeeResponse = zod.object({
   "email": zod.string(),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member']),
@@ -216,6 +224,8 @@ export const DeactivateEmployeeResponse = zod.object({
   "email": zod.string(),
   "department": zod.string().nullish(),
   "location": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member']),
@@ -414,6 +424,124 @@ export const GetTransactionSummaryResponse = zod.object({
   "thisMonthSent": zod.number(),
   "thisMonthReceived": zod.number()
 })
+
+
+/**
+ * @summary List all departments
+ */
+export const ListDepartmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().describe('Number of employees currently assigned to this department')
+})
+export const ListDepartmentsResponse = zod.array(ListDepartmentsResponseItem)
+
+
+/**
+ * @summary Create a department (admin only)
+ */
+
+
+
+export const CreateDepartmentBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const CreateDepartmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().describe('Number of employees currently assigned to this department')
+})
+
+
+/**
+ * @summary Rename a department (admin only)
+ */
+export const UpdateDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateDepartmentBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const UpdateDepartmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().describe('Number of employees currently assigned to this department')
+})
+
+
+/**
+ * @summary Delete a department (admin only)
+ */
+export const DeleteDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDepartmentResponse = zod.void()
+
+
+/**
+ * @summary List all locations
+ */
+export const ListLocationsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().describe('Number of employees currently assigned to this location')
+})
+export const ListLocationsResponse = zod.array(ListLocationsResponseItem)
+
+
+/**
+ * @summary Create a location (admin only)
+ */
+
+
+
+export const CreateLocationBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const CreateLocationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().describe('Number of employees currently assigned to this location')
+})
+
+
+/**
+ * @summary Rename a location (admin only)
+ */
+export const UpdateLocationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateLocationBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const UpdateLocationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "employeeCount": zod.number().describe('Number of employees currently assigned to this location')
+})
+
+
+/**
+ * @summary Delete a location (admin only)
+ */
+export const DeleteLocationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteLocationResponse = zod.void()
 
 
 /**

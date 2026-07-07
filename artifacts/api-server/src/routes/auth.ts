@@ -22,12 +22,14 @@ import {
   extractSessionToken,
 } from "../lib/auth";
 import { sendMagicLinkEmail, sendInviteEmail } from "../lib/email";
+import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
 const router: IRouter = Router();
 
 router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
   const balance = await getEmployeeBalance(user.id);
+  const { department, location } = await resolveOrgNames(user.departmentId, user.locationId);
   res.json(
     GetMeResponse.parse({
       id: user.id,
@@ -35,8 +37,8 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       lastName: user.lastName,
       email: user.email,
       role: user.role,
-      department: user.department,
-      location: user.location,
+      department,
+      location,
       managerId: user.managerId,
       status: user.status,
       balance,
@@ -128,6 +130,7 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
   });
 
   const balance = await getEmployeeBalance(employee.id);
+  const { department, location } = await resolveOrgNames(employee.departmentId, employee.locationId);
   res.json(
     VerifyMagicLinkResponse.parse({
       id: employee.id,
@@ -135,8 +138,8 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
       lastName: employee.lastName,
       email: employee.email,
       role: employee.role,
-      department: employee.department,
-      location: employee.location,
+      department,
+      location,
       managerId: employee.managerId,
       status: employee.status,
       balance,
@@ -183,6 +186,12 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const orgError = await validateOrgIds(parsed.data.departmentId, parsed.data.locationId);
+  if (orgError) {
+    res.status(400).json({ error: orgError });
+    return;
+  }
+
   const [employee] = await db
     .insert(employeesTable)
     .values({
@@ -190,12 +199,14 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
       lastName: parsed.data.lastName,
       email: parsed.data.email.toLowerCase(),
       role: parsed.data.role,
-      department: parsed.data.department ?? null,
-      location: parsed.data.location ?? null,
+      departmentId: parsed.data.departmentId ?? null,
+      locationId: parsed.data.locationId ?? null,
       managerId: parsed.data.managerId ?? null,
       status: "invited",
     })
     .returning();
+
+  const orgNames = await resolveOrgNames(employee.departmentId, employee.locationId);
 
   // Generate magic token and email the invitation
   const token = await createMagicToken(employee.id);
@@ -214,8 +225,10 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
       lastName: employee.lastName,
       email: employee.email,
       role: employee.role,
-      department: employee.department,
-      location: employee.location,
+      department: orgNames.department,
+      location: orgNames.location,
+      departmentId: employee.departmentId ?? null,
+      locationId: employee.locationId ?? null,
       managerId: employee.managerId,
       managerName: null,
       status: employee.status,

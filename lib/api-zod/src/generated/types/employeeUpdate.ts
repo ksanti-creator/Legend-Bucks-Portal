@@ -11,8 +11,10 @@ import type { EmployeeUpdateStatus } from './employeeUpdateStatus';
 export interface EmployeeUpdate {
   firstName?: string;
   lastName?: string;
-  department?: string;
-  location?: string;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
   role?: EmployeeUpdateRole;

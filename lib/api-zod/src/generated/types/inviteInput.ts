@@ -12,8 +12,10 @@ export interface InviteInput {
   firstName: string;
   lastName: string;
   role: InviteInputRole;
-  department?: string;
-  location?: string;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
 }
