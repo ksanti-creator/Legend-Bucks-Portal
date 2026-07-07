@@ -150,7 +150,7 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 flex flex-col gap-6">
-          <img src="/logos/legend-bucks-rewards.png" alt="Legend Bucks Rewards Program" className="w-72 brightness-0 invert drop-shadow-xl" />
+          <img src="/logos/legend-bucks-rewards.png" alt="Legend Bucks Rewards Program" className="w-72 drop-shadow-xl" />
           <p className="text-white/80 text-sm max-w-xs leading-relaxed">
             Recognise great work. Reward your crew. Built for the Legend Boats team.
           </p>
@@ -163,7 +163,7 @@ export default function Login() {
       <div className="flex-1 flex flex-col justify-center items-center p-8 bg-sidebar min-h-screen">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center">
-          <img src="/logos/legend-bucks-rewards.png" alt="Legend Bucks" className="h-16 mx-auto brightness-0 invert mb-2" />
+          <img src="/logos/legend-bucks-rewards.png" alt="Legend Bucks" className="h-16 mx-auto mb-2" />
         </div>
 
         <div className="w-full max-w-sm space-y-5">
