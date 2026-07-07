@@ -20,7 +20,12 @@ import {
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
-import { sendRedemptionReceiptEmail } from "../lib/email";
+import {
+  sendRedemptionReceiptEmail,
+  sendRedemptionApprovedEmail,
+  sendRedemptionRejectedEmail,
+  sendRedemptionFulfilledEmail,
+} from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -192,6 +197,18 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
     .where(eq(redemptionsTable.id, params.data.id))
     .returning();
 
+  // Notify the employee their redemption was approved — best-effort, never blocks.
+  try {
+    const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
+    const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, updated.rewardId)).limit(1);
+    if (emp?.email) {
+      await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
+      req.log.info({ redemptionId: updated.id }, "Redemption approved email sent");
+    }
+  } catch (err) {
+    req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption approved email");
+  }
+
   res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });
 
@@ -235,6 +252,17 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
   const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
   if (reward && reward.quantity !== null) {
     await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
+  }
+
+  // Notify the employee their redemption was rejected (and refunded) — best-effort, never blocks.
+  try {
+    const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
+    if (emp?.email) {
+      await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? "your reward", updated.buckCost, updated.adminNote);
+      req.log.info({ redemptionId: updated.id }, "Redemption rejected email sent");
+    }
+  } catch (err) {
+    req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption rejected email");
   }
 
   res.json(RejectRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
@@ -316,6 +344,18 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
     .set({ status: "fulfilled" })
     .where(eq(redemptionsTable.id, params.data.id))
     .returning();
+
+  // Notify the employee their reward is on its way — best-effort, never blocks.
+  try {
+    const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
+    const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, updated.rewardId)).limit(1);
+    if (emp?.email) {
+      await sendRedemptionFulfilledEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
+      req.log.info({ redemptionId: updated.id }, "Redemption fulfilled email sent");
+    }
+  } catch (err) {
+    req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption fulfilled email");
+  }
 
   res.json(FulfillRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });

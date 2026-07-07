@@ -424,3 +424,85 @@ export async function sendRedemptionReceiptEmail(
 
   await sendViaResend(to, `Redemption receipt: ${rewardName}`, html, "Failed to send redemption receipt email");
 }
+
+/**
+ * Notify an employee that their redemption was approved.
+ */
+export async function sendRedemptionApprovedEmail(
+  to: string,
+  firstName: string,
+  rewardName: string,
+): Promise<void> {
+  const html = emailShell(
+    "Your redemption was approved",
+    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Hi ${escapeHtml(firstName)},
+     </p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Good news — your redemption for <strong>${escapeHtml(rewardName)}</strong> has been <strong style="color:#35b729;">approved</strong>. We'll let you know once it's on its way.
+     </p>
+     <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
+       Sign in to Legend Bucks to track the status of your redemption.
+     </p>`,
+  );
+
+  await sendViaResend(to, `Approved: ${rewardName}`, html, "Failed to send redemption approved email");
+}
+
+/**
+ * Notify an employee that their redemption was rejected (bucks refunded).
+ */
+export async function sendRedemptionRejectedEmail(
+  to: string,
+  firstName: string,
+  rewardName: string,
+  buckCost: number,
+  adminNote: string | null,
+): Promise<void> {
+  const noteBlock = adminNote
+    ? `<p style="margin:0 0 8px;color:#888;font-size:13px;line-height:1.5;">Reason:</p>
+       <p style="margin:0 0 28px;color:#4f4f51;font-size:16px;line-height:1.6;font-style:italic;background:#f5f5f5;padding:14px 18px;border-radius:6px;border-left:4px solid #d64545;">
+         “${escapeHtml(adminNote)}”
+       </p>`
+    : "";
+
+  const html = emailShell(
+    "Your redemption was not approved",
+    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Hi ${escapeHtml(firstName)},
+     </p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Unfortunately, your redemption for <strong>${escapeHtml(rewardName)}</strong> was <strong style="color:#d64545;">not approved</strong>. Your <strong>${formatBucks(buckCost)}</strong> has been refunded to your balance.
+     </p>
+     ${noteBlock}
+     <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
+       Sign in to Legend Bucks to browse other rewards.
+     </p>`,
+  );
+
+  await sendViaResend(to, `Update on your redemption: ${rewardName}`, html, "Failed to send redemption rejected email");
+}
+
+/**
+ * Notify an employee that their redemption was fulfilled / shipped.
+ */
+export async function sendRedemptionFulfilledEmail(
+  to: string,
+  firstName: string,
+  rewardName: string,
+): Promise<void> {
+  const html = emailShell(
+    "Your reward is on its way",
+    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Hi ${escapeHtml(firstName)},
+     </p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Your redemption for <strong>${escapeHtml(rewardName)}</strong> has been <strong style="color:#35b729;">fulfilled</strong> and is on its way to you. 🎉
+     </p>
+     <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
+       Sign in to Legend Bucks to see your redemption history.
+     </p>`,
+  );
+
+  await sendViaResend(to, `On its way: ${rewardName}`, html, "Failed to send redemption fulfilled email");
+}
