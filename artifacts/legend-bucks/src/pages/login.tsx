@@ -167,20 +167,20 @@ export default function Login() {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex flex-col justify-center items-center p-8 bg-sidebar min-h-screen">
+      <div className="flex-1 flex flex-col justify-center items-center p-8 app-gradient-bg text-foreground min-h-screen">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center">
-          <img src="/logos/legend-bucks-rewards-white.png" alt="Legend Bucks" className="h-16 mx-auto mb-2" />
+          <img src="/logos/legend-bucks-rewards.png" alt="Legend Bucks" className="h-16 mx-auto mb-2" />
         </div>
 
         <div className="w-full max-w-sm space-y-5">
           {/* ── Dev Quick Login (development only) ───────────────── */}
           {import.meta.env.DEV && (
             <>
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden">
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20">
-                  <FlaskConical className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                  <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">Dev — Quick Login</span>
+                  <FlaskConical className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  <span className="text-amber-600 text-xs font-semibold uppercase tracking-wider">Dev — Quick Login</span>
                 </div>
                 <div className="p-3 space-y-2">
                   {DEV_ACCOUNTS.map((account) => {
@@ -191,17 +191,17 @@ export default function Login() {
                         key={account.email}
                         onClick={() => quickLogin(account.email)}
                         disabled={quickLoggingIn !== null}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md bg-sidebar-accent/40 hover:bg-sidebar-accent transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-card border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isLoading
-                          ? <Loader2 className="h-4 w-4 animate-spin text-sidebar-foreground/50 shrink-0" />
+                          ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
                           : <Icon className={`h-4 w-4 shrink-0 ${account.color}`} />
                         }
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{account.name}</p>
-                          <p className="text-xs text-sidebar-foreground/50 truncate">{account.role}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{account.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{account.role}</p>
                         </div>
-                        <span className="text-xs text-sidebar-foreground/30 shrink-0">→</span>
+                        <span className="text-xs text-muted-foreground shrink-0">→</span>
                       </button>
                     );
                   })}
@@ -210,9 +210,9 @@ export default function Login() {
 
               {/* Divider */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 border-t border-sidebar-border" />
-                <span className="text-xs text-sidebar-foreground/30 uppercase tracking-wider">or sign in with email</span>
-                <div className="flex-1 border-t border-sidebar-border" />
+                <div className="flex-1 border-t border-border" />
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">or sign in with email</span>
+                <div className="flex-1 border-t border-border" />
               </div>
             </>
           )}
@@ -220,17 +220,17 @@ export default function Login() {
           {/* ── Sign-in form ────────────────────────────────────── */}
           <div>
             <div className="mb-5">
-              <h1 className="text-2xl font-bold text-white mb-1">
+              <h1 className="text-2xl font-bold text-foreground mb-1">
                 {step === "email" ? "Sign In" : "Check Your Email"}
               </h1>
-              <p className="text-sidebar-foreground/60 text-sm">
+              <p className="text-muted-foreground text-sm">
                 {step === "email"
                   ? "Enter your company email to receive a magic login link."
                   : `We sent a code to ${email}`}
               </p>
             </div>
 
-            <Card className="border-sidebar-border bg-sidebar-accent/30 backdrop-blur-md shadow-2xl">
+            <Card className="shadow-lg">
               <CardContent className="pt-6">
                 {step === "email" ? (
                   <Form {...emailForm}>
@@ -240,13 +240,13 @@ export default function Login() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sidebar-foreground/80 text-xs uppercase tracking-wider">Email Address</FormLabel>
+                            <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">Email Address</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-sidebar-foreground/40" />
+                                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                   placeholder="name@legendboats.com"
-                                  className="pl-10 bg-sidebar/60 border-sidebar-border text-white placeholder:text-sidebar-foreground/25 focus-visible:ring-primary focus-visible:border-primary"
+                                  className="pl-10"
                                   {...field}
                                 />
                               </div>
@@ -273,13 +273,13 @@ export default function Login() {
                         name="token"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sidebar-foreground/80 text-xs uppercase tracking-wider">Login Token</FormLabel>
+                            <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">Login Token</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-sidebar-foreground/40" />
+                                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                   placeholder="Paste your token here"
-                                  className="pl-10 bg-sidebar/60 border-sidebar-border text-white placeholder:text-sidebar-foreground/25 focus-visible:ring-primary focus-visible:border-primary font-mono tracking-wider"
+                                  className="pl-10 font-mono tracking-wider"
                                   {...field}
                                 />
                               </div>
@@ -300,7 +300,7 @@ export default function Login() {
                         <Button
                           type="button"
                           variant="ghost"
-                          className="text-sidebar-foreground/50 hover:text-white hover:bg-sidebar-accent text-sm"
+                          className="text-muted-foreground hover:text-foreground text-sm"
                           onClick={() => setStep("email")}
                         >
                           ← Back to email
@@ -313,7 +313,7 @@ export default function Login() {
             </Card>
           </div>
 
-          <p className="text-center text-sidebar-foreground/30 text-xs">
+          <p className="text-center text-muted-foreground text-xs">
             No account? Ask your manager to invite you.
           </p>
         </div>

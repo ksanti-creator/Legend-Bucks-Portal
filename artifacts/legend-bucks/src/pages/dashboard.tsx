@@ -1,5 +1,6 @@
 import { useGetMe, useGetDashboardSummary, useGetRecentActivity, useGetLeaderboard, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,58 +64,30 @@ export default function Dashboard() {
       {/* Admin/Manager Stats */}
       {isAdminOrManager && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-accent/10 p-3 rounded-lg text-accent">
-                <Users className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Employees</p>
-                <div className="text-2xl font-bold font-display">
-                  {isLoadingSummary ? <Skeleton className="h-8 w-16" /> : summary?.totalEmployees}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg text-primary">
-                <Trophy className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Bucks Awarded (Month)</p>
-                <div className="text-2xl font-bold font-display">
-                  {isLoadingSummary ? <Skeleton className="h-8 w-24" /> : summary?.thisMonthBucksAwarded?.toLocaleString() || 0}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-destructive/10 p-3 rounded-lg text-destructive">
-                <Activity className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
-                <div className="text-2xl font-bold font-display">
-                  {isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.pendingApprovals}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-green-600/10 p-3 rounded-lg text-green-600">
-                <Target className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Goals</p>
-                <div className="text-2xl font-bold font-display">
-                  {isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.activeGoals}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Total Employees"
+            icon={Users}
+            tint="blue"
+            value={isLoadingSummary ? <Skeleton className="h-8 w-16" /> : summary?.totalEmployees}
+          />
+          <StatCard
+            label="Bucks Awarded (Month)"
+            icon={Trophy}
+            tint="green"
+            value={isLoadingSummary ? <Skeleton className="h-8 w-24" /> : (summary?.thisMonthBucksAwarded?.toLocaleString() || 0)}
+          />
+          <StatCard
+            label="Pending Approvals"
+            icon={Activity}
+            tint="amber"
+            value={isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.pendingApprovals}
+          />
+          <StatCard
+            label="Active Goals"
+            icon={Target}
+            tint="slate"
+            value={isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.activeGoals}
+          />
         </div>
       )}
 

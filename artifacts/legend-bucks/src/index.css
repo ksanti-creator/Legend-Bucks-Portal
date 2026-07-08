@@ -84,33 +84,33 @@
 }
 
 :root {
-  /* ── Light mode ─────────────────────────────────────────────── */
+  /* ── Light mode — "Events HQ" sky-blue aesthetic ────────────── */
 
-  /* Canvas */
-  --background: 0 0% 97%;
-  --foreground: 240 1% 31%;      /* #4f4f51 */
+  /* Canvas — soft sky-blue tint (gradient applied on the app shell) */
+  --background: 202 60% 97%;
+  --foreground: 222 20% 22%;
 
-  /* Cards */
+  /* Cards — clean white with soft light borders */
   --card: 0 0% 100%;
-  --card-foreground: 240 1% 31%;
-  --card-border: 220 10% 90%;
+  --card-foreground: 222 20% 22%;
+  --card-border: 210 32% 92%;
 
   /* Popovers */
   --popover: 0 0% 100%;
-  --popover-foreground: 240 1% 31%;
-  --popover-border: 220 10% 90%;
+  --popover-foreground: 222 20% 22%;
+  --popover-border: 210 32% 92%;
 
   /* Primary = Legend Blue #00afed */
   --primary: 199 100% 46%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary = light grey tint */
-  --secondary: 220 10% 92%;
-  --secondary-foreground: 240 1% 31%;
+  /* Secondary = soft blue-grey tint */
+  --secondary: 205 40% 95%;
+  --secondary-foreground: 222 20% 30%;
 
   /* Muted */
-  --muted: 220 10% 94%;
-  --muted-foreground: 240 1% 50%;
+  --muted: 205 35% 95%;
+  --muted-foreground: 215 16% 52%;
 
   /* Accent = Legend Green #35b729 */
   --accent: 115 63% 44%;
@@ -121,20 +121,20 @@
   --destructive-foreground: 0 0% 100%;
 
   /* Borders / Inputs */
-  --border: 220 10% 88%;
-  --input: 220 10% 88%;
+  --border: 210 30% 90%;
+  --input: 210 30% 90%;
   --ring: 199 100% 46%;
 
-  /* Sidebar = #4f4f51 dark grey */
-  --sidebar: 240 1% 21%;
-  --sidebar-foreground: 0 0% 100%;
-  --sidebar-border: 240 1% 27%;
+  /* Sidebar = light / white with soft blue active pill */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 222 18% 32%;
+  --sidebar-border: 210 32% 92%;
   --sidebar-primary: 199 100% 46%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 1% 28%;
-  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-accent: 199 100% 95%;
+  --sidebar-accent-foreground: 199 90% 38%;
 
-  --radius: 0.5rem;
+  --radius: 0.85rem;
 }
 
 .dark {
@@ -189,4 +189,20 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-bold tracking-tight;
   }
+}
+
+/* ── Events HQ soft sky-blue gradient page background ──────────── */
+.app-gradient-bg {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, hsl(199 100% 92% / 0.55), transparent 60%),
+    radial-gradient(900px 500px at -10% 0%, hsl(199 100% 94% / 0.5), transparent 55%),
+    linear-gradient(180deg, hsl(202 70% 97%) 0%, hsl(0 0% 100%) 45%, hsl(202 60% 97%) 100%);
+}
+
+/* Section header helpers for a consistent title + subtitle rhythm */
+.section-title {
+  @apply text-3xl font-display font-bold tracking-tight text-foreground;
+}
+.section-subtitle {
+  @apply text-muted-foreground mt-1;
 }

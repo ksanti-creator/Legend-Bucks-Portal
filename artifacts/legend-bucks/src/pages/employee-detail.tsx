@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -325,34 +326,28 @@ export default function EmployeeDetail() {
 
         <div className="md:col-span-2 space-y-6">
           {/* Balance Cards */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="bg-primary text-primary-foreground border-none shadow-sm">
-              <CardContent className="p-6">
-                <Coins className="h-5 w-5 text-primary-foreground/70 mb-2" />
-                <p className="text-sm font-medium text-primary-foreground/80">Current Balance</p>
-                <p className="text-3xl font-display font-bold mt-1">
-                  {isLoadingBal ? "..." : balance?.balance.toLocaleString()}
-                </p>
-              </CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="relative overflow-hidden bg-primary text-primary-foreground border-none shadow-sm p-6">
+              <div className="absolute top-5 right-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
+                <Coins className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <p className="text-sm font-medium text-primary-foreground/80 pr-12">Current Balance</p>
+              <p className="text-3xl font-display font-bold mt-2 leading-none">
+                {isLoadingBal ? "..." : balance?.balance.toLocaleString()}
+              </p>
             </Card>
-            <Card className="bg-card shadow-sm border-none">
-              <CardContent className="p-6">
-                <Award className="h-5 w-5 text-accent mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">Total Received</p>
-                <p className="text-2xl font-display font-bold mt-1">
-                  {isLoadingBal ? "..." : balance?.totalReceived.toLocaleString()}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card shadow-sm border-none">
-              <CardContent className="p-6">
-                <AlertTriangle className="h-5 w-5 text-muted-foreground mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                <p className="text-2xl font-display font-bold mt-1">
-                  {isLoadingBal ? "..." : balance?.totalSpent.toLocaleString()}
-                </p>
-              </CardContent>
-            </Card>
+            <StatCard
+              label="Total Received"
+              icon={Award}
+              tint="green"
+              value={isLoadingBal ? "..." : balance?.totalReceived.toLocaleString()}
+            />
+            <StatCard
+              label="Total Spent"
+              icon={AlertTriangle}
+              tint="slate"
+              value={isLoadingBal ? "..." : balance?.totalSpent.toLocaleString()}
+            />
           </div>
 
           {canViewCap && capInfo?.cap != null && (

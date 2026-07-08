@@ -10,4 +10,5 @@
 - [Postgres UPDATE no ORDER BY/LIMIT](postgres-update-order-limit.md) — Postgres rejects ORDER BY/LIMIT on UPDATE; such raw SQL 500s at runtime, invisible until a test hits the real path.
 - [Email provider](legend-bucks-email-provider.md) — transactional email sends via Gmail connector (not Resend); Gmail sends from the authorized account, From only honored for that account/alias.
 - [Per-employee award cap](legend-bucks-award-cap.md) — replaced monthly budgets; cap enforced only for the recipient's assigned manager, UTC calendar year, private to admins + that manager.
+- [Design tokens & sidebar trap](legend-bucks-design-tokens.md) — theme is CSS-token driven (cascades from index.css + Card); flipping a shared token's brightness (dark→light sidebar) silently breaks login (white-on-white); app is desktop-only fixed sidebar.
 - [Team (department) budgets](legend-bucks-team-budgets.md) — per-dept yearly pool funds team goals via `team_goal_award` (never a balance); used is ledger-derived; new tx enum values need DB+OpenAPI both; pool spend must be atomic (FOR UPDATE).
