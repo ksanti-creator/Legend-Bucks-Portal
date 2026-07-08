@@ -29,3 +29,4 @@ APP_URL = "https://10ede099-f36a-45fd-ab95-9563f0cca0ce-00-3u26dn923lkkz-21jzdhn
 
 [userenv.shared]
 GMAIL_FROM = "Legend Bucks <ksanti@legendboats.com>"
+BOOTSTRAP_SECRET = "90bdf82970494610671ecc90145b7d9eaf208618ef999cf575dde2451157e62b"
