@@ -1,6 +1,6 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 
-const APP_URL = process.env.APP_URL ?? "https://legendbucks.replit.app";
+const APP_URL = process.env.APP_URL ?? "https://legend-bucks-portal.replit.app";
 // Optional display From header, e.g. `Legend Bucks <rewards@legendboats.com>`.
 // Gmail only honors it if the address is the authorized account or a configured
 // "send as" alias; otherwise Gmail sends from the authenticated account.

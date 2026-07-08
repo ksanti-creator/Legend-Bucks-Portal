@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -106,6 +106,43 @@ export default function Login() {
       }
     );
   };
+
+  /**
+   * When the user arrives via a magic-link email (`/login?token=...`),
+   * pick up the token from the URL and verify it automatically so they
+   * don't have to copy/paste anything.
+   */
+  const autoVerifiedRef = useRef(false);
+  useEffect(() => {
+    if (autoVerifiedRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
+    if (!urlToken) return;
+    autoVerifiedRef.current = true;
+    // Strip the token from the URL so it doesn't linger in browser history.
+    window.history.replaceState({}, "", window.location.pathname);
+    setStep("token");
+    tokenForm.setValue("token", urlToken);
+    verifyMagicLink.mutate(
+      { data: { token: urlToken } },
+      {
+        onSuccess: ({ token, ...user }) => {
+          setSessionToken(token);
+          queryClient.setQueryData(getGetMeQueryKey(), user);
+          toast({ title: "Welcome back!" });
+          setLocation("/dashboard");
+        },
+        onError: () => {
+          toast({
+            title: "Invalid or expired link",
+            description: "Enter your email below to get a fresh sign-in link.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** One-click dev login: request token then immediately verify it */
   const quickLogin = async (accountEmail: string) => {

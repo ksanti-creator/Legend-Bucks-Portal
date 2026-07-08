@@ -29,3 +29,6 @@ APP_URL = "https://10ede099-f36a-45fd-ab95-9563f0cca0ce-00-3u26dn923lkkz-21jzdhn
 
 [userenv.shared]
 GMAIL_FROM = "Legend Bucks <ksanti@legendboats.com>"
+
+[userenv.production]
+APP_URL = "https://legend-bucks-portal.replit.app"
