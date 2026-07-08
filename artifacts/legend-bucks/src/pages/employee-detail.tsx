@@ -81,13 +81,11 @@ export default function EmployeeDetail() {
   const isAdminOrManager = currentUser?.role === "admin" || currentUser?.role === "manager";
   const canDeactivate = currentUser?.role === "admin" && employee?.status !== "inactive";
 
-  // The yearly award cap is private: only admins and the employee's assigned
-  // manager may see it. team_members and unrelated managers never do.
-  const isAssignedManager =
-    currentUser?.role === "manager" &&
-    employee?.managerId != null &&
-    employee.managerId === currentUser.id;
-  const canViewCap = isAdmin || isAssignedManager;
+  // The yearly award cap is private: admins and any manager in the employee's
+  // management chain (direct or higher up) may see it. The server authorizes
+  // the exact chain; we let any manager attempt the fetch and rely on the 403
+  // (retry disabled) to hide the card for unrelated managers.
+  const canViewCap = isAdmin || currentUser?.role === "manager";
   const { data: capInfo } = useGetEmployeeAwardCap(id, {
     query: { queryKey: getGetEmployeeAwardCapQueryKey(id), enabled: !!id && canViewCap, retry: false },
   });
@@ -356,7 +354,7 @@ export default function EmployeeDetail() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Yearly Award Cap</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Max the assigned manager can award this person this year.
+                    Shared cap for this person's whole management chain this year.
                   </p>
                 </div>
                 <div className="text-right">

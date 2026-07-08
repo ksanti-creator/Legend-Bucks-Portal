@@ -988,7 +988,7 @@ export const getGetEmployeeAwardCapUrl = (id: number,) => {
 }
 
 /**
- * @summary Get an employee's yearly per-employee award cap and this-year remaining. Restricted to admins and the employee's assigned manager; never exposed to the employee themselves or to unrelated managers.
+ * @summary Get an employee's yearly per-employee award cap and this-year remaining. The cap is shared across the employee's whole management chain, so the remaining reflects combined awards from every manager above them. Restricted to admins and any manager in the employee's management chain (direct or higher up); never exposed to the employee themselves or to unrelated managers.
  */
 export const getEmployeeAwardCap = async (id: number, options?: RequestInit): Promise<AwardCapInfo> => {
 
@@ -1035,7 +1035,7 @@ export type GetEmployeeAwardCapQueryError = ErrorType<void>
 
 
 /**
- * @summary Get an employee's yearly per-employee award cap and this-year remaining. Restricted to admins and the employee's assigned manager; never exposed to the employee themselves or to unrelated managers.
+ * @summary Get an employee's yearly per-employee award cap and this-year remaining. The cap is shared across the employee's whole management chain, so the remaining reflects combined awards from every manager above them. Restricted to admins and any manager in the employee's management chain (direct or higher up); never exposed to the employee themselves or to unrelated managers.
  */
 
 export function useGetEmployeeAwardCap<TData = Awaited<ReturnType<typeof getEmployeeAwardCap>>, TError = ErrorType<void>>(

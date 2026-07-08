@@ -18,7 +18,8 @@ import {
   GetEmployeeAwardCapResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
-import { getAwardedThisYear } from "../lib/awardCap";
+import { getChainAwardedThisYear } from "../lib/awardCap";
+import { getManagerChain, getSubtreeIds } from "../lib/orgChain";
 import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
 const router: IRouter = Router();
@@ -70,7 +71,12 @@ router.get("/employees", requireAuth, async (req, res): Promise<void> => {
   if (locationId !== undefined) employees = employees.filter((e) => e.locationId === locationId);
   if (role) employees = employees.filter((e) => e.role === role);
   if (status) employees = employees.filter((e) => e.status === status);
-  if (managerId !== undefined) employees = employees.filter((e) => e.managerId === managerId);
+  if (managerId !== undefined) {
+    // Roll up to the manager's whole subtree: every direct AND indirect report
+    // beneath them, not only their immediate reports.
+    const subtree = new Set(await getSubtreeIds(managerId));
+    employees = employees.filter((e) => subtree.has(e.id));
+  }
 
   const result = await Promise.all(employees.map((e) => buildEmployeeResponse(e, false)));
   res.json(ListEmployeesResponse.parse(result));
@@ -195,15 +201,19 @@ router.get("/employees/:id/award-cap", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  const isAssignedManager = emp.managerId != null && emp.managerId === user.id;
-  if (user.role !== "admin" && !isAssignedManager) {
+  // Any manager in the employee's chain (direct or higher up) may view the cap,
+  // as may admins. Employees never see their own cap; unrelated managers 403.
+  const chain = await getManagerChain(emp.id);
+  const isChainManager = chain.includes(user.id);
+  if (user.role !== "admin" && !isChainManager) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
 
   const cap = emp.awardCapYearly ?? null;
-  // "Used" reflects the assigned manager's awards to this employee this year.
-  const usedThisYear = emp.managerId != null ? await getAwardedThisYear(emp.managerId, emp.id) : 0;
+  // "Used" reflects the combined awards from the whole management chain this
+  // year, matching exactly what the send-bucks cap enforcement blocks against.
+  const usedThisYear = await getChainAwardedThisYear(emp.id, chain);
   const remaining = cap == null ? null : Math.max(0, cap - usedThisYear);
 
   res.json(

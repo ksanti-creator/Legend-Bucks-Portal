@@ -265,7 +265,7 @@ export interface AwardCapInfo {
      * @nullable
      */
   cap: number | null;
-  /** Bucks the assigned manager has already awarded this employee this calendar year. */
+  /** Bucks the employee's whole management chain has already awarded them this calendar year (combined across every manager above them). */
   usedThisYear: number;
   /**
      * Bucks remaining under the cap this year, or null if no cap is set.
@@ -578,6 +578,9 @@ departmentId?: number;
 locationId?: number;
 role?: string;
 status?: string;
+/**
+ * Filter to the given manager's whole subtree — every direct AND indirect report beneath them across the management chain, not just their immediate reports.
+ */
 managerId?: number;
 };
 

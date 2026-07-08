@@ -14,7 +14,8 @@ import {
   GetTransactionSummaryResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canAwardBucks } from "../lib/auth";
-import { getAwardedThisYear } from "../lib/awardCap";
+import { getChainAwardedThisYear } from "../lib/awardCap";
+import { getManagerChain } from "../lib/orgChain";
 import { sendBucksReceivedEmail } from "../lib/email";
 
 const router: IRouter = Router();
@@ -149,21 +150,23 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
   }
 
   // Per-employee yearly award cap. A recipient may carry an optional cap that
-  // limits how much their *assigned manager* can award them per calendar year.
-  // Admins are never limited, and the cap only applies to the employee's own
-  // manager (matching the cap-info endpoint's "remaining" exactly).
-  if (
-    user.role === "manager" &&
-    recipient.awardCapYearly != null &&
-    recipient.managerId === user.id
-  ) {
-    const used = await getAwardedThisYear(user.id, recipient.id);
-    const remaining = recipient.awardCapYearly - used;
-    if (amount > remaining) {
-      res.status(400).json({
-        error: `This exceeds your yearly award cap for ${recipient.firstName}. Remaining this year: ${Math.max(0, remaining)} bucks`,
-      });
-      return;
+  // limits how much their whole management chain (direct manager, that
+  // manager's manager, and so on) can award them per calendar year. The cap is
+  // *shared* across the chain, so it applies to any manager in that chain and
+  // counts everyone's awards combined — a senior manager can't bypass it by
+  // awarding through a report. Admins are never limited; managers outside the
+  // recipient's chain are not governed by this cap.
+  if (user.role === "manager" && recipient.awardCapYearly != null) {
+    const chain = await getManagerChain(recipient.id);
+    if (chain.includes(user.id)) {
+      const used = await getChainAwardedThisYear(recipient.id, chain);
+      const remaining = recipient.awardCapYearly - used;
+      if (amount > remaining) {
+        res.status(400).json({
+          error: `This exceeds the yearly award cap for ${recipient.firstName}. Remaining this year: ${Math.max(0, remaining)} bucks`,
+        });
+        return;
+      }
     }
   }
 

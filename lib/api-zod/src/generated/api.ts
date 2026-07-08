@@ -135,7 +135,7 @@ export const ListEmployeesQueryParams = zod.object({
   "locationId": zod.coerce.number().optional(),
   "role": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
-  "managerId": zod.coerce.number().optional()
+  "managerId": zod.coerce.number().optional().describe('Filter to the given manager\'s whole subtree — every direct AND indirect report beneath them across the management chain, not just their immediate reports.')
 })
 
 export const ListEmployeesResponseItem = zod.object({
@@ -262,7 +262,7 @@ export const DeactivateEmployeeResponse = zod.object({
 
 
 /**
- * @summary Get an employee's yearly per-employee award cap and this-year remaining. Restricted to admins and the employee's assigned manager; never exposed to the employee themselves or to unrelated managers.
+ * @summary Get an employee's yearly per-employee award cap and this-year remaining. The cap is shared across the employee's whole management chain, so the remaining reflects combined awards from every manager above them. Restricted to admins and any manager in the employee's management chain (direct or higher up); never exposed to the employee themselves or to unrelated managers.
  */
 export const GetEmployeeAwardCapParams = zod.object({
   "id": zod.coerce.number()
@@ -271,7 +271,7 @@ export const GetEmployeeAwardCapParams = zod.object({
 export const GetEmployeeAwardCapResponse = zod.object({
   "employeeId": zod.number(),
   "cap": zod.number().nullable().describe('The yearly award cap in bucks, or null if no cap is set.'),
-  "usedThisYear": zod.number().describe('Bucks the assigned manager has already awarded this employee this calendar year.'),
+  "usedThisYear": zod.number().describe('Bucks the employee\'s whole management chain has already awarded them this calendar year (combined across every manager above them).'),
   "remaining": zod.number().nullable().describe('Bucks remaining under the cap this year, or null if no cap is set.')
 })
 

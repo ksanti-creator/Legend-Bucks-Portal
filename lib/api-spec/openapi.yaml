@@ -177,6 +177,10 @@ paths:
             type: string
         - name: managerId
           in: query
+          description: >-
+            Filter to the given manager's whole subtree — every direct AND
+            indirect report beneath them across the management chain, not just
+            their immediate reports.
           schema:
             type: integer
       responses:
@@ -279,8 +283,11 @@ paths:
       tags: [employees]
       summary: >-
         Get an employee's yearly per-employee award cap and this-year remaining.
-        Restricted to admins and the employee's assigned manager; never exposed
-        to the employee themselves or to unrelated managers.
+        The cap is shared across the employee's whole management chain, so the
+        remaining reflects combined awards from every manager above them.
+        Restricted to admins and any manager in the employee's management chain
+        (direct or higher up); never exposed to the employee themselves or to
+        unrelated managers.
       parameters:
         - name: id
           in: path
@@ -1499,7 +1506,9 @@ components:
           description: The yearly award cap in bucks, or null if no cap is set.
         usedThisYear:
           type: integer
-          description: Bucks the assigned manager has already awarded this employee this calendar year.
+          description: >-
+            Bucks the employee's whole management chain has already awarded them
+            this calendar year (combined across every manager above them).
         remaining:
           type: ["integer", "null"]
           description: Bucks remaining under the cap this year, or null if no cap is set.

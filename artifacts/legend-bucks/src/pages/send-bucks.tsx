@@ -29,8 +29,16 @@ export default function SendBucks() {
   const searchParams = new URLSearchParams(window.location.search);
   const defaultToId = searchParams.get("to") || "";
 
-  const { data: employees } = useListEmployees({ status: "active" });
-  
+  // Managers pick from their whole subtree (direct + indirect reports); admins
+  // see everyone. The managerId filter rolls up the full management chain
+  // server-side.
+  const isManagerRole = user?.role === "manager";
+  const { data: employees } = useListEmployees(
+    isManagerRole && user?.id
+      ? { status: "active", managerId: user.id }
+      : { status: "active" },
+  );
+
   // Filter out the current user
   const eligibleEmployees = employees?.filter(e => e.id !== user?.id) || [];
 
@@ -125,7 +133,7 @@ export default function SendBucks() {
 
               {isManager && capInfo?.cap != null && (
                 <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm">
-                  <span className="text-muted-foreground">Your yearly award cap for this person: </span>
+                  <span className="text-muted-foreground">Shared yearly award cap for this person: </span>
                   <strong className="text-foreground">{capInfo.remaining?.toLocaleString()} LB</strong>
                   <span className="text-muted-foreground"> remaining of {capInfo.cap.toLocaleString()} LB.</span>
                 </div>

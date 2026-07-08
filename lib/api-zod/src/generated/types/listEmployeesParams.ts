@@ -11,5 +11,8 @@ departmentId?: number;
 locationId?: number;
 role?: string;
 status?: string;
+/**
+ * Filter to the given manager's whole subtree — every direct AND indirect report beneath them across the management chain, not just their immediate reports.
+ */
 managerId?: number;
 };
