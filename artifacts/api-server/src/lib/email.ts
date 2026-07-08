@@ -26,7 +26,7 @@ function toBase64Url(input: string): string {
  * bytes (e.g. emoji, accented names) would otherwise arrive garbled. Pure-ASCII
  * values are returned unchanged so ordinary subjects are untouched.
  */
-function encodeHeaderValue(value: string): string {
+export function encodeHeaderValue(value: string): string {
   // eslint-disable-next-line no-control-regex
   if (/^[\x00-\x7F]*$/.test(value)) return value;
   return `=?UTF-8?B?${Buffer.from(value, "utf-8").toString("base64")}?=`;
@@ -37,7 +37,7 @@ function encodeHeaderValue(value: string): string {
  * `<address>` (which must stay ASCII) intact. Handles both the
  * `Name <addr@example.com>` and bare-address forms.
  */
-function encodeFromHeader(from: string): string {
+export function encodeFromHeader(from: string): string {
   const match = /^(.*?)\s*(<[^>]+>)\s*$/.exec(from);
   if (!match) return encodeHeaderValue(from);
   const [, name, address] = match;
