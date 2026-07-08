@@ -21,6 +21,31 @@ function toBase64Url(input: string): string {
 }
 
 /**
+ * MIME encoded-word encode a header value if it contains non-ASCII characters
+ * (RFC 2047, base64/UTF-8 form). Email headers are ASCII-only, so raw UTF-8
+ * bytes (e.g. emoji, accented names) would otherwise arrive garbled. Pure-ASCII
+ * values are returned unchanged so ordinary subjects are untouched.
+ */
+function encodeHeaderValue(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (/^[\x00-\x7F]*$/.test(value)) return value;
+  return `=?UTF-8?B?${Buffer.from(value, "utf-8").toString("base64")}?=`;
+}
+
+/**
+ * Encode the display-name portion of a `From` header while leaving the
+ * `<address>` (which must stay ASCII) intact. Handles both the
+ * `Name <addr@example.com>` and bare-address forms.
+ */
+function encodeFromHeader(from: string): string {
+  const match = /^(.*?)\s*(<[^>]+>)\s*$/.exec(from);
+  if (!match) return encodeHeaderValue(from);
+  const [, name, address] = match;
+  if (!name) return address;
+  return `${encodeHeaderValue(name)} ${address}`;
+}
+
+/**
  * Send an HTML email via the Gmail API (connector proxy). The message is sent
  * from the authorized Google account.
  */
@@ -29,11 +54,11 @@ async function sendGmail(to: string, subject: string, html: string): Promise<voi
 
   const headers = [
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeHeaderValue(subject)}`,
     "MIME-Version: 1.0",
     'Content-Type: text/html; charset="UTF-8"',
   ];
-  if (GMAIL_FROM) headers.unshift(`From: ${GMAIL_FROM}`);
+  if (GMAIL_FROM) headers.unshift(`From: ${encodeFromHeader(GMAIL_FROM)}`);
 
   const raw = toBase64Url(`${headers.join("\r\n")}\r\n\r\n${html}`);
 
