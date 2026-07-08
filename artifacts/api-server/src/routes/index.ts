@@ -10,7 +10,6 @@ import redemptionsRouter from "./redemptions";
 import goalsRouter from "./goals";
 import teamBudgetsRouter from "./teamBudgets";
 import dashboardRouter from "./dashboard";
-import bootstrapRouter from "./bootstrap";
 
 const router: IRouter = Router();
 
@@ -25,6 +24,5 @@ router.use(redemptionsRouter);
 router.use(goalsRouter);
 router.use(teamBudgetsRouter);
 router.use(dashboardRouter);
-router.use(bootstrapRouter);
 
 export default router;
