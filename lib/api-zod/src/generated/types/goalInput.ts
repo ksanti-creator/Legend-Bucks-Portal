@@ -9,11 +9,8 @@
 export interface GoalInput {
   name: string;
   description?: string;
-  /**
-     * Department this goal belongs to, or null for company-wide.
-     * @nullable
-     */
-  departmentId?: number | null;
+  /** The department this goal belongs to (required). Managers may only use their own department. */
+  departmentId: number;
   /** @minimum 1 */
   targetAmount: number;
   active?: boolean;

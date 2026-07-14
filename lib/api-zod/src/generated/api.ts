@@ -106,7 +106,7 @@ export const InviteEmployeeBody = zod.object({
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
-  "awardCapYearly": zod.number().min(1).nullish().describe('Optional yearly cap on bucks this employee\'s manager may award them. Omit to leave unchanged; null clears the cap (no limit). Admin-only.')
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.')
 })
 
 export const InviteEmployeeResponse = zod.object({
@@ -123,6 +123,7 @@ export const InviteEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -152,6 +153,7 @@ export const ListEmployeesResponseItem = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -178,6 +180,7 @@ export const GetEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -200,7 +203,7 @@ export const UpdateEmployeeBody = zod.object({
   "managerId": zod.number().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']).optional(),
   "status": zod.enum(['active', 'inactive']).optional(),
-  "awardCapYearly": zod.number().min(1).nullish().describe('Yearly cap on bucks this employee\'s manager may award them. null clears the cap (no limit). Admin-only.')
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.')
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -217,6 +220,7 @@ export const UpdateEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -257,22 +261,23 @@ export const DeactivateEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
 
 /**
- * @summary Get an employee's yearly per-employee award cap and this-year remaining. The cap is shared across the employee's whole management chain, so the remaining reflects combined awards from every manager above them. Restricted to admins and any manager in the employee's management chain (direct or higher up); never exposed to the employee themselves or to unrelated managers.
+ * @summary Get an employee's yearly award budget, this-year usage, and remaining. This is the pool the user (a manager/admin) draws down when awarding bucks. Restricted to admins and the employee themselves.
  */
-export const GetEmployeeAwardCapParams = zod.object({
+export const GetEmployeeAwardBudgetParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const GetEmployeeAwardCapResponse = zod.object({
+export const GetEmployeeAwardBudgetResponse = zod.object({
   "employeeId": zod.number(),
-  "cap": zod.number().nullable().describe('The yearly award cap in bucks, or null if no cap is set.'),
-  "usedThisYear": zod.number().describe('Bucks the employee\'s whole management chain has already awarded them this calendar year (combined across every manager above them).'),
-  "remaining": zod.number().nullable().describe('Bucks remaining under the cap this year, or null if no cap is set.')
+  "budget": zod.number().nullable().describe('The yearly award budget in bucks, or null if none is set.'),
+  "usedThisYear": zod.number().describe('Bucks this user has awarded so far this UTC calendar year.'),
+  "remaining": zod.number().nullable().describe('Bucks left in the budget this year, or null if no budget is set (which means the user cannot award).')
 })
 
 
@@ -294,7 +299,7 @@ export const ListTransactionsQueryParams = zod.object({
 export const ListTransactionsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment', 'team_goal_award']),
+  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment']),
   "amount": zod.number(),
   "fromEmployeeId": zod.number().nullish(),
   "fromEmployeeName": zod.string().nullish(),
@@ -326,7 +331,7 @@ export const SendBucksBody = zod.object({
 
 export const SendBucksResponse = zod.object({
   "id": zod.number(),
-  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment', 'team_goal_award']),
+  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment']),
   "amount": zod.number(),
   "fromEmployeeId": zod.number().nullish(),
   "fromEmployeeName": zod.string().nullish(),
@@ -349,7 +354,7 @@ export const GetTransactionParams = zod.object({
 
 export const GetTransactionResponse = zod.object({
   "id": zod.number(),
-  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment', 'team_goal_award']),
+  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment']),
   "amount": zod.number(),
   "fromEmployeeId": zod.number().nullish(),
   "fromEmployeeName": zod.string().nullish(),
@@ -857,7 +862,7 @@ export const ListGoalsResponseItem = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "department": zod.string().nullish().describe('Resolved department name (from departmentId when linked).'),
-  "departmentId": zod.number().nullish().describe('Linked department id, or null for a company-wide goal.'),
+  "departmentId": zod.number().nullish().describe('The department this goal belongs to.'),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "progressPercent": zod.number().optional(),
@@ -869,7 +874,7 @@ export const ListGoalsResponse = zod.array(ListGoalsResponseItem)
 
 
 /**
- * @summary Create a team goal (admin only)
+ * @summary Create a team goal. Admins can create for any department; managers can create only for their own department. A department is required.
  */
 
 
@@ -877,7 +882,7 @@ export const ListGoalsResponse = zod.array(ListGoalsResponseItem)
 export const CreateGoalBody = zod.object({
   "name": zod.string(),
   "description": zod.string().optional(),
-  "departmentId": zod.number().nullish().describe('Department this goal belongs to, or null for company-wide.'),
+  "departmentId": zod.number().describe('The department this goal belongs to (required). Managers may only use their own department.'),
   "targetAmount": zod.number().min(1),
   "active": zod.boolean().optional(),
   "endsAt": zod.string().nullish()
@@ -888,7 +893,7 @@ export const CreateGoalResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "department": zod.string().nullish().describe('Resolved department name (from departmentId when linked).'),
-  "departmentId": zod.number().nullish().describe('Linked department id, or null for a company-wide goal.'),
+  "departmentId": zod.number().nullish().describe('The department this goal belongs to.'),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "progressPercent": zod.number().optional(),
@@ -910,7 +915,7 @@ export const GetGoalResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "department": zod.string().nullish().describe('Resolved department name (from departmentId when linked).'),
-  "departmentId": zod.number().nullish().describe('Linked department id, or null for a company-wide goal.'),
+  "departmentId": zod.number().nullish().describe('The department this goal belongs to.'),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "progressPercent": zod.number().optional(),
@@ -921,7 +926,7 @@ export const GetGoalResponse = zod.object({
 
 
 /**
- * @summary Update a goal (admin only)
+ * @summary Update a goal. Admins can update any goal; managers can update goals for their own department only.
  */
 export const UpdateGoalParams = zod.object({
   "id": zod.coerce.number()
@@ -930,7 +935,7 @@ export const UpdateGoalParams = zod.object({
 export const UpdateGoalBody = zod.object({
   "name": zod.string().optional(),
   "description": zod.string().nullish(),
-  "departmentId": zod.number().nullish().describe('Department this goal belongs to, or null for company-wide.'),
+  "departmentId": zod.number().optional().describe('The department this goal belongs to. Managers may only use their own department.'),
   "targetAmount": zod.number().optional(),
   "active": zod.boolean().optional(),
   "endsAt": zod.string().nullish()
@@ -941,7 +946,7 @@ export const UpdateGoalResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "department": zod.string().nullish().describe('Resolved department name (from departmentId when linked).'),
-  "departmentId": zod.number().nullish().describe('Linked department id, or null for a company-wide goal.'),
+  "departmentId": zod.number().nullish().describe('The department this goal belongs to.'),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "progressPercent": zod.number().optional(),
@@ -970,36 +975,7 @@ export const ContributeToGoalResponse = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
   "department": zod.string().nullish().describe('Resolved department name (from departmentId when linked).'),
-  "departmentId": zod.number().nullish().describe('Linked department id, or null for a company-wide goal.'),
-  "targetAmount": zod.number(),
-  "currentAmount": zod.number(),
-  "progressPercent": zod.number().optional(),
-  "active": zod.boolean(),
-  "endsAt": zod.string().nullish(),
-  "createdAt": zod.string()
-})
-
-
-/**
- * @summary Award bucks from a department's team budget pool toward this team goal. Draws down the department's yearly pool and increases the goal's progress; funds the goal only, never any individual balance. Allowed for admins and managers of the goal's department; blocked if the pool can't cover the amount.
- */
-export const AwardFromTeamBudgetParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-
-
-export const AwardFromTeamBudgetBody = zod.object({
-  "amount": zod.number().min(1)
-})
-
-export const AwardFromTeamBudgetResponse = zod.object({
-  "id": zod.number(),
-  "name": zod.string(),
-  "description": zod.string().nullish(),
-  "department": zod.string().nullish().describe('Resolved department name (from departmentId when linked).'),
-  "departmentId": zod.number().nullish().describe('Linked department id, or null for a company-wide goal.'),
+  "departmentId": zod.number().nullish().describe('The department this goal belongs to.'),
   "targetAmount": zod.number(),
   "currentAmount": zod.number(),
   "progressPercent": zod.number().optional(),
@@ -1053,7 +1029,7 @@ export const GetRecentActivityQueryParams = zod.object({
 
 export const GetRecentActivityResponseItem = zod.object({
   "id": zod.number(),
-  "type": zod.enum(['award', 'redemption', 'goal_contribution', 'new_employee', 'budget_assigned']),
+  "type": zod.enum(['award', 'redemption', 'goal_contribution', 'new_employee']),
   "description": zod.string(),
   "actorName": zod.string().nullish(),
   "targetName": zod.string().nullish(),
@@ -1084,58 +1060,25 @@ export const GetLeaderboardResponse = zod.array(GetLeaderboardResponseItem)
 
 
 /**
- * @summary List every department's team budget for the current year with amount, used, and remaining. Admin only.
+ * @summary Get global application settings (any authenticated user).
  */
-export const ListTeamBudgetsResponseItem = zod.object({
-  "departmentId": zod.number(),
-  "departmentName": zod.string(),
-  "year": zod.number(),
-  "amount": zod.number().describe('Total pool set for this department this year (0 if unset).'),
-  "used": zod.number().describe('Bucks already awarded from the pool this year.'),
-  "remaining": zod.number().describe('amount minus used (never negative in practice).')
-})
-export const ListTeamBudgetsResponse = zod.array(ListTeamBudgetsResponseItem)
-
-
-/**
- * @summary Get a single department's team budget for the current year (amount, used, remaining). Allowed for admins and managers of that department.
- */
-export const GetTeamBudgetParams = zod.object({
-  "departmentId": zod.coerce.number()
-})
-
-export const GetTeamBudgetResponse = zod.object({
-  "departmentId": zod.number(),
-  "departmentName": zod.string(),
-  "year": zod.number(),
-  "amount": zod.number().describe('Total pool set for this department this year (0 if unset).'),
-  "used": zod.number().describe('Bucks already awarded from the pool this year.'),
-  "remaining": zod.number().describe('amount minus used (never negative in practice).')
+export const GetSettingsResponse = zod.object({
+  "maxSingleAward": zod.number().nullable().describe('The maximum bucks allowed in a single award, or null for no limit.')
 })
 
 
 /**
- * @summary Set (upsert) a department's team budget for the current year. Admin only.
+ * @summary Update global application settings. Admin only.
  */
-export const SetTeamBudgetParams = zod.object({
-  "departmentId": zod.coerce.number()
+
+
+
+export const UpdateSettingsBody = zod.object({
+  "maxSingleAward": zod.number().min(1).nullable().describe('The maximum bucks allowed in a single award. null removes the limit.')
 })
 
-export const setTeamBudgetBodyAmountMin = 0;
-
-
-
-export const SetTeamBudgetBody = zod.object({
-  "amount": zod.number().min(setTeamBudgetBodyAmountMin).describe('Total pool for this department for the current year.')
-})
-
-export const SetTeamBudgetResponse = zod.object({
-  "departmentId": zod.number(),
-  "departmentName": zod.string(),
-  "year": zod.number(),
-  "amount": zod.number().describe('Total pool set for this department this year (0 if unset).'),
-  "used": zod.number().describe('Bucks already awarded from the pool this year.'),
-  "remaining": zod.number().describe('amount minus used (never negative in practice).')
+export const UpdateSettingsResponse = zod.object({
+  "maxSingleAward": zod.number().nullable().describe('The maximum bucks allowed in a single award, or null for no limit.')
 })
 
 

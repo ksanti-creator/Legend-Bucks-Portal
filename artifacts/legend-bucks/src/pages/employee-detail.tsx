@@ -10,10 +10,10 @@ import {
   useListDepartments,
   useListLocations,
   useGetMe,
-  useGetEmployeeAwardCap,
+  useGetEmployeeAwardBudget,
   getGetEmployeeQueryKey,
   getGetEmployeeBalanceQueryKey,
-  getGetEmployeeAwardCapQueryKey,
+  getGetEmployeeAwardBudgetQueryKey,
   getListTransactionsQueryKey
 } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,26 +75,25 @@ export default function EmployeeDetail() {
   const [editDept, setEditDept] = useState<string>("none");
   const [editLoc, setEditLoc] = useState<string>("none");
   const [editManager, setEditManager] = useState<string>("none");
-  const [editCap, setEditCap] = useState<string>("");
+  const [editBudget, setEditBudget] = useState<string>("");
 
   const isAdmin = currentUser?.role === "admin";
   const isAdminOrManager = currentUser?.role === "admin" || currentUser?.role === "manager";
   const canDeactivate = currentUser?.role === "admin" && employee?.status !== "inactive";
 
-  // The yearly award cap is private: admins and any manager in the employee's
-  // management chain (direct or higher up) may see it. The server authorizes
-  // the exact chain; we let any manager attempt the fetch and rely on the 403
-  // (retry disabled) to hide the card for unrelated managers.
-  const canViewCap = isAdmin || currentUser?.role === "manager";
-  const { data: capInfo } = useGetEmployeeAwardCap(id, {
-    query: { queryKey: getGetEmployeeAwardCapQueryKey(id), enabled: !!id && canViewCap, retry: false },
+  // The yearly award budget is private to the employee themselves and admins.
+  // The server authorizes only self + admin; retry is disabled so an
+  // unauthorized fetch quietly hides the card.
+  const canViewBudget = isAdmin || currentUser?.id === id;
+  const { data: budgetInfo } = useGetEmployeeAwardBudget(id, {
+    query: { queryKey: getGetEmployeeAwardBudgetQueryKey(id), enabled: !!id && canViewBudget, retry: false },
   });
 
   const openEdit = () => {
     setEditDept(employee?.departmentId ? employee.departmentId.toString() : "none");
     setEditLoc(employee?.locationId ? employee.locationId.toString() : "none");
     setEditManager(employee?.managerId ? employee.managerId.toString() : "none");
-    setEditCap(capInfo?.cap != null ? capInfo.cap.toString() : "");
+    setEditBudget(budgetInfo?.budget != null ? budgetInfo.budget.toString() : "");
     setEditOpen(true);
   };
 
@@ -106,14 +105,14 @@ export default function EmployeeDetail() {
           departmentId: editDept === "none" ? null : parseInt(editDept),
           locationId: editLoc === "none" ? null : parseInt(editLoc),
           managerId: editManager === "none" ? null : parseInt(editManager),
-          awardCapYearly: editCap.trim() === "" ? null : parseInt(editCap, 10),
+          awardBudgetYearly: editBudget.trim() === "" ? null : parseInt(editBudget, 10),
         },
       },
       {
         onSuccess: () => {
           toast({ title: "Employee updated" });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
-          queryClient.invalidateQueries({ queryKey: getGetEmployeeAwardCapQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeAwardBudgetQueryKey(id) });
           setEditOpen(false);
         },
         onError: () => toast({ title: "Failed to update employee", variant: "destructive" }),
@@ -272,16 +271,16 @@ export default function EmployeeDetail() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Yearly Award Cap</Label>
+                      <Label>Yearly Award Budget</Label>
                       <Input
                         type="number"
                         min="1"
-                        placeholder="No limit"
-                        value={editCap}
-                        onChange={(e) => setEditCap(e.target.value)}
+                        placeholder="No budget"
+                        value={editBudget}
+                        onChange={(e) => setEditBudget(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Most Legend Bucks this person's manager can award them per year. Leave blank for no limit.
+                        Total Legend Bucks this person can award to others per year. Leave blank so they can't award until a budget is set.
                       </p>
                     </div>
                   </div>
@@ -348,21 +347,21 @@ export default function EmployeeDetail() {
             />
           </div>
 
-          {canViewCap && capInfo?.cap != null && (
+          {canViewBudget && budgetInfo?.budget != null && (
             <Card className="border-none shadow-sm bg-accent/5">
               <CardContent className="p-6 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Yearly Award Cap</p>
+                  <p className="text-sm font-medium text-muted-foreground">Yearly Award Budget</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Shared cap for this person's whole management chain this year.
+                    Legend Bucks this person can award to others this year.
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-display font-bold text-foreground">
-                    {capInfo.remaining?.toLocaleString()} <span className="text-base text-muted-foreground">/ {capInfo.cap.toLocaleString()} LB</span>
+                    {budgetInfo.remaining?.toLocaleString()} <span className="text-base text-muted-foreground">/ {budgetInfo.budget.toLocaleString()} LB</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {capInfo.usedThisYear.toLocaleString()} LB awarded so far this year
+                    {budgetInfo.usedThisYear.toLocaleString()} LB awarded so far this year
                   </p>
                 </div>
               </CardContent>

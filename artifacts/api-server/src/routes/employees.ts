@@ -14,17 +14,20 @@ import {
   UpdateEmployeeResponse,
   DeactivateEmployeeResponse,
   GetEmployeeBalanceResponse,
-  GetEmployeeAwardCapParams,
-  GetEmployeeAwardCapResponse,
+  GetEmployeeAwardBudgetParams,
+  GetEmployeeAwardBudgetResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
-import { getChainAwardedThisYear } from "../lib/awardCap";
-import { getManagerChain, getSubtreeIds } from "../lib/orgChain";
+import { getAwardedThisYear } from "../lib/awardBudget";
+import { getSubtreeIds } from "../lib/orgChain";
 import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
 const router: IRouter = Router();
 
-async function buildEmployeeResponse(emp: any, withBalance = false) {
+async function buildEmployeeResponse(
+  emp: any,
+  opts: { withBalance?: boolean; includeBudget?: boolean } = {},
+) {
   let managerName: string | null = null;
   if (emp.managerId) {
     const [mgr] = await db
@@ -35,7 +38,7 @@ async function buildEmployeeResponse(emp: any, withBalance = false) {
     if (mgr) managerName = `${mgr.firstName} ${mgr.lastName}`;
   }
   let balance: number | null = null;
-  if (withBalance) {
+  if (opts.withBalance) {
     balance = await getEmployeeBalance(emp.id);
   }
   const { department, location } = await resolveOrgNames(emp.departmentId, emp.locationId);
@@ -53,6 +56,8 @@ async function buildEmployeeResponse(emp: any, withBalance = false) {
     role: emp.role,
     status: emp.status,
     balance,
+    // The yearly award budget is admin/self-only — never leak it in listings.
+    awardBudgetYearly: opts.includeBudget ? (emp.awardBudgetYearly ?? null) : null,
     createdAt: emp.createdAt.toISOString(),
   };
 }
@@ -78,7 +83,7 @@ router.get("/employees", requireAuth, async (req, res): Promise<void> => {
     employees = employees.filter((e) => subtree.has(e.id));
   }
 
-  const result = await Promise.all(employees.map((e) => buildEmployeeResponse(e, false)));
+  const result = await Promise.all(employees.map((e) => buildEmployeeResponse(e)));
   res.json(ListEmployeesResponse.parse(result));
 });
 
@@ -100,7 +105,9 @@ router.get("/employees/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetEmployeeResponse.parse(await buildEmployeeResponse(emp, true)));
+  const user = getCurrentUser(req);
+  const includeBudget = user.role === "admin" || user.id === emp.id;
+  res.json(GetEmployeeResponse.parse(await buildEmployeeResponse(emp, { withBalance: true, includeBudget })));
 });
 
 router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
@@ -136,7 +143,7 @@ router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
   if ("managerId" in body.data) updates.managerId = body.data.managerId;
   if (body.data.role !== undefined) updates.role = body.data.role;
   if (body.data.status !== undefined) updates.status = body.data.status;
-  if ("awardCapYearly" in body.data) updates.awardCapYearly = body.data.awardCapYearly ?? null;
+  if ("awardBudgetYearly" in body.data) updates.awardBudgetYearly = body.data.awardBudgetYearly ?? null;
 
   const [updated] = await db
     .update(employeesTable)
@@ -149,7 +156,7 @@ router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(UpdateEmployeeResponse.parse(await buildEmployeeResponse(updated, true)));
+  res.json(UpdateEmployeeResponse.parse(await buildEmployeeResponse(updated, { withBalance: true, includeBudget: true })));
 });
 
 router.patch("/employees/:id/deactivate", requireAuth, async (req, res): Promise<void> => {
@@ -176,14 +183,14 @@ router.patch("/employees/:id/deactivate", requireAuth, async (req, res): Promise
     return;
   }
 
-  res.json(DeactivateEmployeeResponse.parse(await buildEmployeeResponse(updated, false)));
+  res.json(DeactivateEmployeeResponse.parse(await buildEmployeeResponse(updated)));
 });
 
-// Yearly per-employee award cap + this-year remaining. Private: only admins and
-// the employee's assigned manager may read it — never the employee themselves
-// or unrelated managers.
-router.get("/employees/:id/award-cap", requireAuth, async (req, res): Promise<void> => {
-  const params = GetEmployeeAwardCapParams.safeParse(req.params);
+// A user's yearly award budget + this-year usage/remaining. This is the pool
+// the user (a manager/admin) draws down when awarding bucks. Readable only by
+// admins and the employee themselves.
+router.get("/employees/:id/award-budget", requireAuth, async (req, res): Promise<void> => {
+  const params = GetEmployeeAwardBudgetParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -201,25 +208,19 @@ router.get("/employees/:id/award-cap", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  // Any manager in the employee's chain (direct or higher up) may view the cap,
-  // as may admins. Employees never see their own cap; unrelated managers 403.
-  const chain = await getManagerChain(emp.id);
-  const isChainManager = chain.includes(user.id);
-  if (user.role !== "admin" && !isChainManager) {
+  if (user.role !== "admin" && user.id !== emp.id) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
 
-  const cap = emp.awardCapYearly ?? null;
-  // "Used" reflects the combined awards from the whole management chain this
-  // year, matching exactly what the send-bucks cap enforcement blocks against.
-  const usedThisYear = await getChainAwardedThisYear(emp.id, chain);
-  const remaining = cap == null ? null : Math.max(0, cap - usedThisYear);
+  const budget = emp.awardBudgetYearly ?? null;
+  const usedThisYear = await getAwardedThisYear(emp.id);
+  const remaining = budget == null ? null : Math.max(0, budget - usedThisYear);
 
   res.json(
-    GetEmployeeAwardCapResponse.parse({
+    GetEmployeeAwardBudgetResponse.parse({
       employeeId: emp.id,
-      cap,
+      budget,
       usedThisYear,
       remaining,
     }),

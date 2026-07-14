@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface TeamBudgetInput {
+export interface Settings {
   /**
-     * Total pool for this department for the current year.
-     * @minimum 0
+     * The maximum bucks allowed in a single award, or null for no limit.
+     * @nullable
      */
-  amount: number;
+  maxSingleAward: number | null;
 }

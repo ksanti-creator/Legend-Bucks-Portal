@@ -1,14 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   useListGoals, 
   useCreateGoal, 
-  useUpdateGoal, 
   useContributeToGoal, 
-  useListGoalContributions,
   useListDepartments,
-  useGetTeamBudget,
-  getGetTeamBudgetQueryKey,
-  useAwardFromTeamBudget,
   useGetMe
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,7 +24,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Target, Plus, Coins, CalendarDays, Loader2, Users, Wallet } from "lucide-react";
+import { Target, Plus, Coins, CalendarDays, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,12 +35,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-const NO_DEPARTMENT = "none";
-
 const createGoalSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
-  departmentId: z.string().optional(),
+  departmentId: z.string().min(1, "Department is required"),
   targetAmount: z.coerce.number().min(100, "Target must be at least 100"),
   endsAt: z.string().optional().nullable(),
 });
@@ -53,6 +46,10 @@ const createGoalSchema = z.object({
 export default function Goals() {
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
+  const isManager = user?.role === "manager";
+  // Team goals are department-scoped and manager-owned: admins create for any
+  // department, managers only for their own.
+  const canCreate = isAdmin || (isManager && user?.departmentId != null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -66,26 +63,37 @@ export default function Goals() {
   const createMut = useCreateGoal();
   const contributeMut = useContributeToGoal();
 
+  // Managers may only target their own department; admins pick from all.
+  const availableDepartments =
+    isManager && user?.departmentId != null
+      ? departments?.filter((d) => d.id === user.departmentId)
+      : departments;
+
   const form = useForm<z.infer<typeof createGoalSchema>>({
     resolver: zodResolver(createGoalSchema),
     defaultValues: {
       name: "",
       description: "",
-      departmentId: NO_DEPARTMENT,
+      departmentId: "",
       targetAmount: 5000,
       endsAt: null,
     },
   });
 
+  // Pin a manager's department selection to their own department.
+  useEffect(() => {
+    if (isManager && user?.departmentId != null) {
+      form.setValue("departmentId", String(user.departmentId));
+    }
+  }, [isManager, user?.departmentId, form]);
+
   const onSubmitCreate = (data: z.infer<typeof createGoalSchema>) => {
-    const departmentId =
-      data.departmentId && data.departmentId !== NO_DEPARTMENT ? Number(data.departmentId) : null;
     createMut.mutate(
       {
         data: {
           name: data.name,
           description: data.description,
-          departmentId,
+          departmentId: Number(data.departmentId),
           targetAmount: data.targetAmount,
           endsAt: data.endsAt,
         },
@@ -141,7 +149,7 @@ export default function Goals() {
           <p className="text-muted-foreground mt-1">Pool your Legend Bucks together for collective rewards.</p>
         </div>
         
-        {isAdmin && (
+        {canCreate && (
           <Dialog open={openCreate} onOpenChange={setOpenCreate}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -153,7 +161,9 @@ export default function Goals() {
               <DialogHeader>
                 <DialogTitle>Create Team Goal</DialogTitle>
                 <DialogDescription>
-                  Set up a collective goal that employees can contribute their bucks towards.
+                  {isManager
+                    ? "Set up a collective goal for your department that employees can contribute their bucks towards."
+                    : "Set up a collective goal that employees can contribute their bucks towards."}
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -193,15 +203,18 @@ export default function Goals() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Target Department</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || NO_DEPARTMENT}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || undefined}
+                            disabled={isManager}
+                          >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Company-wide" />
+                                <SelectValue placeholder="Select a department" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value={NO_DEPARTMENT}>Company-wide</SelectItem>
-                              {departments?.map((d) => (
+                              {availableDepartments?.map((d) => (
                                 <SelectItem key={d.id} value={String(d.id)}>
                                   {d.name}
                                 </SelectItem>
@@ -366,108 +379,11 @@ export default function Goals() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-                <AwardFromBudgetButton goal={goal} user={user} />
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-// Distinct from personal contribution: managers (of the goal's own department)
-// and admins can award from the department's team budget pool. This funds the
-// goal only and never touches anyone's personal balance.
-function AwardFromBudgetButton({ goal, user }: { goal: any; user: any }) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState<number>(100);
-
-  const canAward =
-    goal.departmentId != null &&
-    (user?.role === "admin" || (user?.role === "manager" && user?.departmentId === goal.departmentId));
-
-  // Only fetch the pool when this manager/admin can actually award from it.
-  const { data: budget } = useGetTeamBudget(goal.departmentId ?? 0, {
-    query: { queryKey: getGetTeamBudgetQueryKey(goal.departmentId ?? 0), enabled: canAward && open },
-  });
-  const awardMut = useAwardFromTeamBudget();
-
-  if (!canAward) return null;
-
-  const remaining = budget?.remaining ?? 0;
-  const goalOpen = (goal.progressPercent ?? 0) < 100 && goal.active;
-
-  const handleAward = () => {
-    if (amount <= 0) {
-      toast({ title: "Invalid amount", variant: "destructive" });
-      return;
-    }
-    awardMut.mutate(
-      { id: goal.id, data: { amount } },
-      {
-        onSuccess: () => {
-          setOpen(false);
-          toast({ title: "Awarded from team budget", description: `${amount} LB added to ${goal.name}.` });
-          queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/team-budgets"] });
-        },
-        onError: (err: any) => {
-          toast({ title: "Failed to award", description: err?.message, variant: "destructive" });
-        },
-      },
-    );
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="secondary"
-          className="w-full"
-          disabled={!goalOpen}
-          onClick={() => setOpen(true)}
-        >
-          <Wallet className="h-4 w-4 mr-2" />
-          Award from Team Budget
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Award to {goal.name}</DialogTitle>
-          <DialogDescription>
-            Draw from the {goal.department} team budget. Remaining pool: <strong>{remaining.toLocaleString()} LB</strong>.
-            This funds the goal only — it does not credit anyone's balance.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-6 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Award Amount (LB)</label>
-            <div className="relative">
-              <Coins className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="number"
-                min="1"
-                max={remaining}
-                value={amount}
-                onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAward} disabled={awardMut.isPending || amount <= 0 || amount > remaining}>
-            {awardMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Confirm Award
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }

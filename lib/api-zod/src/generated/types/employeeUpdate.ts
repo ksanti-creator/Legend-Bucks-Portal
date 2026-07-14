@@ -20,9 +20,9 @@ export interface EmployeeUpdate {
   role?: EmployeeUpdateRole;
   status?: EmployeeUpdateStatus;
   /**
-     * Yearly cap on bucks this employee's manager may award them. null clears the cap (no limit). Admin-only.
+     * Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.
      * @minimum 1
      * @nullable
      */
-  awardCapYearly?: number | null;
+  awardBudgetYearly?: number | null;
 }

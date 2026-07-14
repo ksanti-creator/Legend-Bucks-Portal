@@ -22,8 +22,8 @@ tags:
     description: Redemption management
   - name: goals
     description: Team goals
-  - name: team-budgets
-    description: Per-department yearly team budget pools
+  - name: settings
+    description: Global application settings
   - name: dashboard
     description: Dashboard summary data
 
@@ -277,17 +277,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/Employee"
 
-  /employees/{id}/award-cap:
+  /employees/{id}/award-budget:
     get:
-      operationId: getEmployeeAwardCap
+      operationId: getEmployeeAwardBudget
       tags: [employees]
       summary: >-
-        Get an employee's yearly per-employee award cap and this-year remaining.
-        The cap is shared across the employee's whole management chain, so the
-        remaining reflects combined awards from every manager above them.
-        Restricted to admins and any manager in the employee's management chain
-        (direct or higher up); never exposed to the employee themselves or to
-        unrelated managers.
+        Get an employee's yearly award budget, this-year usage, and remaining.
+        This is the pool the user (a manager/admin) draws down when awarding
+        bucks. Restricted to admins and the employee themselves.
       parameters:
         - name: id
           in: path
@@ -296,11 +293,11 @@ paths:
             type: integer
       responses:
         "200":
-          description: Award cap info
+          description: Award budget info
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AwardCapInfo"
+                $ref: "#/components/schemas/AwardBudgetInfo"
         "403":
           description: Forbidden
         "404":
@@ -958,7 +955,9 @@ paths:
     post:
       operationId: createGoal
       tags: [goals]
-      summary: Create a team goal (admin only)
+      summary: >-
+        Create a team goal. Admins can create for any department; managers can
+        create only for their own department. A department is required.
       requestBody:
         required: true
         content:
@@ -996,7 +995,9 @@ paths:
     patch:
       operationId: updateGoal
       tags: [goals]
-      summary: Update a goal (admin only)
+      summary: >-
+        Update a goal. Admins can update any goal; managers can update goals for
+        their own department only.
       parameters:
         - name: id
           in: path
@@ -1041,42 +1042,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Goal"
-
-  /goals/{id}/award-from-budget:
-    post:
-      operationId: awardFromTeamBudget
-      tags: [goals]
-      summary: >-
-        Award bucks from a department's team budget pool toward this team goal.
-        Draws down the department's yearly pool and increases the goal's
-        progress; funds the goal only, never any individual balance. Allowed for
-        admins and managers of the goal's department; blocked if the pool can't
-        cover the amount.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GoalBudgetAward"
-      responses:
-        "201":
-          description: Award recorded, goal progress updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Goal"
-        "400":
-          description: Insufficient team budget or bad request
-        "403":
-          description: Forbidden
-        "404":
-          description: Goal not found, inactive, or has no department
 
   /goals/{id}/contributions:
     get:
@@ -1159,77 +1124,38 @@ paths:
                 items:
                   $ref: "#/components/schemas/LeaderboardEntry"
 
-  # Team budgets
-  /team-budgets:
+  # Settings
+  /settings:
     get:
-      operationId: listTeamBudgets
-      tags: [team-budgets]
-      summary: >-
-        List every department's team budget for the current year with amount,
-        used, and remaining. Admin only.
+      operationId: getSettings
+      tags: [settings]
+      summary: Get global application settings (any authenticated user).
       responses:
         "200":
-          description: Team budgets for the current year
+          description: Global settings
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/TeamBudget"
-        "403":
-          description: Forbidden
-
-  /team-budgets/{departmentId}:
-    get:
-      operationId: getTeamBudget
-      tags: [team-budgets]
-      summary: >-
-        Get a single department's team budget for the current year (amount,
-        used, remaining). Allowed for admins and managers of that department.
-      parameters:
-        - name: departmentId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Team budget
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TeamBudget"
-        "403":
-          description: Forbidden
-        "404":
-          description: Department not found
-    put:
-      operationId: setTeamBudget
-      tags: [team-budgets]
-      summary: Set (upsert) a department's team budget for the current year. Admin only.
-      parameters:
-        - name: departmentId
-          in: path
-          required: true
-          schema:
-            type: integer
+                $ref: "#/components/schemas/Settings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update global application settings. Admin only.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TeamBudgetInput"
+              $ref: "#/components/schemas/SettingsUpdate"
       responses:
         "200":
-          description: Updated team budget
+          description: Updated settings
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/TeamBudget"
+                $ref: "#/components/schemas/Settings"
         "403":
           description: Forbidden
-        "404":
-          description: Department not found
 
 components:
   schemas:
@@ -1401,6 +1327,11 @@ components:
           enum: [active, inactive, invited]
         balance:
           type: ["integer", "null"]
+        awardBudgetYearly:
+          type: ["integer", "null"]
+          description: >-
+            This user's yearly award budget in bucks. Only populated for admins
+            and the employee themselves; null otherwise.
         createdAt:
           type: string
 
@@ -1423,12 +1354,12 @@ components:
         status:
           type: string
           enum: [active, inactive]
-        awardCapYearly:
+        awardBudgetYearly:
           type: ["integer", "null"]
           minimum: 1
           description: >-
-            Yearly cap on bucks this employee's manager may award them. null
-            clears the cap (no limit). Admin-only.
+            Yearly award budget (in bucks) this user may draw down when awarding
+            bucks to others. null clears it (cannot award). Admin-only.
 
     BalanceSummary:
       type: object
@@ -1488,30 +1419,31 @@ components:
           type: ["integer", "null"]
         managerId:
           type: ["integer", "null"]
-        awardCapYearly:
+        awardBudgetYearly:
           type: ["integer", "null"]
           minimum: 1
           description: >-
-            Optional yearly cap on bucks this employee's manager may award them.
-            Omit to leave unchanged; null clears the cap (no limit). Admin-only.
+            Optional yearly award budget (in bucks) this user may draw down when
+            awarding bucks. Omit to leave unset; null means no budget (cannot
+            award). Admin-only.
 
-    AwardCapInfo:
+    AwardBudgetInfo:
       type: object
-      required: [employeeId, cap, usedThisYear, remaining]
+      required: [employeeId, budget, usedThisYear, remaining]
       properties:
         employeeId:
           type: integer
-        cap:
+        budget:
           type: ["integer", "null"]
-          description: The yearly award cap in bucks, or null if no cap is set.
+          description: The yearly award budget in bucks, or null if none is set.
         usedThisYear:
           type: integer
-          description: >-
-            Bucks the employee's whole management chain has already awarded them
-            this calendar year (combined across every manager above them).
+          description: Bucks this user has awarded so far this UTC calendar year.
         remaining:
           type: ["integer", "null"]
-          description: Bucks remaining under the cap this year, or null if no cap is set.
+          description: >-
+            Bucks left in the budget this year, or null if no budget is set
+            (which means the user cannot award).
 
     Transaction:
       type: object
@@ -1521,7 +1453,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [award, redemption_debit, refund, contribution, adjustment, team_goal_award]
+          enum: [award, redemption_debit, refund, contribution, adjustment]
         amount:
           type: integer
         fromEmployeeId:
@@ -1726,7 +1658,7 @@ components:
           description: Resolved department name (from departmentId when linked).
         departmentId:
           type: ["integer", "null"]
-          description: Linked department id, or null for a company-wide goal.
+          description: The department this goal belongs to.
         targetAmount:
           type: integer
         currentAmount:
@@ -1742,15 +1674,17 @@ components:
 
     GoalInput:
       type: object
-      required: [name, targetAmount]
+      required: [name, targetAmount, departmentId]
       properties:
         name:
           type: string
         description:
           type: string
         departmentId:
-          type: ["integer", "null"]
-          description: Department this goal belongs to, or null for company-wide.
+          type: integer
+          description: >-
+            The department this goal belongs to (required). Managers may only
+            use their own department.
         targetAmount:
           type: integer
           minimum: 1
@@ -1767,8 +1701,10 @@ components:
         description:
           type: ["string", "null"]
         departmentId:
-          type: ["integer", "null"]
-          description: Department this goal belongs to, or null for company-wide.
+          type: integer
+          description: >-
+            The department this goal belongs to. Managers may only use their own
+            department.
         targetAmount:
           type: integer
         active:
@@ -1801,42 +1737,24 @@ components:
         createdAt:
           type: string
 
-    GoalBudgetAward:
+    Settings:
       type: object
-      required: [amount]
+      required: [maxSingleAward]
       properties:
-        amount:
-          type: integer
+        maxSingleAward:
+          type: ["integer", "null"]
+          description: >-
+            The maximum bucks allowed in a single award, or null for no limit.
+
+    SettingsUpdate:
+      type: object
+      required: [maxSingleAward]
+      properties:
+        maxSingleAward:
+          type: ["integer", "null"]
           minimum: 1
-
-    TeamBudget:
-      type: object
-      required: [departmentId, departmentName, year, amount, used, remaining]
-      properties:
-        departmentId:
-          type: integer
-        departmentName:
-          type: string
-        year:
-          type: integer
-        amount:
-          type: integer
-          description: Total pool set for this department this year (0 if unset).
-        used:
-          type: integer
-          description: Bucks already awarded from the pool this year.
-        remaining:
-          type: integer
-          description: amount minus used (never negative in practice).
-
-    TeamBudgetInput:
-      type: object
-      required: [amount]
-      properties:
-        amount:
-          type: integer
-          minimum: 0
-          description: Total pool for this department for the current year.
+          description: >-
+            The maximum bucks allowed in a single award. null removes the limit.
 
     DashboardSummary:
       type: object
@@ -1867,7 +1785,7 @@ components:
           type: integer
         type:
           type: string
-          enum: [award, redemption, goal_contribution, new_employee, budget_assigned]
+          enum: [award, redemption, goal_contribution, new_employee]
         description:
           type: string
         actorName:

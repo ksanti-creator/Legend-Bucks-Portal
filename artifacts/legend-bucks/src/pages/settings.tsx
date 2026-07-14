@@ -3,7 +3,10 @@ import {
   useLogout, 
   useUpdateEmployee,
   useUpdateNotificationPreferences,
-  getGetMeQueryKey
+  useGetSettings,
+  useUpdateSettings,
+  getGetMeQueryKey,
+  getGetSettingsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { clearSessionToken } from "@/lib/auth-token";
-import { LogOut, Loader2, Save, Bell } from "lucide-react";
+import { LogOut, Loader2, Save, Bell, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const profileSchema = z.object({
@@ -33,6 +36,35 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const updateMut = useUpdateEmployee();
   const notifyMut = useUpdateNotificationPreferences();
+
+  const isAdmin = user?.role === "admin";
+  // Global "maximum single award" setting is admin-only. Any authed user can
+  // read it (for client validation), but only admins can change it here.
+  const { data: settings } = useGetSettings({ query: { queryKey: getGetSettingsQueryKey(), enabled: !!user } });
+  const settingsMut = useUpdateSettings();
+  const [maxAward, setMaxAward] = useState<string>("");
+
+  useEffect(() => {
+    setMaxAward(settings?.maxSingleAward != null ? String(settings.maxSingleAward) : "");
+  }, [settings?.maxSingleAward]);
+
+  const saveMaxAward = () => {
+    const value = maxAward.trim() === "" ? null : parseInt(maxAward, 10);
+    if (value != null && (Number.isNaN(value) || value < 1)) {
+      toast({ title: "Enter a positive number or leave blank", variant: "destructive" });
+      return;
+    }
+    settingsMut.mutate(
+      { data: { maxSingleAward: value } },
+      {
+        onSuccess: () => {
+          toast({ title: "Award limit saved" });
+          queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        },
+        onError: () => toast({ title: "Failed to save award limit", variant: "destructive" }),
+      },
+    );
+  };
 
   // Local mirror of the user's notification toggles, seeded from the server.
   const [prefs, setPrefs] = useState({
@@ -226,6 +258,38 @@ export default function Settings() {
               ))}
             </CardContent>
           </Card>
+
+          {isAdmin && (
+            <Card className="border-none shadow-sm">
+              <CardHeader className="border-b bg-muted/20">
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Award Limits
+                </CardTitle>
+                <CardDescription>
+                  Set the maximum Legend Bucks allowed in a single award, across the whole company. Leave blank for no limit.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <FormLabel>Maximum single award (LB)</FormLabel>
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="No limit"
+                    value={maxAward}
+                    onChange={(e) => setMaxAward(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={saveMaxAward} disabled={settingsMut.isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    {settingsMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Limit
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-destructive/30 shadow-sm">
             <CardHeader className="border-b border-destructive/10 bg-destructive/5">

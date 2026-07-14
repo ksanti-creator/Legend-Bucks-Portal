@@ -14,5 +14,4 @@ export const ActivityItemType = {
   redemption: 'redemption',
   goal_contribution: 'goal_contribution',
   new_employee: 'new_employee',
-  budget_assigned: 'budget_assigned',
 } as const;

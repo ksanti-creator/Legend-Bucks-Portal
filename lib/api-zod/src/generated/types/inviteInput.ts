@@ -19,9 +19,9 @@ export interface InviteInput {
   /** @nullable */
   managerId?: number | null;
   /**
-     * Optional yearly cap on bucks this employee's manager may award them. Omit to leave unchanged; null clears the cap (no limit). Admin-only.
+     * Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.
      * @minimum 1
      * @nullable
      */
-  awardCapYearly?: number | null;
+  awardBudgetYearly?: number | null;
 }

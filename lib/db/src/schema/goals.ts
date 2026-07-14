@@ -10,8 +10,9 @@ export const goalsTable = pgTable("goals", {
   // Legacy free-text department label, kept for display continuity. New code
   // should rely on departmentId (the real department link) instead.
   department: text("department"),
-  // Links a goal to a real department so it maps to that department's team
-  // budget pool. Nullable = company-wide goal (no team budget).
+  // The department this team goal belongs to. Every team goal is department-
+  // specific and manager-owned. Kept nullable at the DB level for legacy rows;
+  // the API requires a department on create/update.
   departmentId: integer("department_id").references(() => departmentsTable.id),
   targetAmount: integer("target_amount").notNull(),
   currentAmount: integer("current_amount").notNull().default(0),

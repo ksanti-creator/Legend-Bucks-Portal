@@ -17,7 +17,6 @@ import SendBucks from '@/pages/send-bucks';
 import Transactions from '@/pages/transactions';
 import Redemptions from '@/pages/redemptions';
 import Goals from '@/pages/goals';
-import Budgets from '@/pages/budgets';
 import Settings from '@/pages/settings';
 import Help from '@/pages/help';
 
@@ -60,7 +59,6 @@ function Router() {
             <Route path="/transactions" component={Transactions} />
             <Route path="/redemptions" component={Redemptions} />
             <Route path="/goals" component={Goals} />
-            <Route path="/budgets" component={Budgets} />
             <Route path="/settings" component={Settings} />
             <Route path="/help" component={Help} />
             <Route component={NotFound} />

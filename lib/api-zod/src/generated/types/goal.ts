@@ -17,7 +17,7 @@ export interface Goal {
      */
   department?: string | null;
   /**
-     * Linked department id, or null for a company-wide goal.
+     * The department this goal belongs to.
      * @nullable
      */
   departmentId?: number | null;

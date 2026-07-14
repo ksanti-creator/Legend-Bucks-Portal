@@ -8,7 +8,7 @@ import transactionsRouter from "./transactions";
 import rewardsRouter from "./rewards";
 import redemptionsRouter from "./redemptions";
 import goalsRouter from "./goals";
-import teamBudgetsRouter from "./teamBudgets";
+import settingsRouter from "./settings";
 import dashboardRouter from "./dashboard";
 
 const router: IRouter = Router();
@@ -22,7 +22,7 @@ router.use(transactionsRouter);
 router.use(rewardsRouter);
 router.use(redemptionsRouter);
 router.use(goalsRouter);
-router.use(teamBudgetsRouter);
+router.use(settingsRouter);
 router.use(dashboardRouter);
 
 export default router;

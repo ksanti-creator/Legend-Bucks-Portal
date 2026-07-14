@@ -165,6 +165,11 @@ export interface Employee {
   status: EmployeeStatus;
   /** @nullable */
   balance?: number | null;
+  /**
+     * This user's yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.
+     * @nullable
+     */
+  awardBudgetYearly?: number | null;
   createdAt: string;
 }
 
@@ -198,11 +203,11 @@ export interface EmployeeUpdate {
   role?: EmployeeUpdateRole;
   status?: EmployeeUpdateStatus;
   /**
-     * Yearly cap on bucks this employee's manager may award them. null clears the cap (no limit). Admin-only.
+     * Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.
      * @minimum 1
      * @nullable
      */
-  awardCapYearly?: number | null;
+  awardBudgetYearly?: number | null;
 }
 
 export interface BalanceSummary {
@@ -251,24 +256,24 @@ export interface InviteInput {
   /** @nullable */
   managerId?: number | null;
   /**
-     * Optional yearly cap on bucks this employee's manager may award them. Omit to leave unchanged; null clears the cap (no limit). Admin-only.
+     * Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.
      * @minimum 1
      * @nullable
      */
-  awardCapYearly?: number | null;
+  awardBudgetYearly?: number | null;
 }
 
-export interface AwardCapInfo {
+export interface AwardBudgetInfo {
   employeeId: number;
   /**
-     * The yearly award cap in bucks, or null if no cap is set.
+     * The yearly award budget in bucks, or null if none is set.
      * @nullable
      */
-  cap: number | null;
-  /** Bucks the employee's whole management chain has already awarded them this calendar year (combined across every manager above them). */
+  budget: number | null;
+  /** Bucks this user has awarded so far this UTC calendar year. */
   usedThisYear: number;
   /**
-     * Bucks remaining under the cap this year, or null if no cap is set.
+     * Bucks left in the budget this year, or null if no budget is set (which means the user cannot award).
      * @nullable
      */
   remaining: number | null;
@@ -283,7 +288,6 @@ export const TransactionType = {
   refund: 'refund',
   contribution: 'contribution',
   adjustment: 'adjustment',
-  team_goal_award: 'team_goal_award',
 } as const;
 
 export interface Transaction {
@@ -446,7 +450,7 @@ export interface Goal {
      */
   department?: string | null;
   /**
-     * Linked department id, or null for a company-wide goal.
+     * The department this goal belongs to.
      * @nullable
      */
   departmentId?: number | null;
@@ -462,11 +466,8 @@ export interface Goal {
 export interface GoalInput {
   name: string;
   description?: string;
-  /**
-     * Department this goal belongs to, or null for company-wide.
-     * @nullable
-     */
-  departmentId?: number | null;
+  /** The department this goal belongs to (required). Managers may only use their own department. */
+  departmentId: number;
   /** @minimum 1 */
   targetAmount: number;
   active?: boolean;
@@ -478,11 +479,8 @@ export interface GoalUpdate {
   name?: string;
   /** @nullable */
   description?: string | null;
-  /**
-     * Department this goal belongs to, or null for company-wide.
-     * @nullable
-     */
-  departmentId?: number | null;
+  /** The department this goal belongs to. Managers may only use their own department. */
+  departmentId?: number;
   targetAmount?: number;
   active?: boolean;
   /** @nullable */
@@ -503,29 +501,21 @@ export interface GoalContributionRecord {
   createdAt: string;
 }
 
-export interface GoalBudgetAward {
-  /** @minimum 1 */
-  amount: number;
-}
-
-export interface TeamBudget {
-  departmentId: number;
-  departmentName: string;
-  year: number;
-  /** Total pool set for this department this year (0 if unset). */
-  amount: number;
-  /** Bucks already awarded from the pool this year. */
-  used: number;
-  /** amount minus used (never negative in practice). */
-  remaining: number;
-}
-
-export interface TeamBudgetInput {
+export interface Settings {
   /**
-     * Total pool for this department for the current year.
-     * @minimum 0
+     * The maximum bucks allowed in a single award, or null for no limit.
+     * @nullable
      */
-  amount: number;
+  maxSingleAward: number | null;
+}
+
+export interface SettingsUpdate {
+  /**
+     * The maximum bucks allowed in a single award. null removes the limit.
+     * @minimum 1
+     * @nullable
+     */
+  maxSingleAward: number | null;
 }
 
 export interface DashboardSummary {
@@ -548,7 +538,6 @@ export const ActivityItemType = {
   redemption: 'redemption',
   goal_contribution: 'goal_contribution',
   new_employee: 'new_employee',
-  budget_assigned: 'budget_assigned',
 } as const;
 
 export interface ActivityItem {

@@ -26,7 +26,14 @@ export class Fixtures {
   locationIds: number[] = [];
   private sessionTokens: string[] = [];
 
-  async createEmployee(role: Role, opts: { departmentId?: number; locationId?: number } = {}) {
+  async createEmployee(
+    role: Role,
+    opts: { departmentId?: number; locationId?: number; awardBudgetYearly?: number | null } = {},
+  ) {
+    // Awarding roles get a large default yearly award budget so tests that send
+    // bucks aren't blocked by the budget check. Callers can override to test the
+    // budget itself. Non-awarding roles have no budget.
+    const defaultBudget = role === "admin" || role === "manager" ? 100_000_000 : null;
     const [emp] = await db
       .insert(employeesTable)
       .values({
@@ -37,6 +44,7 @@ export class Fixtures {
         status: "active",
         departmentId: opts.departmentId ?? null,
         locationId: opts.locationId ?? null,
+        awardBudgetYearly: opts.awardBudgetYearly !== undefined ? opts.awardBudgetYearly : defaultBudget,
       })
       .returning();
     this.employeeIds.push(emp.id);
@@ -44,7 +52,10 @@ export class Fixtures {
   }
 
   /** Create an employee and an authenticated Bearer token for them. */
-  async createAuthedEmployee(role: Role, opts: { departmentId?: number; locationId?: number } = {}) {
+  async createAuthedEmployee(
+    role: Role,
+    opts: { departmentId?: number; locationId?: number; awardBudgetYearly?: number | null } = {},
+  ) {
     const emp = await this.createEmployee(role, opts);
     const token = await createSession(emp.id);
     this.sessionTokens.push(token);

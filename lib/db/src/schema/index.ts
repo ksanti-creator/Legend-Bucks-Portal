@@ -6,4 +6,4 @@ export * from "./transactions";
 export * from "./rewards";
 export * from "./redemptions";
 export * from "./goals";
-export * from "./budgets";
+export * from "./settings";

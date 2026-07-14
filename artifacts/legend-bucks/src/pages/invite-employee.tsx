@@ -20,7 +20,7 @@ const inviteSchema = z.object({
   departmentId: z.coerce.number().optional().nullable(),
   locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
-  awardCapYearly: z.number().min(1).optional().nullable(),
+  awardBudgetYearly: z.number().min(1).optional().nullable(),
 });
 
 export default function InviteEmployee() {
@@ -44,7 +44,7 @@ export default function InviteEmployee() {
       departmentId: null,
       locationId: null,
       managerId: null,
-      awardCapYearly: null,
+      awardBudgetYearly: null,
     },
   });
 
@@ -262,15 +262,15 @@ export default function InviteEmployee() {
               {user?.role === "admin" && (
                 <FormField
                   control={form.control}
-                  name="awardCapYearly"
+                  name="awardBudgetYearly"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Yearly Award Cap (Optional)</FormLabel>
+                      <FormLabel>Yearly Award Budget (Optional)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="1"
-                          placeholder="No limit"
+                          placeholder="No budget"
                           value={field.value ?? ""}
                           onChange={(e) =>
                             field.onChange(e.target.value === "" ? null : Number(e.target.value))
@@ -278,7 +278,7 @@ export default function InviteEmployee() {
                         />
                       </FormControl>
                       <FormDescription>
-                        The most Legend Bucks this person's manager can award them per calendar year. Leave blank for no limit.
+                        The total Legend Bucks this person can award to others per calendar year. Only admins and managers award. Leave blank and they won't be able to award until you set a budget.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

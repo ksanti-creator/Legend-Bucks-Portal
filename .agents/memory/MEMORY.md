@@ -9,7 +9,7 @@
 - [Role-guard fallthrough](legend-bucks-role-guards.md) — authorize every bucks-moving write with a positive allow-list; exclusion guards silently grant new roles spend power.
 - [Postgres UPDATE no ORDER BY/LIMIT](postgres-update-order-limit.md) — Postgres rejects ORDER BY/LIMIT on UPDATE; such raw SQL 500s at runtime, invisible until a test hits the real path.
 - [Email provider](legend-bucks-email-provider.md) — transactional email sends via Gmail connector (not Resend); Gmail sends from the authorized account, From only honored for that account/alias.
-- [Per-employee award cap](legend-bucks-award-cap.md) — replaced monthly budgets; cap enforced only for the recipient's assigned manager, UTC calendar year, private to admins + that manager.
+- [Per-user award budget & global max](legend-bucks-award-budget.md) — award limits live on the awarding user (nullable yearly budget) + a global max_single_award in app_settings; enforced atomically by locking the sender row.
+- [drizzle push renames hang non-TTY](drizzle-push-noninteractive-renames.md) — push --force still prompts on ambiguous rename/drop diffs; pre-apply idempotent SQL in post-merge before push.
 - [Design tokens & sidebar trap](legend-bucks-design-tokens.md) — theme is CSS-token driven (cascades from index.css + Card); flipping a shared token's brightness (dark→light sidebar) silently breaks login (white-on-white); app is desktop-only fixed sidebar.
-- [Team (department) budgets](legend-bucks-team-budgets.md) — per-dept yearly pool funds team goals via `team_goal_award` (never a balance); used is ledger-derived; new tx enum values need DB+OpenAPI both; pool spend must be atomic (FOR UPDATE).
 - [Prod DB, admin bootstrap & reset](legend-bucks-prod-reset.md) — dev(heliumdb)/prod(neondb) are separate DBs, prod is read-only via tools; no public signup; reset/seed-admin needs a temp secret-guarded endpoint + republish twice.

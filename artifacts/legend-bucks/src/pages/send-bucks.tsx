@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useListEmployees, useGetMe, useSendBucks, useGetEmployeeAwardCap, getGetEmployeeAwardCapQueryKey } from "@workspace/api-client-react";
+import { useListEmployees, useGetMe, useSendBucks, useGetEmployeeAwardBudget, getGetEmployeeAwardBudgetQueryKey, useGetSettings } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,14 +53,23 @@ export default function SendBucks() {
     },
   });
 
-  // Show the awarding manager's remaining yearly cap for the selected recipient.
-  // Admins are never capped, so this is only fetched for managers.
-  const watchedTo = form.watch("toEmployeeId");
-  const recipientId = watchedTo ? Number(watchedTo) : 0;
-  const isManager = user?.role === "manager";
-  const { data: capInfo } = useGetEmployeeAwardCap(recipientId, {
-    query: { queryKey: getGetEmployeeAwardCapQueryKey(recipientId), enabled: isManager && recipientId > 0, retry: false },
+  // Every award draws down the sender's own yearly award budget, and no single
+  // award may exceed the global maximum. Fetch both so we can validate before
+  // submitting and show the sender their remaining budget.
+  const { data: budgetInfo } = useGetEmployeeAwardBudget(user?.id ?? 0, {
+    query: { queryKey: getGetEmployeeAwardBudgetQueryKey(user?.id ?? 0), enabled: !!user?.id, retry: false },
   });
+  const { data: settings } = useGetSettings();
+
+  const budget = budgetInfo?.budget ?? null;
+  const remaining = budgetInfo?.remaining ?? null;
+  const maxSingleAward = settings?.maxSingleAward ?? null;
+
+  const watchedAmount = Number(form.watch("amount")) || 0;
+  const hasNoBudget = budgetInfo != null && budget == null;
+  const overBudget = remaining != null && watchedAmount > remaining;
+  const overMax = maxSingleAward != null && watchedAmount > maxSingleAward;
+  const blocked = hasNoBudget || overBudget || overMax;
 
   if (user?.role !== "admin" && user?.role !== "manager") {
     return <div className="p-8 text-center text-destructive">Unauthorized. Managers only.</div>;
@@ -131,12 +140,27 @@ export default function SendBucks() {
                 )}
               />
 
-              {isManager && capInfo?.cap != null && (
-                <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm">
-                  <span className="text-muted-foreground">Shared yearly award cap for this person: </span>
-                  <strong className="text-foreground">{capInfo.remaining?.toLocaleString()} LB</strong>
-                  <span className="text-muted-foreground"> remaining of {capInfo.cap.toLocaleString()} LB.</span>
+              {hasNoBudget ? (
+                <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+                  You don't have an award budget set. Ask an admin to set your yearly award budget before you can send bucks.
                 </div>
+              ) : (
+                (budget != null || maxSingleAward != null) && (
+                  <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm space-y-1">
+                    {budget != null && (
+                      <div>
+                        <span className="text-muted-foreground">Your remaining award budget this year: </span>
+                        <strong className="text-foreground">{remaining?.toLocaleString()} LB</strong>
+                        <span className="text-muted-foreground"> of {budget.toLocaleString()} LB.</span>
+                      </div>
+                    )}
+                    {maxSingleAward != null && (
+                      <div className="text-muted-foreground">
+                        Maximum single award: <strong className="text-foreground">{maxSingleAward.toLocaleString()} LB</strong>.
+                      </div>
+                    )}
+                  </div>
+                )
               )}
 
               <FormField
@@ -156,6 +180,16 @@ export default function SendBucks() {
                         />
                       </div>
                     </FormControl>
+                    {overMax && (
+                      <p className="text-sm text-destructive">
+                        Exceeds the maximum single award of {maxSingleAward?.toLocaleString()} LB.
+                      </p>
+                    )}
+                    {!overMax && overBudget && (
+                      <p className="text-sm text-destructive">
+                        Exceeds your remaining award budget ({remaining?.toLocaleString()} LB left this year).
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -187,7 +221,7 @@ export default function SendBucks() {
                   type="submit" 
                   size="lg"
                   className="w-full text-lg font-semibold bg-primary hover:bg-primary/90"
-                  disabled={sendMut.isPending}
+                  disabled={sendMut.isPending || blocked}
                 >
                   {sendMut.isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Send className="h-5 w-5 mr-2" />}
                   Send Award

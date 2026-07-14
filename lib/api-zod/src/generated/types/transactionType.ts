@@ -15,5 +15,4 @@ export const TransactionType = {
   refund: 'refund',
   contribution: 'contribution',
   adjustment: 'adjustment',
-  team_goal_award: 'team_goal_award',
 } as const;

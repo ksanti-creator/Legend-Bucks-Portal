@@ -234,7 +234,7 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
       departmentId: parsed.data.departmentId ?? null,
       locationId: parsed.data.locationId ?? null,
       managerId: parsed.data.managerId ?? null,
-      awardCapYearly: parsed.data.awardCapYearly ?? null,
+      awardBudgetYearly: parsed.data.awardBudgetYearly ?? null,
       status: "invited",
     })
     .returning();

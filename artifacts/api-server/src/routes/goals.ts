@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, goalsTable, goalContributionsTable, employeesTable, transactionsTable, departmentsTable, teamBudgetsTable } from "@workspace/db";
-import { and, eq, sql } from "drizzle-orm";
+import { db, goalsTable, goalContributionsTable, employeesTable, transactionsTable, departmentsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import {
   ListGoalsQueryParams,
   ListGoalsResponse,
@@ -17,12 +17,8 @@ import {
   ContributeToGoalResponse,
   ListGoalContributionsParams,
   ListGoalContributionsResponse,
-  AwardFromTeamBudgetParams,
-  AwardFromTeamBudgetBody,
-  AwardFromTeamBudgetResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance, canSpendBucks, canAwardBucks } from "../lib/auth";
-import { currentYear, getUsedThisYear } from "../lib/teamBudget";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canSpendBucks } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -75,8 +71,10 @@ router.get("/goals", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/goals", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
+  // Team goals are manager-owned: admins create for any department, managers
+  // only for their own. Read-only roles (team_member, accounting_admin) can't.
+  if (user.role !== "admin" && user.role !== "manager") {
+    res.status(403).json({ error: "You are not allowed to create goals" });
     return;
   }
 
@@ -87,9 +85,13 @@ router.post("/goals", requireAuth, async (req, res): Promise<void> => {
   }
 
   const deptNames = await departmentNameMap();
-  const departmentId = body.data.departmentId ?? null;
-  if (departmentId != null && !deptNames.has(departmentId)) {
+  const departmentId = body.data.departmentId;
+  if (!deptNames.has(departmentId)) {
     res.status(400).json({ error: "Department not found" });
+    return;
+  }
+  if (user.role === "manager" && user.departmentId !== departmentId) {
+    res.status(403).json({ error: "Managers can only create goals for their own department" });
     return;
   }
 
@@ -100,7 +102,7 @@ router.post("/goals", requireAuth, async (req, res): Promise<void> => {
       description: body.data.description ?? null,
       departmentId,
       // Keep the legacy text label in sync for display fallback.
-      department: departmentId != null ? (deptNames.get(departmentId) ?? null) : null,
+      department: deptNames.get(departmentId) ?? null,
       targetAmount: body.data.targetAmount,
       active: body.data.active ?? true,
       endsAt: body.data.endsAt ? new Date(body.data.endsAt) : null,
@@ -129,8 +131,9 @@ router.get("/goals/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.patch("/goals/:id", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
+  // Admins update any goal; managers only goals in their own department.
+  if (user.role !== "admin" && user.role !== "manager") {
+    res.status(403).json({ error: "You are not allowed to update goals" });
     return;
   }
 
@@ -146,19 +149,33 @@ router.patch("/goals/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  const [existing] = await db.select().from(goalsTable).where(eq(goalsTable.id, params.data.id)).limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Goal not found" });
+    return;
+  }
+  if (user.role === "manager" && existing.departmentId !== user.departmentId) {
+    res.status(403).json({ error: "Managers can only update goals for their own department" });
+    return;
+  }
+
   const deptNames = await departmentNameMap();
   const updates: Record<string, any> = {};
   if (body.data.name !== undefined) updates.name = body.data.name;
   if ("description" in body.data) updates.description = body.data.description;
-  if ("departmentId" in body.data) {
-    const departmentId = body.data.departmentId ?? null;
-    if (departmentId != null && !deptNames.has(departmentId)) {
+  if (body.data.departmentId !== undefined) {
+    const departmentId = body.data.departmentId;
+    if (!deptNames.has(departmentId)) {
       res.status(400).json({ error: "Department not found" });
+      return;
+    }
+    if (user.role === "manager" && departmentId !== user.departmentId) {
+      res.status(403).json({ error: "Managers can only assign goals to their own department" });
       return;
     }
     updates.departmentId = departmentId;
     // Keep the legacy text label in sync for display fallback.
-    updates.department = departmentId != null ? (deptNames.get(departmentId) ?? null) : null;
+    updates.department = deptNames.get(departmentId) ?? null;
   }
   if (body.data.targetAmount !== undefined) updates.targetAmount = body.data.targetAmount;
   if (body.data.active !== undefined) updates.active = body.data.active;
@@ -169,11 +186,6 @@ router.patch("/goals/:id", requireAuth, async (req, res): Promise<void> => {
     .set(updates)
     .where(eq(goalsTable.id, params.data.id))
     .returning();
-
-  if (!updated) {
-    res.status(404).json({ error: "Goal not found" });
-    return;
-  }
 
   res.json(UpdateGoalResponse.parse(goalToResponse(updated, deptNames)));
 });
@@ -236,92 +248,6 @@ router.post("/goals/:id/contribute", requireAuth, async (req, res): Promise<void
 
   const deptNames = await departmentNameMap();
   res.status(201).json(ContributeToGoalResponse.parse(goalToResponse(updated, deptNames)));
-});
-
-// Award bucks toward a team goal from its department's budget pool. Unlike
-// /contribute, this does NOT touch any individual balance — it only draws down
-// the department pool and advances the goal. Allowed for admins and for managers
-// of the goal's own department; blocked when the pool can't cover the amount.
-router.post("/goals/:id/award-from-budget", requireAuth, async (req, res): Promise<void> => {
-  const user = getCurrentUser(req);
-  if (!canAwardBucks(user.role)) {
-    res.status(403).json({ error: "You are not allowed to award bucks" });
-    return;
-  }
-
-  const params = AwardFromTeamBudgetParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-  const body = AwardFromTeamBudgetBody.safeParse(req.body);
-  if (!body.success) {
-    res.status(400).json({ error: body.error.message });
-    return;
-  }
-
-  const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, params.data.id)).limit(1);
-  if (!goal || !goal.active) {
-    res.status(404).json({ error: "Goal not found or inactive" });
-    return;
-  }
-  if (goal.departmentId == null) {
-    res.status(404).json({ error: "This goal is not linked to a department budget" });
-    return;
-  }
-
-  // Managers may only award from their own department's pool; admins are exempt.
-  if (user.role !== "admin" && user.departmentId !== goal.departmentId) {
-    res.status(403).json({ error: "You can only award from your own department's budget" });
-    return;
-  }
-
-  const departmentId = goal.departmentId;
-  const amount = body.data.amount;
-
-  // Run the pool check + writes atomically. We lock the department's budget row
-  // (SELECT ... FOR UPDATE) so concurrent awards to the same department can't
-  // both pass the remaining-check and overspend the pool.
-  const result = await db.transaction(async (tx) => {
-    const [budgetRow] = await tx
-      .select()
-      .from(teamBudgetsTable)
-      .where(and(eq(teamBudgetsTable.departmentId, departmentId), eq(teamBudgetsTable.year, currentYear())))
-      .for("update")
-      .limit(1);
-
-    const poolAmount = budgetRow?.amount ?? 0;
-    const used = await getUsedThisYear(departmentId, tx);
-    const remaining = Math.max(0, poolAmount - used);
-    if (amount > remaining) return { remaining };
-
-    await tx.insert(transactionsTable).values({
-      type: "team_goal_award",
-      amount,
-      fromEmployeeId: user.id,
-      toEmployeeId: null,
-      note: `Team budget award to goal: ${goal.name}`,
-      goalId: goal.id,
-    });
-
-    // Atomic increment: never read-then-write currentAmount, or a concurrent
-    // award serialized after us would overwrite our progress with a stale base.
-    const [updated] = await tx
-      .update(goalsTable)
-      .set({ currentAmount: sql`${goalsTable.currentAmount} + ${amount}` })
-      .where(eq(goalsTable.id, goal.id))
-      .returning();
-
-    return { updated };
-  });
-
-  if (!result.updated) {
-    res.status(400).json({ error: `Insufficient team budget. Remaining: ${result.remaining} bucks.` });
-    return;
-  }
-
-  const deptNames = await departmentNameMap();
-  res.status(201).json(AwardFromTeamBudgetResponse.parse(goalToResponse(result.updated, deptNames)));
 });
 
 router.get("/goals/:id/contributions", requireAuth, async (req, res): Promise<void> => {
