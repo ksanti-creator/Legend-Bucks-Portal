@@ -165,11 +165,6 @@ export interface Employee {
   status: EmployeeStatus;
   /** @nullable */
   balance?: number | null;
-  /**
-     * This user's yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.
-     * @nullable
-     */
-  awardBudgetYearly?: number | null;
   createdAt: string;
 }
 
@@ -202,12 +197,6 @@ export interface EmployeeUpdate {
   managerId?: number | null;
   role?: EmployeeUpdateRole;
   status?: EmployeeUpdateStatus;
-  /**
-     * Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.
-     * @minimum 1
-     * @nullable
-     */
-  awardBudgetYearly?: number | null;
 }
 
 export interface BalanceSummary {
@@ -255,28 +244,6 @@ export interface InviteInput {
   locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
-  /**
-     * Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.
-     * @minimum 1
-     * @nullable
-     */
-  awardBudgetYearly?: number | null;
-}
-
-export interface AwardBudgetInfo {
-  employeeId: number;
-  /**
-     * The yearly award budget in bucks, or null if none is set.
-     * @nullable
-     */
-  budget: number | null;
-  /** Bucks this user has awarded so far this UTC calendar year. */
-  usedThisYear: number;
-  /**
-     * Bucks left in the budget this year, or null if no budget is set (which means the user cannot award).
-     * @nullable
-     */
-  remaining: number | null;
 }
 
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];

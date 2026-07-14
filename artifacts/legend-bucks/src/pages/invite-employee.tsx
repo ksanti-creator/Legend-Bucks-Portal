@@ -20,7 +20,6 @@ const inviteSchema = z.object({
   departmentId: z.coerce.number().optional().nullable(),
   locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
-  awardBudgetYearly: z.number().min(1).optional().nullable(),
 });
 
 export default function InviteEmployee() {
@@ -44,7 +43,6 @@ export default function InviteEmployee() {
       departmentId: null,
       locationId: null,
       managerId: null,
-      awardBudgetYearly: null,
     },
   });
 
@@ -258,33 +256,6 @@ export default function InviteEmployee() {
                   )}
                 />
               </div>
-
-              {user?.role === "admin" && (
-                <FormField
-                  control={form.control}
-                  name="awardBudgetYearly"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Yearly Award Budget (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="No budget"
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(e.target.value === "" ? null : Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        The total Legend Bucks this person can award to others per calendar year. Only admins and managers award. Leave blank and they won't be able to award until you set a budget.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               <div className="flex justify-end pt-4 border-t border-border">
                 <Button type="button" variant="outline" className="mr-3" onClick={() => setLocation("/employees")}>

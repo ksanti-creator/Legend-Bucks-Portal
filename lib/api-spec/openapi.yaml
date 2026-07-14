@@ -277,32 +277,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/Employee"
 
-  /employees/{id}/award-budget:
-    get:
-      operationId: getEmployeeAwardBudget
-      tags: [employees]
-      summary: >-
-        Get an employee's yearly award budget, this-year usage, and remaining.
-        This is the pool the user (a manager/admin) draws down when awarding
-        bucks. Restricted to admins and the employee themselves.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Award budget info
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AwardBudgetInfo"
-        "403":
-          description: Forbidden
-        "404":
-          description: Not found
-
   # Transactions (Ledger)
   /transactions:
     get:
@@ -363,7 +337,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Transaction"
         "400":
-          description: Award cap exceeded or bad request
+          description: Award exceeds the maximum single award, or bad request
         "403":
           description: Forbidden
 
@@ -1327,11 +1301,6 @@ components:
           enum: [active, inactive, invited]
         balance:
           type: ["integer", "null"]
-        awardBudgetYearly:
-          type: ["integer", "null"]
-          description: >-
-            This user's yearly award budget in bucks. Only populated for admins
-            and the employee themselves; null otherwise.
         createdAt:
           type: string
 
@@ -1354,12 +1323,6 @@ components:
         status:
           type: string
           enum: [active, inactive]
-        awardBudgetYearly:
-          type: ["integer", "null"]
-          minimum: 1
-          description: >-
-            Yearly award budget (in bucks) this user may draw down when awarding
-            bucks to others. null clears it (cannot award). Admin-only.
 
     BalanceSummary:
       type: object
@@ -1419,31 +1382,6 @@ components:
           type: ["integer", "null"]
         managerId:
           type: ["integer", "null"]
-        awardBudgetYearly:
-          type: ["integer", "null"]
-          minimum: 1
-          description: >-
-            Optional yearly award budget (in bucks) this user may draw down when
-            awarding bucks. Omit to leave unset; null means no budget (cannot
-            award). Admin-only.
-
-    AwardBudgetInfo:
-      type: object
-      required: [employeeId, budget, usedThisYear, remaining]
-      properties:
-        employeeId:
-          type: integer
-        budget:
-          type: ["integer", "null"]
-          description: The yearly award budget in bucks, or null if none is set.
-        usedThisYear:
-          type: integer
-          description: Bucks this user has awarded so far this UTC calendar year.
-        remaining:
-          type: ["integer", "null"]
-          description: >-
-            Bucks left in the budget this year, or null if no budget is set
-            (which means the user cannot award).
 
     Transaction:
       type: object

@@ -1,17 +1,17 @@
 ---
-name: Per-user award budget & global max single award
-description: How award spending is limited in Legend Bucks after the manager-budget redesign
+name: Award authorization & limits
+description: How awarding bucks is gated in Legend Bucks (roles + global max single award). The per-user yearly budget was removed.
 ---
 
-Award-spending limits live on the **awarding user**, not the recipient or a department.
+# Awarding bucks — what gates it
 
-- **Per-user yearly award budget**: nullable int column on the employee row. Draws down as that user awards ('award' tx). Resets on the UTC calendar year (no carryover). `null` budget = the user cannot award at all. Set by admins on invite and on the employee detail dialog. Backfilled a default for existing admin/manager rows.
-- **Global "maximum single award"**: a single key/value row in an `app_settings` table (key `max_single_award`). Admin-only to change; any authed user may read it (client-side validation). Absent row = no limit.
+Awarding (POST /api/transactions, type `award`) is constrained by exactly two things:
 
-**Enforcement (POST /transactions):** check global max first, then lock the *sender's* employee row `FOR UPDATE`, compute their YTD awarded total, check against their budget, then insert — all in one transaction. The self-award guard runs BEFORE the budget check.
+1. **Role allow-list** — only `admin` and `manager` may award (`canAwardBucks` in `lib/auth.ts`, a positive allow-list). `team_member` and `accounting_admin` get 403. Self-awards are always blocked server-side.
+2. **Global "max single award"** — a single optional cap in `app_settings` (key `max_single_award`, read via `getMaxSingleAward`). Absent row = no limit. Applies to every awarding role, admins included.
 
-**Visibility:** award-budget is private — the `GET /employees/{id}/award-budget` endpoint and the `awardBudgetYearly` field on the employee response are authorized to **self + admin only** (via an `includeBudget` gate in the response builder). Never leaked in list endpoints.
+There is **no per-user / yearly award budget** and no atomic budget draw-down. The award endpoint just inserts the row after the two checks above.
 
-**Why:** replaced both the department "team budget" pool and the per-recipient shared cap. The old models limited the wrong party; budgets now belong to whoever spends.
+**Why:** The per-user `awardBudgetYearly` column + `/employees/{id}/award-budget` endpoint + `AwardBudgetInfo` schema + `lib/awardBudget.ts` were all removed on request (July 2026). Users found the yearly budget cumbersome; recognition should be as frequent as deserved, capped only by the single-award ceiling.
 
-**How to apply:** any new award path must go through the same atomic sender-lock + global-max flow, or budgets can be over-drawn under concurrency. Any new setting goes in `app_settings` as another key.
+**How to apply:** If asked to "limit awards," reach for the global max-single-award setting, not a per-user budget. Do not reintroduce `awardBudgetYearly` unless explicitly asked. If a future task references an "award budget" (e.g. "spot who's running low on budget"), it's obsolete — confirm before building.

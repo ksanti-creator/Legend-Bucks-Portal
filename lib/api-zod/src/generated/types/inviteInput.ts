@@ -18,10 +18,4 @@ export interface InviteInput {
   locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
-  /**
-     * Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.
-     * @minimum 1
-     * @nullable
-     */
-  awardBudgetYearly?: number | null;
 }

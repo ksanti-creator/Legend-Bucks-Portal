@@ -22,7 +22,6 @@ import type {
 import type {
   ActivityItem,
   AuthSession,
-  AwardBudgetInfo,
   BalanceSummary,
   CurrentUser,
   DashboardSummary,
@@ -977,83 +976,6 @@ export const useDeactivateEmployee = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeactivateEmployeeMutationOptions(options));
     }
-
-export const getGetEmployeeAwardBudgetUrl = (id: number,) => {
-
-
-
-
-  return `/api/employees/${id}/award-budget`
-}
-
-/**
- * @summary Get an employee's yearly award budget, this-year usage, and remaining. This is the pool the user (a manager/admin) draws down when awarding bucks. Restricted to admins and the employee themselves.
- */
-export const getEmployeeAwardBudget = async (id: number, options?: RequestInit): Promise<AwardBudgetInfo> => {
-
-  return customFetch<AwardBudgetInfo>(getGetEmployeeAwardBudgetUrl(id),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetEmployeeAwardBudgetQueryKey = (id: number,) => {
-    return [
-    `/api/employees/${id}/award-budget`
-    ] as const;
-    }
-
-
-export const getGetEmployeeAwardBudgetQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeAwardBudget>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAwardBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeAwardBudgetQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeAwardBudget>>> = ({ signal }) => getEmployeeAwardBudget(id, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAwardBudget>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetEmployeeAwardBudgetQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeAwardBudget>>>
-export type GetEmployeeAwardBudgetQueryError = ErrorType<void>
-
-
-/**
- * @summary Get an employee's yearly award budget, this-year usage, and remaining. This is the pool the user (a manager/admin) draws down when awarding bucks. Restricted to admins and the employee themselves.
- */
-
-export function useGetEmployeeAwardBudget<TData = Awaited<ReturnType<typeof getEmployeeAwardBudget>>, TError = ErrorType<void>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeAwardBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetEmployeeAwardBudgetQueryOptions(id,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
 
 export const getListTransactionsUrl = (params?: ListTransactionsParams,) => {
   const normalizedParams = new URLSearchParams();

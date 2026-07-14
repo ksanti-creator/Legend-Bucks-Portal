@@ -10,10 +10,8 @@ import {
   useListDepartments,
   useListLocations,
   useGetMe,
-  useGetEmployeeAwardBudget,
   getGetEmployeeQueryKey,
   getGetEmployeeBalanceQueryKey,
-  getGetEmployeeAwardBudgetQueryKey,
   getListTransactionsQueryKey
 } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,25 +73,15 @@ export default function EmployeeDetail() {
   const [editDept, setEditDept] = useState<string>("none");
   const [editLoc, setEditLoc] = useState<string>("none");
   const [editManager, setEditManager] = useState<string>("none");
-  const [editBudget, setEditBudget] = useState<string>("");
 
   const isAdmin = currentUser?.role === "admin";
   const isAdminOrManager = currentUser?.role === "admin" || currentUser?.role === "manager";
   const canDeactivate = currentUser?.role === "admin" && employee?.status !== "inactive";
 
-  // The yearly award budget is private to the employee themselves and admins.
-  // The server authorizes only self + admin; retry is disabled so an
-  // unauthorized fetch quietly hides the card.
-  const canViewBudget = isAdmin || currentUser?.id === id;
-  const { data: budgetInfo } = useGetEmployeeAwardBudget(id, {
-    query: { queryKey: getGetEmployeeAwardBudgetQueryKey(id), enabled: !!id && canViewBudget, retry: false },
-  });
-
   const openEdit = () => {
     setEditDept(employee?.departmentId ? employee.departmentId.toString() : "none");
     setEditLoc(employee?.locationId ? employee.locationId.toString() : "none");
     setEditManager(employee?.managerId ? employee.managerId.toString() : "none");
-    setEditBudget(budgetInfo?.budget != null ? budgetInfo.budget.toString() : "");
     setEditOpen(true);
   };
 
@@ -105,14 +93,12 @@ export default function EmployeeDetail() {
           departmentId: editDept === "none" ? null : parseInt(editDept),
           locationId: editLoc === "none" ? null : parseInt(editLoc),
           managerId: editManager === "none" ? null : parseInt(editManager),
-          awardBudgetYearly: editBudget.trim() === "" ? null : parseInt(editBudget, 10),
         },
       },
       {
         onSuccess: () => {
           toast({ title: "Employee updated" });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
-          queryClient.invalidateQueries({ queryKey: getGetEmployeeAwardBudgetQueryKey(id) });
           setEditOpen(false);
         },
         onError: () => toast({ title: "Failed to update employee", variant: "destructive" }),
@@ -270,19 +256,6 @@ export default function EmployeeDetail() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Yearly Award Budget</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        placeholder="No budget"
-                        value={editBudget}
-                        onChange={(e) => setEditBudget(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Total Legend Bucks this person can award to others per year. Leave blank so they can't award until a budget is set.
-                      </p>
-                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
@@ -346,27 +319,6 @@ export default function EmployeeDetail() {
               value={isLoadingBal ? "..." : balance?.totalSpent.toLocaleString()}
             />
           </div>
-
-          {canViewBudget && budgetInfo?.budget != null && (
-            <Card className="border-none shadow-sm bg-accent/5">
-              <CardContent className="p-6 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Yearly Award Budget</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Legend Bucks this person can award to others this year.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-display font-bold text-foreground">
-                    {budgetInfo.remaining?.toLocaleString()} <span className="text-base text-muted-foreground">/ {budgetInfo.budget.toLocaleString()} LB</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {budgetInfo.usedThisYear.toLocaleString()} LB awarded so far this year
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <Card className="border-none shadow-sm h-[500px] flex flex-col">
             <CardHeader className="pb-3 border-b">

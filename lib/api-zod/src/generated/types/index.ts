@@ -11,7 +11,6 @@ export * from './activityItemType';
 export * from './authSession';
 export * from './authSessionRole';
 export * from './authSessionStatus';
-export * from './awardBudgetInfo';
 export * from './balanceSummary';
 export * from './currentUser';
 export * from './currentUserRole';

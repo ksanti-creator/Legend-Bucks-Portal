@@ -14,11 +14,8 @@ import {
   UpdateEmployeeResponse,
   DeactivateEmployeeResponse,
   GetEmployeeBalanceResponse,
-  GetEmployeeAwardBudgetParams,
-  GetEmployeeAwardBudgetResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
-import { getAwardedThisYear } from "../lib/awardBudget";
 import { getSubtreeIds } from "../lib/orgChain";
 import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
@@ -26,7 +23,7 @@ const router: IRouter = Router();
 
 async function buildEmployeeResponse(
   emp: any,
-  opts: { withBalance?: boolean; includeBudget?: boolean } = {},
+  opts: { withBalance?: boolean } = {},
 ) {
   let managerName: string | null = null;
   if (emp.managerId) {
@@ -56,8 +53,6 @@ async function buildEmployeeResponse(
     role: emp.role,
     status: emp.status,
     balance,
-    // The yearly award budget is admin/self-only — never leak it in listings.
-    awardBudgetYearly: opts.includeBudget ? (emp.awardBudgetYearly ?? null) : null,
     createdAt: emp.createdAt.toISOString(),
   };
 }
@@ -105,9 +100,7 @@ router.get("/employees/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const user = getCurrentUser(req);
-  const includeBudget = user.role === "admin" || user.id === emp.id;
-  res.json(GetEmployeeResponse.parse(await buildEmployeeResponse(emp, { withBalance: true, includeBudget })));
+  res.json(GetEmployeeResponse.parse(await buildEmployeeResponse(emp, { withBalance: true })));
 });
 
 router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
@@ -143,7 +136,6 @@ router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
   if ("managerId" in body.data) updates.managerId = body.data.managerId;
   if (body.data.role !== undefined) updates.role = body.data.role;
   if (body.data.status !== undefined) updates.status = body.data.status;
-  if ("awardBudgetYearly" in body.data) updates.awardBudgetYearly = body.data.awardBudgetYearly ?? null;
 
   const [updated] = await db
     .update(employeesTable)
@@ -156,7 +148,7 @@ router.patch("/employees/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(UpdateEmployeeResponse.parse(await buildEmployeeResponse(updated, { withBalance: true, includeBudget: true })));
+  res.json(UpdateEmployeeResponse.parse(await buildEmployeeResponse(updated, { withBalance: true })));
 });
 
 router.patch("/employees/:id/deactivate", requireAuth, async (req, res): Promise<void> => {
@@ -184,47 +176,6 @@ router.patch("/employees/:id/deactivate", requireAuth, async (req, res): Promise
   }
 
   res.json(DeactivateEmployeeResponse.parse(await buildEmployeeResponse(updated)));
-});
-
-// A user's yearly award budget + this-year usage/remaining. This is the pool
-// the user (a manager/admin) draws down when awarding bucks. Readable only by
-// admins and the employee themselves.
-router.get("/employees/:id/award-budget", requireAuth, async (req, res): Promise<void> => {
-  const params = GetEmployeeAwardBudgetParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-
-  const user = getCurrentUser(req);
-  const [emp] = await db
-    .select()
-    .from(employeesTable)
-    .where(eq(employeesTable.id, params.data.id))
-    .limit(1);
-
-  if (!emp) {
-    res.status(404).json({ error: "Employee not found" });
-    return;
-  }
-
-  if (user.role !== "admin" && user.id !== emp.id) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-
-  const budget = emp.awardBudgetYearly ?? null;
-  const usedThisYear = await getAwardedThisYear(emp.id);
-  const remaining = budget == null ? null : Math.max(0, budget - usedThisYear);
-
-  res.json(
-    GetEmployeeAwardBudgetResponse.parse({
-      employeeId: emp.id,
-      budget,
-      usedThisYear,
-      remaining,
-    }),
-  );
 });
 
 router.get("/employees/:id/balance", requireAuth, async (req, res): Promise<void> => {

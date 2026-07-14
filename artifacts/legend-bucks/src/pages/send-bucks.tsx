@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useListEmployees, useGetMe, useSendBucks, useGetEmployeeAwardBudget, getGetEmployeeAwardBudgetQueryKey, useGetSettings } from "@workspace/api-client-react";
+import { useListEmployees, useGetMe, useSendBucks, useGetSettings } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,23 +53,15 @@ export default function SendBucks() {
     },
   });
 
-  // Every award draws down the sender's own yearly award budget, and no single
-  // award may exceed the global maximum. Fetch both so we can validate before
-  // submitting and show the sender their remaining budget.
-  const { data: budgetInfo } = useGetEmployeeAwardBudget(user?.id ?? 0, {
-    query: { queryKey: getGetEmployeeAwardBudgetQueryKey(user?.id ?? 0), enabled: !!user?.id, retry: false },
-  });
+  // No single award may exceed the global maximum. Fetch it so we can validate
+  // before submitting and show the sender the cap.
   const { data: settings } = useGetSettings();
 
-  const budget = budgetInfo?.budget ?? null;
-  const remaining = budgetInfo?.remaining ?? null;
   const maxSingleAward = settings?.maxSingleAward ?? null;
 
   const watchedAmount = Number(form.watch("amount")) || 0;
-  const hasNoBudget = budgetInfo != null && budget == null;
-  const overBudget = remaining != null && watchedAmount > remaining;
   const overMax = maxSingleAward != null && watchedAmount > maxSingleAward;
-  const blocked = hasNoBudget || overBudget || overMax;
+  const blocked = overMax;
 
   if (user?.role !== "admin" && user?.role !== "manager") {
     return <div className="p-8 text-center text-destructive">Unauthorized. Managers only.</div>;
@@ -140,27 +132,10 @@ export default function SendBucks() {
                 )}
               />
 
-              {hasNoBudget ? (
-                <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
-                  You don't have an award budget set. Ask an admin to set your yearly award budget before you can send bucks.
+              {maxSingleAward != null && (
+                <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm text-muted-foreground">
+                  Maximum single award: <strong className="text-foreground">{maxSingleAward.toLocaleString()} LB</strong>.
                 </div>
-              ) : (
-                (budget != null || maxSingleAward != null) && (
-                  <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm space-y-1">
-                    {budget != null && (
-                      <div>
-                        <span className="text-muted-foreground">Your remaining award budget this year: </span>
-                        <strong className="text-foreground">{remaining?.toLocaleString()} LB</strong>
-                        <span className="text-muted-foreground"> of {budget.toLocaleString()} LB.</span>
-                      </div>
-                    )}
-                    {maxSingleAward != null && (
-                      <div className="text-muted-foreground">
-                        Maximum single award: <strong className="text-foreground">{maxSingleAward.toLocaleString()} LB</strong>.
-                      </div>
-                    )}
-                  </div>
-                )
               )}
 
               <FormField
@@ -183,11 +158,6 @@ export default function SendBucks() {
                     {overMax && (
                       <p className="text-sm text-destructive">
                         Exceeds the maximum single award of {maxSingleAward?.toLocaleString()} LB.
-                      </p>
-                    )}
-                    {!overMax && overBudget && (
-                      <p className="text-sm text-destructive">
-                        Exceeds your remaining award budget ({remaining?.toLocaleString()} LB left this year).
                       </p>
                     )}
                     <FormMessage />

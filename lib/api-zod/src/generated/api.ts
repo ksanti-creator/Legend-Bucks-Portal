@@ -95,9 +95,6 @@ export const LogoutResponse = zod.void()
 /**
  * @summary Admin invites a new employee by email
  */
-
-
-
 export const InviteEmployeeBody = zod.object({
   "email": zod.string().email(),
   "firstName": zod.string(),
@@ -105,8 +102,7 @@ export const InviteEmployeeBody = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
-  "managerId": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.')
+  "managerId": zod.number().nullish()
 })
 
 export const InviteEmployeeResponse = zod.object({
@@ -123,7 +119,6 @@ export const InviteEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -153,7 +148,6 @@ export const ListEmployeesResponseItem = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -180,7 +174,6 @@ export const GetEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -192,9 +185,6 @@ export const UpdateEmployeeParams = zod.object({
   "id": zod.coerce.number()
 })
 
-
-
-
 export const UpdateEmployeeBody = zod.object({
   "firstName": zod.string().optional(),
   "lastName": zod.string().optional(),
@@ -202,8 +192,7 @@ export const UpdateEmployeeBody = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']).optional(),
-  "status": zod.enum(['active', 'inactive']).optional(),
-  "awardBudgetYearly": zod.number().min(1).nullish().describe('Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.')
+  "status": zod.enum(['active', 'inactive']).optional()
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -220,7 +209,6 @@ export const UpdateEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -261,23 +249,7 @@ export const DeactivateEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
-})
-
-
-/**
- * @summary Get an employee's yearly award budget, this-year usage, and remaining. This is the pool the user (a manager/admin) draws down when awarding bucks. Restricted to admins and the employee themselves.
- */
-export const GetEmployeeAwardBudgetParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const GetEmployeeAwardBudgetResponse = zod.object({
-  "employeeId": zod.number(),
-  "budget": zod.number().nullable().describe('The yearly award budget in bucks, or null if none is set.'),
-  "usedThisYear": zod.number().describe('Bucks this user has awarded so far this UTC calendar year.'),
-  "remaining": zod.number().nullable().describe('Bucks left in the budget this year, or null if no budget is set (which means the user cannot award).')
 })
 
 
