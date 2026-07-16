@@ -32,6 +32,7 @@ app.use(
 // would then allow any site to make authenticated cross-origin requests.
 const TRUSTED_ORIGIN_PATTERNS: RegExp[] = [
   /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
   /^https:\/\/[\w-]+\.replit\.dev$/,
   /^https:\/\/[\w-]+\.replit\.app$/,
   /^https:\/\/[\w-]+\.picard\.replit\.dev$/,

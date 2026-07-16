@@ -39,7 +39,7 @@ export default function Dashboard() {
         
         <Card className="bg-primary text-primary-foreground border-none shadow-lg shrink-0 w-full md:w-auto relative overflow-hidden">
           <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
-          <CardContent className="p-6 flex items-center gap-6 relative z-10">
+          <CardContent className="p-6 flex flex-wrap items-center gap-x-6 gap-y-4 relative z-10">
             <div className="bg-primary-foreground/20 p-4 rounded-xl">
               <Coins className="h-8 w-8 text-primary-foreground" />
             </div>
@@ -49,7 +49,7 @@ export default function Dashboard() {
                 {user?.balance?.toLocaleString()} <span className="text-xl text-primary-foreground/70">LB</span>
               </div>
             </div>
-            <div className="ml-4 pl-6 border-l border-primary-foreground/20">
+            <div className="sm:ml-4 sm:pl-6 sm:border-l border-primary-foreground/20">
               <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 font-bold" asChild>
                 <Link href="/rewards">
                   Redeem

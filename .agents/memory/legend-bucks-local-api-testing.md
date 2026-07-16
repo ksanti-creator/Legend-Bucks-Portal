@@ -19,3 +19,6 @@ bypasses that routing and yields empty responses.
 **How to apply:** for auth'd calls, POST `/api/auth/login` (dev returns a
 `token`), POST `/api/auth/verify` with it to get a session token, then send
 `Authorization: Bearer <sessionToken>`.
+
+## Screenshotting authenticated pages (mobile/desktop)
+The screenshot browser can't set localStorage, but `/login?token=<magic>` auto-verifies and lands on /dashboard. Get a dev magic token via `POST /api/auth/login` (token returned when NODE_ENV != production). Each screenshot needs a fresh single-use token; only /dashboard is reachable this way. The screenshot browser's origin is `http://127.0.0.1`, which is in the API CORS allow-list (added alongside localhost) — without it, POST verify fails with a CORS 500.

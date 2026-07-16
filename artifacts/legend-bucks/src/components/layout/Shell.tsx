@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import { 
@@ -14,18 +14,99 @@ import {
   Ship,
   Building2,
   HelpCircle,
-  Coins
+  Coins,
+  Menu
 } from "lucide-react";
 
 import { cn, getInitials } from "@/lib/utils";
 import { clearSessionToken } from "@/lib/auth-token";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
+
+function SidebarContent({
+  navItems,
+  location,
+  user,
+  onNavigate,
+  onLogout,
+}: {
+  navItems: NavItem[];
+  location: string;
+  user: { firstName: string; lastName: string; role: string };
+  onNavigate?: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <div className="px-5 py-6">
+        <img
+          src="/logos/legend-bucks-rewards.png"
+          alt="Legend Bucks Rewards"
+          className="h-10 w-auto"
+        />
+      </div>
+
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const isActive = location.startsWith(item.href);
+          return (
+            <Link 
+              key={item.href} 
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-sm font-medium",
+                isActive 
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-sidebar-primary")} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="p-3 mt-2">
+        <div className="rounded-2xl border border-sidebar-border bg-secondary/50 p-3">
+          <div className="flex items-center gap-3 mb-3">
+            <Avatar className="h-10 w-10 border border-sidebar-border">
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                {getInitials(user.firstName, user.lastName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate text-foreground">{user.firstName} {user.lastName}</p>
+              <p className="text-xs text-muted-foreground truncate capitalize">{user.role.replace('_', ' ')}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" size="sm" className="w-full bg-card" asChild>
+              <Link href="/settings" onClick={onNavigate}>
+                <Settings className="h-4 w-4 mr-1.5" />
+                Settings
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" className="w-full bg-card text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" onClick={onLogout}>
+              <LogOut className="h-4 w-4 mr-1.5" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useGetMe();
   const logout = useLogout();
   const [location, setLocation] = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -60,7 +141,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   // The read-only accounting_admin role only sees finance surfaces — the ledger
   // and redemptions (read-only) — never the action-oriented pages.
-  let navItems: { href: string; label: string; icon: typeof LayoutDashboard }[];
+  let navItems: NavItem[];
 
   if (user.role === "accounting_admin") {
     navItems = [
@@ -91,73 +172,51 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen app-gradient-bg text-foreground">
-      {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-64 border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col z-40">
-        <div className="px-5 py-6">
-          <img
-            src="/logos/legend-bucks-rewards.png"
-            alt="Legend Bucks Rewards"
-            className="h-10 w-auto"
-          />
-        </div>
-
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive = location.startsWith(item.href);
-            return (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-sm font-medium",
-                  isActive 
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-sidebar-primary")} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-3 mt-2">
-          <div className="rounded-2xl border border-sidebar-border bg-secondary/50 p-3">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="h-10 w-10 border border-sidebar-border">
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                  {getInitials(user.firstName, user.lastName)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate text-foreground">{user.firstName} {user.lastName}</p>
-                <p className="text-xs text-muted-foreground truncate capitalize">{user.role.replace('_', ' ')}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="w-full bg-card" asChild>
-                <Link href="/settings">
-                  <Settings className="h-4 w-4 mr-1.5" />
-                  Settings
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm" className="w-full bg-card text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-1.5" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 border-r border-sidebar-border flex-col z-40">
+        <SidebarContent
+          navItems={navItems}
+          location={location}
+          user={user}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 pl-64 flex flex-col min-h-screen">
-        <header className="h-16 border-b border-border/70 bg-background/70 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-20">
-          <div className="font-semibold text-foreground flex items-center">
-            {navItems.find(item => location.startsWith(item.href))?.label || "Legend Bucks"}
+      <main className="flex-1 min-w-0 lg:pl-64 flex flex-col min-h-screen">
+        <header className="h-16 border-b border-border/70 bg-background/70 backdrop-blur-md flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Mobile nav trigger */}
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden -ml-1 shrink-0"
+                  aria-label="Open navigation menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 max-w-[85vw] p-0 border-sidebar-border">
+                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                <SidebarContent
+                  navItems={navItems}
+                  location={location}
+                  user={user}
+                  onNavigate={() => setMobileNavOpen(false)}
+                  onLogout={() => {
+                    setMobileNavOpen(false);
+                    handleLogout();
+                  }}
+                />
+              </SheetContent>
+            </Sheet>
+            <div className="font-semibold text-foreground truncate">
+              {navItems.find(item => location.startsWith(item.href))?.label || "Legend Bucks"}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="flex items-center gap-2.5 rounded-full bg-primary/10 pl-3 pr-4 py-1.5">
               <Coins className="h-4 w-4 text-primary" />
               <div className="leading-tight">
@@ -169,7 +228,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
