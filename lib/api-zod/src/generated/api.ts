@@ -95,6 +95,9 @@ export const LogoutResponse = zod.void()
 /**
  * @summary Admin invites a new employee by email
  */
+
+
+
 export const InviteEmployeeBody = zod.object({
   "email": zod.string().email(),
   "firstName": zod.string(),
@@ -102,7 +105,8 @@ export const InviteEmployeeBody = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
-  "managerId": zod.number().nullish()
+  "managerId": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.')
 })
 
 export const InviteEmployeeResponse = zod.object({
@@ -119,6 +123,7 @@ export const InviteEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -148,6 +153,7 @@ export const ListEmployeesResponseItem = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -174,6 +180,7 @@ export const GetEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -185,6 +192,9 @@ export const UpdateEmployeeParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
+
+
 export const UpdateEmployeeBody = zod.object({
   "firstName": zod.string().optional(),
   "lastName": zod.string().optional(),
@@ -192,7 +202,8 @@ export const UpdateEmployeeBody = zod.object({
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']).optional(),
-  "status": zod.enum(['active', 'inactive']).optional()
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.')
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -209,6 +220,7 @@ export const UpdateEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
 })
 
@@ -249,7 +261,23 @@ export const DeactivateEmployeeResponse = zod.object({
   "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().nullish().describe('This user\'s yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.'),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get an employee's yearly award budget, this-year usage, and remaining. This is the pool the user (a manager/admin) draws down when awarding bucks. Restricted to admins and the employee themselves.
+ */
+export const GetEmployeeAwardBudgetParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEmployeeAwardBudgetResponse = zod.object({
+  "employeeId": zod.number(),
+  "budget": zod.number().nullable().describe('The yearly award budget in bucks, or null if none is set.'),
+  "usedThisYear": zod.number().describe('Bucks this user has awarded so far this UTC calendar year.'),
+  "remaining": zod.number().nullable().describe('Bucks left in the budget this year, or null if no budget is set (which means the user cannot award).')
 })
 
 
@@ -535,6 +563,8 @@ export const ListRewardsResponseItem = zod.object({
   "category": zod.string().nullish(),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
+  "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
+  "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
   "imageUrl": zod.string().nullish(),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
@@ -557,6 +587,8 @@ export const CreateRewardBody = zod.object({
   "category": zod.string().optional(),
   "buckCost": zod.number().min(1),
   "cadValueCents": zod.number().nullish(),
+  "productCode": zod.string().nullish(),
+  "serialNumber": zod.string().nullish(),
   "imageUrl": zod.string().optional(),
   "quantity": zod.number().nullish(),
   "locationRestriction": zod.string().nullish(),
@@ -571,6 +603,8 @@ export const CreateRewardResponse = zod.object({
   "category": zod.string().nullish(),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
+  "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
+  "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
   "imageUrl": zod.string().nullish(),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
@@ -594,6 +628,8 @@ export const GetRewardResponse = zod.object({
   "category": zod.string().nullish(),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
+  "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
+  "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
   "imageUrl": zod.string().nullish(),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
@@ -619,6 +655,8 @@ export const UpdateRewardBody = zod.object({
   "category": zod.string().nullish(),
   "buckCost": zod.number().min(1).optional(),
   "cadValueCents": zod.number().nullish(),
+  "productCode": zod.string().nullish(),
+  "serialNumber": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
   "quantity": zod.number().nullish(),
   "locationRestriction": zod.string().nullish(),
@@ -633,6 +671,8 @@ export const UpdateRewardResponse = zod.object({
   "category": zod.string().nullish(),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
+  "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
+  "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
   "imageUrl": zod.string().nullish(),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
@@ -1052,5 +1092,57 @@ export const UpdateSettingsBody = zod.object({
 export const UpdateSettingsResponse = zod.object({
   "maxSingleAward": zod.number().nullable().describe('The maximum bucks allowed in a single award, or null for no limit.')
 })
+
+
+/**
+ * Returns a presigned GCS URL for direct upload. The client sends JSON
+ * metadata here, then uploads the file directly to the returned URL.
+ * @summary Request a presigned URL for file upload (admin only)
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1).describe('Original file name.'),
+  "size": zod.number().min(1).describe('File size in bytes.'),
+  "contentType": zod.string().min(1).describe('MIME type of the file (e.g. `image\/jpeg`).')
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url().describe('Presigned GCS URL for PUT upload.'),
+  "objectPath": zod.string().describe('Normalized object path (e.g. `\/objects\/uploads\/uuid`).'),
+  "metadata": zod.object({
+  "name": zod.string().min(1).describe('Original file name.'),
+  "size": zod.number().min(1).describe('File size in bytes.'),
+  "contentType": zod.string().min(1).describe('MIME type of the file (e.g. `image\/jpeg`).')
+}).optional()
+})
+
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const GetPublicObjectParams = zod.object({
+  "filePath": zod.coerce.string()
+})
+
+export const GetPublicObjectResponse = zod.unknown()
+
+
+/**
+ * @summary Serve an uploaded object entity
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+export const GetStorageObjectResponse = zod.unknown()
 
 

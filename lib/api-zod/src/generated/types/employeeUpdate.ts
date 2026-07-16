@@ -19,4 +19,10 @@ export interface EmployeeUpdate {
   managerId?: number | null;
   role?: EmployeeUpdateRole;
   status?: EmployeeUpdateStatus;
+  /**
+     * Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.
+     * @minimum 1
+     * @nullable
+     */
+  awardBudgetYearly?: number | null;
 }

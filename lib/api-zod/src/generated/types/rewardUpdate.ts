@@ -17,6 +17,10 @@ export interface RewardUpdate {
   /** @nullable */
   cadValueCents?: number | null;
   /** @nullable */
+  productCode?: string | null;
+  /** @nullable */
+  serialNumber?: string | null;
+  /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
   quantity?: number | null;

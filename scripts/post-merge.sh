@@ -21,11 +21,9 @@ BEGIN
 END $$;
 DROP TABLE IF EXISTS team_budgets;
 
--- Award budgets have been removed entirely: drop both the legacy per-recipient
--- cap and the per-user yearly award budget. Awarding is now gated only by role
--- (admins + managers) and the global max_single_award setting.
+-- Replace the per-recipient award cap with a per-user yearly award budget.
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS award_budget_yearly integer;
 ALTER TABLE employees DROP COLUMN IF EXISTS award_cap_yearly;
-ALTER TABLE employees DROP COLUMN IF EXISTS award_budget_yearly;
 
 -- Key/value store for global settings (e.g. max_single_award).
 CREATE TABLE IF NOT EXISTS app_settings (
@@ -61,6 +59,10 @@ if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
   # Link legacy goals (free-text `department`) to a real `department_id` by
   # case-insensitive department-name match. Only fills rows still unlinked.
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "UPDATE goals SET department_id = d.id FROM departments d WHERE goals.department_id IS NULL AND goals.department IS NOT NULL AND lower(trim(goals.department)) = lower(trim(d.name));"
+
+  # Give existing admins/managers a sensible default yearly award budget so they
+  # can award right away. Only fills accounts that have no budget set yet.
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "UPDATE employees SET award_budget_yearly = 50000 WHERE award_budget_yearly IS NULL AND role IN ('admin','manager');"
 
   # Seed the global maximum single award so the safeguard is active out of the
   # box. Only inserts when the setting is not already present.

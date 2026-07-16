@@ -5,6 +5,36 @@
  * Legend Bucks rewards platform API
  * OpenAPI spec version: 0.1.0
  */
+export interface UploadUrlRequest {
+  /**
+     * Original file name.
+     * @minLength 1
+     */
+  name: string;
+  /**
+     * File size in bytes.
+     * @minimum 1
+     */
+  size: number;
+  /**
+     * MIME type of the file (e.g. `image/jpeg`).
+     * @minLength 1
+     */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  /** Presigned GCS URL for PUT upload. */
+  uploadURL: string;
+  /** Normalized object path (e.g. `/objects/uploads/uuid`). */
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export interface ErrorEnvelope {
+  error: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -165,6 +195,11 @@ export interface Employee {
   status: EmployeeStatus;
   /** @nullable */
   balance?: number | null;
+  /**
+     * This user's yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.
+     * @nullable
+     */
+  awardBudgetYearly?: number | null;
   createdAt: string;
 }
 
@@ -197,6 +232,12 @@ export interface EmployeeUpdate {
   managerId?: number | null;
   role?: EmployeeUpdateRole;
   status?: EmployeeUpdateStatus;
+  /**
+     * Yearly award budget (in bucks) this user may draw down when awarding bucks to others. null clears it (cannot award). Admin-only.
+     * @minimum 1
+     * @nullable
+     */
+  awardBudgetYearly?: number | null;
 }
 
 export interface BalanceSummary {
@@ -244,6 +285,28 @@ export interface InviteInput {
   locationId?: number | null;
   /** @nullable */
   managerId?: number | null;
+  /**
+     * Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.
+     * @minimum 1
+     * @nullable
+     */
+  awardBudgetYearly?: number | null;
+}
+
+export interface AwardBudgetInfo {
+  employeeId: number;
+  /**
+     * The yearly award budget in bucks, or null if none is set.
+     * @nullable
+     */
+  budget: number | null;
+  /** Bucks this user has awarded so far this UTC calendar year. */
+  usedThisYear: number;
+  /**
+     * Bucks left in the budget this year, or null if no budget is set (which means the user cannot award).
+     * @nullable
+     */
+  remaining: number | null;
 }
 
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];
@@ -317,6 +380,16 @@ export interface Reward {
      * @nullable
      */
   cadValueCents?: number | null;
+  /**
+     * Internal product code / SKU. Only returned to admins.
+     * @nullable
+     */
+  productCode?: string | null;
+  /**
+     * Internal serial number. Only returned to admins.
+     * @nullable
+     */
+  serialNumber?: string | null;
   /** @nullable */
   imageUrl?: string | null;
   /**
@@ -339,6 +412,10 @@ export interface RewardInput {
   buckCost: number;
   /** @nullable */
   cadValueCents?: number | null;
+  /** @nullable */
+  productCode?: string | null;
+  /** @nullable */
+  serialNumber?: string | null;
   imageUrl?: string;
   /** @nullable */
   quantity?: number | null;
@@ -358,6 +435,10 @@ export interface RewardUpdate {
   buckCost?: number;
   /** @nullable */
   cadValueCents?: number | null;
+  /** @nullable */
+  productCode?: string | null;
+  /** @nullable */
+  serialNumber?: string | null;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */

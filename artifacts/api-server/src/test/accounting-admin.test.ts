@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../app";
-import { db, transactionsTable, rewardsTable, redemptionsTable, goalsTable, goalContributionsTable } from "@workspace/db";
-import { inArray, or } from "drizzle-orm";
+import { db, transactionsTable, rewardsTable, redemptionsTable, goalsTable, goalContributionsTable, employeesTable } from "@workspace/db";
+import { inArray, or, eq } from "drizzle-orm";
 import { Fixtures, bearer, uniq } from "./helpers";
 
 const fx = new Fixtures();
@@ -37,6 +37,10 @@ beforeAll(async () => {
   const mem = await fx.createAuthedEmployee("team_member");
   memberToken = mem.token;
   memberId = mem.emp.id;
+
+  // Managers only see redemptions from their own reporting subtree, so make
+  // the member report to the manager for the CAD-visibility assertions below.
+  await db.update(employeesTable).set({ managerId }).where(eq(employeesTable.id, memberId));
 
   // Seed an award between manager -> member (accounting admin is not involved).
   const [tx] = await db

@@ -29,5 +29,10 @@ export interface Employee {
   status: EmployeeStatus;
   /** @nullable */
   balance?: number | null;
+  /**
+     * This user's yearly award budget in bucks. Only populated for admins and the employee themselves; null otherwise.
+     * @nullable
+     */
+  awardBudgetYearly?: number | null;
   createdAt: string;
 }

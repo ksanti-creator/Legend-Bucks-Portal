@@ -10,6 +10,7 @@ import redemptionsRouter from "./redemptions";
 import goalsRouter from "./goals";
 import settingsRouter from "./settings";
 import dashboardRouter from "./dashboard";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(redemptionsRouter);
 router.use(goalsRouter);
 router.use(settingsRouter);
 router.use(dashboardRouter);
+router.use(storageRouter);
 
 export default router;

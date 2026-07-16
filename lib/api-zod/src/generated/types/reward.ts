@@ -19,6 +19,16 @@ export interface Reward {
      * @nullable
      */
   cadValueCents?: number | null;
+  /**
+     * Internal product code / SKU. Only returned to admins.
+     * @nullable
+     */
+  productCode?: string | null;
+  /**
+     * Internal serial number. Only returned to admins.
+     * @nullable
+     */
+  serialNumber?: string | null;
   /** @nullable */
   imageUrl?: string | null;
   /**

@@ -95,12 +95,13 @@ const FLOWS: Record<Role, Flow[]> = {
       ],
     },
     {
-      title: "Maximum single award",
-      summary: "There may be a company-wide cap on any single award.",
+      title: "Per-person yearly award caps",
+      summary: "Some team members have a yearly limit on what you can award them.",
       steps: [
-        "An admin can set a maximum single award for the whole company in Settings.",
-        "If a cap is set, Send Bucks shows it and blocks any award above that amount.",
-        "There is no yearly budget — you can recognize great work as often as it's deserved.",
+        "An admin may set a yearly cap on how much you can award a specific person.",
+        "If a person has a cap, Send Bucks shows how much you have left for them this year.",
+        "Awards are blocked once you'd exceed their remaining cap. Caps reset each calendar year.",
+        "People without a cap have no limit.",
       ],
     },
     {
@@ -155,12 +156,12 @@ const FLOWS: Record<Role, Flow[]> = {
       ],
     },
     {
-      title: "Set the maximum single award",
-      summary: "Cap how much can be given in any single award, company-wide.",
+      title: "Set a per-person award cap",
+      summary: "Limit how much a person's manager can award them each year.",
       steps: [
-        "Open Settings and set the Maximum single award.",
-        "No award — from any admin or manager — can exceed that amount.",
-        "Leave it blank for no limit. There is no per-person or yearly budget.",
+        "Open a team member's profile (or the invite form) and set their Yearly Award Cap.",
+        "Their manager can then award them up to that amount per calendar year.",
+        "Leave it blank for no limit. Caps reset at the start of each calendar year.",
       ],
     },
     {

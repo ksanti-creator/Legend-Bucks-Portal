@@ -27,6 +27,9 @@ function rewardToResponse(r: any, isAdmin: boolean) {
     buckCost: r.buckCost,
     // CAD value is accounting-only: only expose it to admins, never to regular staff.
     cadValueCents: isAdmin ? (r.cadValueCents ?? null) : null,
+    // Product code & serial number are internal inventory data: admins only.
+    productCode: isAdmin ? (r.productCode ?? null) : null,
+    serialNumber: isAdmin ? (r.serialNumber ?? null) : null,
     imageUrl: r.imageUrl,
     quantity: r.quantity,
     locationRestriction: r.locationRestriction,
@@ -80,6 +83,8 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
       category: body.data.category ?? null,
       buckCost: body.data.buckCost,
       cadValueCents: body.data.cadValueCents ?? null,
+      productCode: body.data.productCode ?? null,
+      serialNumber: body.data.serialNumber ?? null,
       imageUrl: body.data.imageUrl ?? null,
       quantity: body.data.quantity ?? null,
       locationRestriction: body.data.locationRestriction ?? null,
@@ -133,6 +138,8 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
   if ("category" in body.data) updates.category = body.data.category;
   if (body.data.buckCost !== undefined) updates.buckCost = body.data.buckCost;
   if ("cadValueCents" in body.data) updates.cadValueCents = body.data.cadValueCents;
+  if ("productCode" in body.data) updates.productCode = body.data.productCode;
+  if ("serialNumber" in body.data) updates.serialNumber = body.data.serialNumber;
   if ("imageUrl" in body.data) updates.imageUrl = body.data.imageUrl;
   if ("quantity" in body.data) updates.quantity = body.data.quantity;
   if ("locationRestriction" in body.data) updates.locationRestriction = body.data.locationRestriction;

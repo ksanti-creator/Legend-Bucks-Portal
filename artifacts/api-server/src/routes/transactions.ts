@@ -14,6 +14,7 @@ import {
   GetTransactionSummaryResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, canViewAccounting, canAwardBucks } from "../lib/auth";
+import { getAwardedThisYear } from "../lib/awardBudget";
 import { getMaxSingleAward } from "../lib/settings";
 import { sendBucksReceivedEmail } from "../lib/email";
 
@@ -156,18 +157,52 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Record the award. Awarding is gated by role (admins + managers) and the
-  // global maximum single award above; there is no per-user award budget.
-  const [tx] = await db
-    .insert(transactionsTable)
-    .values({
-      type: "award",
-      amount,
-      fromEmployeeId: user.id,
-      toEmployeeId,
-      note: note ?? null,
-    })
-    .returning();
+  // Draw the award down from the sender's own yearly award budget. This runs
+  // atomically: we lock the sender's employee row (SELECT ... FOR UPDATE) so two
+  // concurrent awards can't both pass the remaining-budget check and overspend
+  // the budget. A sender with no budget set (null) cannot award at all.
+  const spend = await db.transaction(async (trx) => {
+    const [sender] = await trx
+      .select()
+      .from(employeesTable)
+      .where(eq(employeesTable.id, user.id))
+      .for("update")
+      .limit(1);
+
+    const budget = sender?.awardBudgetYearly ?? null;
+    if (budget == null) return { blocked: "no-budget" as const };
+
+    const used = await getAwardedThisYear(user.id, trx);
+    const remaining = budget - used;
+    if (amount > remaining) return { blocked: "over-budget" as const, remaining: Math.max(0, remaining) };
+
+    const [created] = await trx
+      .insert(transactionsTable)
+      .values({
+        type: "award",
+        amount,
+        fromEmployeeId: user.id,
+        toEmployeeId,
+        note: note ?? null,
+      })
+      .returning();
+    return { tx: created };
+  });
+
+  if ("blocked" in spend) {
+    if (spend.blocked === "no-budget") {
+      res.status(400).json({
+        error: "You don't have an award budget set. Ask an admin to set your yearly award budget.",
+      });
+    } else {
+      res.status(400).json({
+        error: `This exceeds your remaining award budget for the year (${spend.remaining} bucks left).`,
+      });
+    }
+    return;
+  }
+
+  const tx = spend.tx;
 
   // Notify the recipient by email — best-effort, never blocks the award.
   // Respect the recipient's notification preference.

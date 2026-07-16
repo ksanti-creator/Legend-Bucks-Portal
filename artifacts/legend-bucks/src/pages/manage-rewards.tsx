@@ -31,6 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch"; // Need to generate this
+import { ImageUpload } from "@/components/image-upload";
 
 import giftCardImg from "@assets/generated_images/gift-card.png";
 import ptoImg from "@assets/generated_images/pto.png";
@@ -57,6 +58,8 @@ const rewardSchema = z.object({
     z.coerce.number().min(0, "Value cannot be negative").nullable(),
   ),
   imageUrl: z.string().optional(),
+  productCode: z.string().optional(),
+  serialNumber: z.string().optional(),
   quantity: z.coerce.number().optional().nullable(),
   locationRestriction: z.string().optional().nullable(),
   active: z.boolean().default(true),
@@ -87,6 +90,8 @@ export default function ManageRewards() {
       buckCost: 100,
       cadValue: null,
       imageUrl: "",
+      productCode: "",
+      serialNumber: "",
       quantity: null,
       locationRestriction: "",
       active: true,
@@ -106,6 +111,8 @@ export default function ManageRewards() {
       ...rest,
       quantity: data.quantity === 0 || isNaN(data.quantity as any) ? null : data.quantity,
       locationRestriction: data.locationRestriction === "" ? null : data.locationRestriction,
+      productCode: data.productCode?.trim() ? data.productCode.trim() : null,
+      serialNumber: data.serialNumber?.trim() ? data.serialNumber.trim() : null,
       cadValueCents:
         cadValue === null || cadValue === undefined || isNaN(cadValue as any)
           ? null
@@ -150,6 +157,8 @@ export default function ManageRewards() {
       buckCost: reward.buckCost,
       cadValue: reward.cadValueCents != null ? reward.cadValueCents / 100 : null,
       imageUrl: reward.imageUrl || "",
+      productCode: reward.productCode || "",
+      serialNumber: reward.serialNumber || "",
       quantity: reward.quantity,
       locationRestriction: reward.locationRestriction || "",
       active: reward.active,
@@ -262,6 +271,44 @@ export default function ManageRewards() {
                   )}
                 />
 
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                  <div>
+                    <h3 className="text-sm font-semibold">Product Identifiers — Admin only</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Optional internal tracking details. Visible only to admins — never shown to employees.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="productCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Code (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. SKU-12345" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="serialNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Serial Number (Optional)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. SN-000123" {...field} value={field.value ?? ""} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="description"
@@ -307,9 +354,12 @@ export default function ManageRewards() {
                     name="imageUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Image URL (Optional)</FormLabel>
+                        <FormLabel>Image (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="/assets/image.png" {...field} />
+                          <ImageUpload
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

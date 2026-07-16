@@ -9,7 +9,8 @@
 - [Role-guard fallthrough](legend-bucks-role-guards.md) — authorize every bucks-moving write with a positive allow-list; exclusion guards silently grant new roles spend power.
 - [Postgres UPDATE no ORDER BY/LIMIT](postgres-update-order-limit.md) — Postgres rejects ORDER BY/LIMIT on UPDATE; such raw SQL 500s at runtime, invisible until a test hits the real path.
 - [Email provider](legend-bucks-email-provider.md) — transactional email sends via Gmail connector (not Resend); Gmail sends from the authorized account, From only honored for that account/alias.
-- [Award authorization & limits](legend-bucks-award-budget.md) — awarding gated only by role (admin/manager) + global max_single_award; per-user yearly budget was REMOVED (don't reintroduce unasked).
+- [Award authorization & limits](legend-bucks-award-budget.md) — awarding gated by role + per-user nullable yearly budget (enforced atomically) + global max_single_award; invite auto-fills 50000 default for admins/managers.
 - [drizzle push renames hang non-TTY](drizzle-push-noninteractive-renames.md) — push --force still prompts on ambiguous rename/drop diffs; pre-apply idempotent SQL in post-merge before push.
 - [Design tokens & sidebar trap](legend-bucks-design-tokens.md) — theme is CSS-token driven (cascades from index.css + Card); flipping a shared token's brightness (dark→light sidebar) silently breaks login (white-on-white); app is desktop-only fixed sidebar.
 - [Prod DB, admin bootstrap & reset](legend-bucks-prod-reset.md) — dev(heliumdb)/prod(neondb) are separate DBs, prod is read-only via tools; no public signup; reset/seed-admin needs a temp secret-guarded endpoint + republish twice.
+- [Object storage image serving](legend-bucks-object-storage.md) — image serve endpoint is public (img tags can't send Bearer) but MUST stay confined to the uploads/ namespace or it leaks the whole private dir.

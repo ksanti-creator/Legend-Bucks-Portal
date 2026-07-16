@@ -17,6 +17,11 @@ export const employeesTable = pgTable("employees", {
   managerId: integer("manager_id"),
   role: roleEnum("role").notNull().default("team_member"),
   status: statusEnum("status").notNull().default("invited"),
+  // Optional yearly award budget (in bucks) this user (a manager/admin) may
+  // draw down when awarding bucks to others within a UTC calendar year.
+  // null = no budget set = cannot award. Resets each year, no carryover.
+  // Admin-only to set; a user may read their own remaining budget.
+  awardBudgetYearly: integer("award_budget_yearly"),
   // Per-user email notification opt-outs. Default true = opted in.
   notifyBucksReceived: boolean("notify_bucks_received").notNull().default(true),
   notifyRedemptionUpdates: boolean("notify_redemption_updates").notNull().default(true),

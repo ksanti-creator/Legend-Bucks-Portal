@@ -19,7 +19,8 @@ import {
   FulfillRedemptionParams,
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks, canDecideRedemptionFor } from "../lib/auth";
+import { getSubtreeIds } from "../lib/orgChain";
 import {
   sendRedemptionReceiptEmail,
   sendRedemptionApprovedEmail,
@@ -59,9 +60,16 @@ router.get("/redemptions", requireAuth, async (req, res): Promise<void> => {
 
   let all = await db.select().from(redemptionsTable).orderBy(redemptionsTable.createdAt);
 
-  // Team members only see their own
+  // Team members only see their own. Managers see their own plus their
+  // reporting subtree (their approval queue). Admins/accounting see all.
   if (user.role === "team_member") {
     all = all.filter((r) => r.employeeId === user.id);
+  } else if (user.role === "manager") {
+    const subtree = new Set(await getSubtreeIds(user.id));
+    all = all.filter((r) => r.employeeId === user.id || subtree.has(r.employeeId));
+    if (params.data.employeeId !== undefined) {
+      all = all.filter((r) => r.employeeId === params.data.employeeId);
+    }
   } else if (params.data.employeeId !== undefined) {
     all = all.filter((r) => r.employeeId === params.data.employeeId);
   }
@@ -170,7 +178,17 @@ router.get("/redemptions/:id", requireAuth, async (req, res): Promise<void> => {
   }
 
   const user = getCurrentUser(req);
+  // Mirror the list scoping: team members only their own; managers only their
+  // own or their reporting subtree's; admins/accounting see any.
   if (user.role === "team_member" && redemption.employeeId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  if (
+    user.role === "manager" &&
+    redemption.employeeId !== user.id &&
+    !(await getSubtreeIds(user.id)).includes(redemption.employeeId)
+  ) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -180,10 +198,6 @@ router.get("/redemptions/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
 
   const params = ApproveRedemptionParams.safeParse(req.params);
   if (!params.success) {
@@ -192,7 +206,18 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
   }
 
   const [redemption] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, params.data.id)).limit(1);
-  if (!redemption || redemption.status !== "requested") {
+  if (!redemption) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  // Admins may decide any redemption; managers only those from their own reports.
+  if (!(await canDecideRedemptionFor(user, redemption.employeeId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  if (redemption.status !== "requested") {
     res.status(400).json({ error: "Redemption cannot be approved" });
     return;
   }
@@ -215,15 +240,11 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
     req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption approved email");
   }
 
-  res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
+  res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated, canViewAccounting(user.role))));
 });
 
 router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role !== "admin") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
 
   const params = RejectRedemptionParams.safeParse(req.params);
   const body = RejectRedemptionBody.safeParse(req.body);
@@ -233,7 +254,18 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
   }
 
   const [redemption] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, params.data.id)).limit(1);
-  if (!redemption || !["requested", "approved"].includes(redemption.status)) {
+  if (!redemption) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  // Admins may decide any redemption; managers only those from their own reports.
+  if (!(await canDecideRedemptionFor(user, redemption.employeeId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  if (!["requested", "approved"].includes(redemption.status)) {
     res.status(400).json({ error: "Redemption cannot be rejected" });
     return;
   }
@@ -271,7 +303,7 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
     req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption rejected email");
   }
 
-  res.json(RejectRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
+  res.json(RejectRedemptionResponse.parse(await enrichRedemption(updated, canViewAccounting(user.role))));
 });
 
 router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<void> => {

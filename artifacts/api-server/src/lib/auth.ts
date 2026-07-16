@@ -4,6 +4,7 @@ import type { Employee } from "@workspace/db";
 import { eq, and, gt } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import { logger } from "./logger";
+import { getSubtreeIds } from "./orgChain";
 
 // Typed request augmentation
 declare global {
@@ -138,6 +139,21 @@ export function canAwardBucks(role: string): boolean {
  */
 export function canSpendBucks(role: string): boolean {
   return role === "admin" || role === "manager" || role === "team_member";
+}
+
+/**
+ * May `user` decide (approve/reject) a redemption made by `redeemerEmployeeId`?
+ * Admins always may; a manager may only for employees inside their own
+ * reporting subtree (direct or indirect reports — never themselves).
+ * Positive allow-list: every other role is denied by default.
+ * Fulfillment is NOT covered here — it stays admin-only at the endpoint.
+ */
+export async function canDecideRedemptionFor(user: Employee, redeemerEmployeeId: number): Promise<boolean> {
+  if (user.role === "admin") return true;
+  if (user.role !== "manager") return false;
+  if (redeemerEmployeeId === user.id) return false;
+  const subtree = await getSubtreeIds(user.id);
+  return subtree.includes(redeemerEmployeeId);
 }
 
 export function getCurrentUser(req: Request): Employee {

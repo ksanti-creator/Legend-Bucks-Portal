@@ -14,6 +14,10 @@ export interface RewardInput {
   buckCost: number;
   /** @nullable */
   cadValueCents?: number | null;
+  /** @nullable */
+  productCode?: string | null;
+  /** @nullable */
+  serialNumber?: string | null;
   imageUrl?: string;
   /** @nullable */
   quantity?: number | null;

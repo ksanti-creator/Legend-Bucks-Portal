@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +21,7 @@ const inviteSchema = z.object({
   departmentId: z.coerce.number().optional().nullable(),
   locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
+  awardBudgetYearly: z.number().min(1).optional().nullable(),
 });
 
 export default function InviteEmployee() {
@@ -43,11 +45,28 @@ export default function InviteEmployee() {
       departmentId: null,
       locationId: null,
       managerId: null,
+      awardBudgetYearly: null,
     },
   });
 
   const { data: departments } = useListDepartments();
   const { data: locations } = useListLocations();
+
+  // Only admins and managers can award, so they get a sending budget. Pre-fill a
+  // sensible default the inviter can adjust; clear it for team members (who can't
+  // award). We only auto-fill when the field is empty so a manual edit sticks.
+  const DEFAULT_AWARD_BUDGET = 50000;
+  const selectedRole = form.watch("role");
+  const canAward = selectedRole === "admin" || selectedRole === "manager";
+  useEffect(() => {
+    if (canAward) {
+      if (form.getValues("awardBudgetYearly") == null) {
+        form.setValue("awardBudgetYearly", DEFAULT_AWARD_BUDGET, { shouldDirty: false });
+      }
+    } else {
+      form.setValue("awardBudgetYearly", null, { shouldDirty: false });
+    }
+  }, [canAward]);
 
   if (user?.role !== "admin" && user?.role !== "manager") {
     return <div className="p-8 text-center text-destructive">Unauthorized. Admins and managers only.</div>;
@@ -256,6 +275,33 @@ export default function InviteEmployee() {
                   )}
                 />
               </div>
+
+              {canAward && (
+                <FormField
+                  control={form.control}
+                  name="awardBudgetYearly"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yearly Award Budget</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="No budget"
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        The total Legend Bucks this person can award to others per calendar year. Pre-filled with a default for admins and managers — adjust it as needed, or clear it so they can't award until you set a budget.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="flex justify-end pt-4 border-t border-border">
                 <Button type="button" variant="outline" className="mr-3" onClick={() => setLocation("/employees")}>

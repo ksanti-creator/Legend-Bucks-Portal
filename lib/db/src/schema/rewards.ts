@@ -9,6 +9,8 @@ export const rewardsTable = pgTable("rewards", {
   category: text("category"),
   buckCost: integer("buck_cost").notNull(),
   cadValueCents: integer("cad_value_cents"), // real-money value in CAD cents; null = not set. Accounting-only.
+  productCode: text("product_code"), // internal SKU / product code; null = not set. Admin-only.
+  serialNumber: text("serial_number"), // internal serial number; null = not set. Admin-only.
   imageUrl: text("image_url"),
   quantity: integer("quantity"), // null = unlimited
   locationRestriction: text("location_restriction"),
