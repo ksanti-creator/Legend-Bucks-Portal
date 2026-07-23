@@ -9,4 +9,5 @@
 export interface NotificationPreferences {
   notifyBucksReceived: boolean;
   notifyRedemptionUpdates: boolean;
+  notifyNewRedemptionRequests: boolean;
 }

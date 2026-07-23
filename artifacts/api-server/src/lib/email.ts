@@ -408,6 +408,56 @@ export async function sendRedemptionReceiptEmail(
 }
 
 /**
+ * Notify an approver (admin or scoped manager) that a new redemption request
+ * came in. Buck cost only — never include accounting-only CAD values here.
+ */
+export async function sendNewRedemptionRequestEmail(
+  to: string,
+  firstName: string,
+  employeeName: string,
+  rewardName: string,
+  buckCost: number,
+  note: string | null,
+): Promise<void> {
+  const noteBlock = note
+    ? `<p style="margin:0 0 8px;color:#888;font-size:13px;line-height:1.5;">Their note:</p>
+       <p style="margin:0 0 28px;color:#4f4f51;font-size:16px;line-height:1.6;font-style:italic;background:#f5f5f5;padding:14px 18px;border-radius:6px;border-left:4px solid #00afed;">
+         “${escapeHtml(note)}”
+       </p>`
+    : "";
+
+  const html = emailShell(
+    "New redemption request",
+    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Hi ${escapeHtml(firstName)},
+     </p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       <strong>${escapeHtml(employeeName)}</strong> just redeemed a reward and it's waiting in the Fulfillment Center.
+     </p>
+     <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;background:#f5f5f5;border-radius:8px;">
+       <tr>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Employee</td>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(employeeName)}</td>
+       </tr>
+       <tr>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Reward</td>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(rewardName)}</td>
+       </tr>
+       <tr>
+         <td style="padding:16px 20px;color:#888;font-size:13px;">Cost</td>
+         <td style="padding:16px 20px;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${formatBucks(buckCost)}</td>
+       </tr>
+     </table>
+     ${noteBlock}
+     <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
+       Sign in to Legend Bucks to review this request in the Fulfillment Center.
+     </p>`,
+  );
+
+  await sendBrandedEmail(to, `New redemption request: ${rewardName}`, html, "Failed to send new redemption request email");
+}
+
+/**
  * Notify an employee that their redemption was approved.
  */
 export async function sendRedemptionApprovedEmail(

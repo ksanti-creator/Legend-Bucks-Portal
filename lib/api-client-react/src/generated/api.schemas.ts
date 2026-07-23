@@ -79,11 +79,14 @@ export interface CurrentUser {
   notifyBucksReceived: boolean;
   /** Receive emails about reward redemption status */
   notifyRedemptionUpdates: boolean;
+  /** Receive an email when a new redemption request needs your attention (admins/managers) */
+  notifyNewRedemptionRequests: boolean;
 }
 
 export interface NotificationPreferences {
   notifyBucksReceived: boolean;
   notifyRedemptionUpdates: boolean;
+  notifyNewRedemptionRequests: boolean;
 }
 
 export type AuthSessionRole = typeof AuthSessionRole[keyof typeof AuthSessionRole];

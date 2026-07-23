@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { IRouter } from "express";
 import { db, redemptionsTable, rewardsTable, employeesTable, transactionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   ListRedemptionsQueryParams,
   ListRedemptionsResponse,
@@ -20,9 +20,10 @@ import {
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks, canDecideRedemptionFor } from "../lib/auth";
-import { getSubtreeIds } from "../lib/orgChain";
+import { getSubtreeIds, getManagerChain } from "../lib/orgChain";
 import {
   sendRedemptionReceiptEmail,
+  sendNewRedemptionRequestEmail,
   sendRedemptionApprovedEmail,
   sendRedemptionRejectedEmail,
   sendRedemptionFulfilledEmail,
@@ -140,9 +141,15 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     .returning();
 
   // Update transaction with redemption id
-  await db.execute(
-    `UPDATE transactions SET redemption_id = ${redemption.id} WHERE type = 'redemption_debit' AND from_employee_id = ${user.id} AND redemption_id IS NULL ORDER BY created_at DESC LIMIT 1`
-  );
+  // Postgres doesn't allow ORDER BY/LIMIT directly on UPDATE — target the
+  // single newest unlinked debit via a subquery instead.
+  await db.execute(sql`
+    UPDATE transactions SET redemption_id = ${redemption.id}
+    WHERE id = (
+      SELECT id FROM transactions
+      WHERE type = 'redemption_debit' AND from_employee_id = ${user.id} AND redemption_id IS NULL
+      ORDER BY created_at DESC LIMIT 1
+    )`);
 
   // Email the employee a redemption receipt — best-effort, never blocks.
   if (user.email && user.notifyRedemptionUpdates) {
@@ -159,6 +166,43 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     } catch (err) {
       req.log.error({ err, redemptionId: redemption.id }, "Failed to send redemption receipt email");
     }
+  }
+
+  // Notify approvers (all admins + managers in the redeemer's chain) — buck
+  // cost only, never CAD. Best-effort per recipient: failures are logged and
+  // never block or fail the redemption.
+  try {
+    const [managerChainIds, allEmployees] = await Promise.all([
+      getManagerChain(user.id),
+      db.select().from(employeesTable),
+    ]);
+    const chainSet = new Set(managerChainIds);
+    const approvers = allEmployees.filter(
+      (e) =>
+        e.id !== user.id &&
+        e.status === "active" &&
+        !!e.email &&
+        e.notifyNewRedemptionRequests &&
+        (e.role === "admin" || (e.role === "manager" && chainSet.has(e.id))),
+    );
+    const employeeName = `${user.firstName} ${user.lastName}`;
+    for (const approver of approvers) {
+      try {
+        await sendNewRedemptionRequestEmail(
+          approver.email,
+          approver.firstName,
+          employeeName,
+          reward.name,
+          redemption.buckCost,
+          redemption.note,
+        );
+        req.log.info({ redemptionId: redemption.id, approverId: approver.id }, "New redemption request email sent");
+      } catch (err) {
+        req.log.error({ err, redemptionId: redemption.id, approverId: approver.id }, "Failed to send new redemption request email");
+      }
+    }
+  } catch (err) {
+    req.log.error({ err, redemptionId: redemption.id }, "Failed to notify approvers of new redemption");
   }
 
   res.status(201).json(CreateRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));

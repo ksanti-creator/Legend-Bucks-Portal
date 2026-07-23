@@ -32,7 +32,8 @@ export const GetMeResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().optional().describe('Current Legend Bucks balance'),
   "notifyBucksReceived": zod.boolean().describe('Receive an email when awarded Legend Bucks'),
-  "notifyRedemptionUpdates": zod.boolean().describe('Receive emails about reward redemption status')
+  "notifyRedemptionUpdates": zod.boolean().describe('Receive emails about reward redemption status'),
+  "notifyNewRedemptionRequests": zod.boolean().describe('Receive an email when a new redemption request needs your attention (admins\/managers)')
 })
 
 
@@ -41,12 +42,14 @@ export const GetMeResponse = zod.object({
  */
 export const UpdateNotificationPreferencesBody = zod.object({
   "notifyBucksReceived": zod.boolean(),
-  "notifyRedemptionUpdates": zod.boolean()
+  "notifyRedemptionUpdates": zod.boolean(),
+  "notifyNewRedemptionRequests": zod.boolean()
 })
 
 export const UpdateNotificationPreferencesResponse = zod.object({
   "notifyBucksReceived": zod.boolean(),
-  "notifyRedemptionUpdates": zod.boolean()
+  "notifyRedemptionUpdates": zod.boolean(),
+  "notifyNewRedemptionRequests": zod.boolean()
 })
 
 

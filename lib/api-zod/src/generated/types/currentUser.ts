@@ -29,4 +29,6 @@ export interface CurrentUser {
   notifyBucksReceived: boolean;
   /** Receive emails about reward redemption status */
   notifyRedemptionUpdates: boolean;
+  /** Receive an email when a new redemption request needs your attention (admins/managers) */
+  notifyNewRedemptionRequests: boolean;
 }

@@ -47,6 +47,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       balance,
       notifyBucksReceived: user.notifyBucksReceived,
       notifyRedemptionUpdates: user.notifyRedemptionUpdates,
+      notifyNewRedemptionRequests: user.notifyNewRedemptionRequests,
     }),
   );
 });
@@ -65,6 +66,7 @@ router.patch("/auth/me/notifications", requireAuth, async (req, res): Promise<vo
     .set({
       notifyBucksReceived: body.data.notifyBucksReceived,
       notifyRedemptionUpdates: body.data.notifyRedemptionUpdates,
+      notifyNewRedemptionRequests: body.data.notifyNewRedemptionRequests,
     })
     .where(eq(employeesTable.id, user.id))
     .returning();
@@ -73,6 +75,7 @@ router.patch("/auth/me/notifications", requireAuth, async (req, res): Promise<vo
     UpdateNotificationPreferencesResponse.parse({
       notifyBucksReceived: updated.notifyBucksReceived,
       notifyRedemptionUpdates: updated.notifyRedemptionUpdates,
+      notifyNewRedemptionRequests: updated.notifyNewRedemptionRequests,
     }),
   );
 });

@@ -25,6 +25,8 @@ export const employeesTable = pgTable("employees", {
   // Per-user email notification opt-outs. Default true = opted in.
   notifyBucksReceived: boolean("notify_bucks_received").notNull().default(true),
   notifyRedemptionUpdates: boolean("notify_redemption_updates").notNull().default(true),
+  // Approver-side opt-out: emails to admins/managers when a new redemption comes in.
+  notifyNewRedemptionRequests: boolean("notify_new_redemption_requests").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

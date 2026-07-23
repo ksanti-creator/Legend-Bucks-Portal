@@ -70,6 +70,7 @@ export default function Settings() {
   const [prefs, setPrefs] = useState({
     notifyBucksReceived: true,
     notifyRedemptionUpdates: true,
+    notifyNewRedemptionRequests: true,
   });
 
   const form = useForm<z.infer<typeof profileSchema>>({
@@ -90,6 +91,7 @@ export default function Settings() {
       setPrefs({
         notifyBucksReceived: user.notifyBucksReceived,
         notifyRedemptionUpdates: user.notifyRedemptionUpdates,
+        notifyNewRedemptionRequests: user.notifyNewRedemptionRequests,
       });
     }
   }, [user, form]);
@@ -243,6 +245,16 @@ export default function Settings() {
                   title: "Redemption updates",
                   desc: "Receipts and status changes for rewards you redeem.",
                 },
+                // Approver-only email: only admins and managers ever receive it.
+                ...(user.role === "admin" || user.role === "manager"
+                  ? [
+                      {
+                        key: "notifyNewRedemptionRequests" as const,
+                        title: "New redemption requests",
+                        desc: "When an employee you can approve for redeems a reward.",
+                      },
+                    ]
+                  : []),
               ].map((row) => (
                 <div key={row.key} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
                   <div className="space-y-0.5">

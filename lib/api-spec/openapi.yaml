@@ -1304,7 +1304,7 @@ components:
 
     CurrentUser:
       type: object
-      required: [id, firstName, lastName, email, role, status, notifyBucksReceived, notifyRedemptionUpdates]
+      required: [id, firstName, lastName, email, role, status, notifyBucksReceived, notifyRedemptionUpdates, notifyNewRedemptionRequests]
       properties:
         id:
           type: integer
@@ -1337,14 +1337,19 @@ components:
         notifyRedemptionUpdates:
           type: boolean
           description: Receive emails about reward redemption status
+        notifyNewRedemptionRequests:
+          type: boolean
+          description: Receive an email when a new redemption request needs your attention (admins/managers)
 
     NotificationPreferences:
       type: object
-      required: [notifyBucksReceived, notifyRedemptionUpdates]
+      required: [notifyBucksReceived, notifyRedemptionUpdates, notifyNewRedemptionRequests]
       properties:
         notifyBucksReceived:
           type: boolean
         notifyRedemptionUpdates:
+          type: boolean
+        notifyNewRedemptionRequests:
           type: boolean
 
     AuthSession:
