@@ -4,6 +4,7 @@ export * from "./employees";
 export * from "./sessions";
 export * from "./transactions";
 export * from "./rewards";
+export * from "./rewardSizes";
 export * from "./redemptions";
 export * from "./goals";
 export * from "./settings";

@@ -56,6 +56,15 @@ if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
 ALTER TABLE rewards ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}';
 UPDATE rewards SET image_urls = ARRAY[image_url] WHERE image_url IS NOT NULL AND image_urls = '{}';
+CREATE TABLE IF NOT EXISTS reward_sizes (
+  id serial PRIMARY KEY,
+  reward_id integer NOT NULL REFERENCES rewards(id) ON DELETE CASCADE,
+  label text NOT NULL,
+  quantity integer,
+  sort_order integer NOT NULL DEFAULT 0
+);
+ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS size_label text;
+CREATE UNIQUE INDEX IF NOT EXISTS reward_sizes_reward_id_label_unique ON reward_sizes (reward_id, label);
 SQL
 fi
 

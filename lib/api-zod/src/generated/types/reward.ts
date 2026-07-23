@@ -5,6 +5,7 @@
  * Legend Bucks rewards platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { RewardSize } from './rewardSize';
 
 export interface Reward {
   id: number;
@@ -45,5 +46,7 @@ export interface Reward {
   locationRestriction?: string | null;
   active: boolean;
   approvalRequired: boolean;
+  /** Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size. */
+  sizes?: RewardSize[];
   createdAt: string;
 }

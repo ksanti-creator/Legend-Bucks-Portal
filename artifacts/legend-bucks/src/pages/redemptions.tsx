@@ -108,7 +108,14 @@ export default function Redemptions() {
                         <span className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</span>
                       </div>
                       
-                      <h3 className="font-display font-semibold text-lg">{item.rewardName}</h3>
+                      <h3 className="font-display font-semibold text-lg">
+                        {item.rewardName}
+                        {item.sizeLabel && (
+                          <Badge variant="outline" className="ml-2 align-middle text-xs">
+                            Size: {item.sizeLabel}
+                          </Badge>
+                        )}
+                      </h3>
                       <p className="text-sm text-foreground mt-1">
                         Requested by <span className="font-medium">{item.employeeName}</span>
                       </p>

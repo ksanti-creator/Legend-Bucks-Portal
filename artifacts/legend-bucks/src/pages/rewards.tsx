@@ -116,11 +116,44 @@ export default function Rewards() {
                   ) : (
                     <Gift className="h-16 w-16 text-muted-foreground/30" />
                   )}
-                  {reward.quantity != null && reward.quantity <= 5 && (
-                    <Badge variant="destructive" className="absolute top-3 right-3 shadow-sm">
-                      Only {reward.quantity} left
-                    </Badge>
-                  )}
+                  {(() => {
+                    const sized = reward.sizes && reward.sizes.length > 0;
+                    if (sized) {
+                      const soldOut = reward.sizes!.every((s) => s.quantity === 0);
+                      if (soldOut) {
+                        return (
+                          <Badge variant="secondary" className="absolute top-3 right-3 shadow-sm">
+                            Out of Stock
+                          </Badge>
+                        );
+                      }
+                      const lowSizes = reward.sizes!.filter((s) => s.quantity !== null && s.quantity > 0 && s.quantity <= 5);
+                      const outSizes = reward.sizes!.filter((s) => s.quantity === 0);
+                      if (outSizes.length > 0 || lowSizes.length > 0) {
+                        return (
+                          <Badge variant="destructive" className="absolute top-3 right-3 shadow-sm">
+                            Low stock in some sizes
+                          </Badge>
+                        );
+                      }
+                      return null;
+                    }
+                    if (reward.quantity != null && reward.quantity <= 0) {
+                      return (
+                        <Badge variant="secondary" className="absolute top-3 right-3 shadow-sm">
+                          Out of Stock
+                        </Badge>
+                      );
+                    }
+                    if (reward.quantity != null && reward.quantity <= 5) {
+                      return (
+                        <Badge variant="destructive" className="absolute top-3 right-3 shadow-sm">
+                          Only {reward.quantity} left
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 
                 <CardContent className="p-5 flex-1 flex flex-col">

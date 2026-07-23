@@ -370,6 +370,15 @@ export interface TransactionSummary {
   thisMonthReceived: number;
 }
 
+export interface RewardSize {
+  label: string;
+  /**
+     * null means unlimited for this size
+     * @nullable
+     */
+  quantity: number | null;
+}
+
 export interface Reward {
   id: number;
   name: string;
@@ -409,7 +418,23 @@ export interface Reward {
   locationRestriction?: string | null;
   active: boolean;
   approvalRequired: boolean;
+  /** Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size. */
+  sizes?: RewardSize[];
   createdAt: string;
+}
+
+export interface RewardSizeInput {
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  label: string;
+  /**
+     * null (or omitted) means unlimited for this size
+     * @minimum 0
+     * @nullable
+     */
+  quantity?: number | null;
 }
 
 export interface RewardInput {
@@ -433,6 +458,11 @@ export interface RewardInput {
   locationRestriction?: string | null;
   active?: boolean;
   approvalRequired?: boolean;
+  /**
+     * Full set of size variants in display order; empty/omitted means not sized.
+     * @maxItems 20
+     */
+  sizes?: RewardSizeInput[];
 }
 
 export interface RewardUpdate {
@@ -459,6 +489,11 @@ export interface RewardUpdate {
   locationRestriction?: string | null;
   active?: boolean;
   approvalRequired?: boolean;
+  /**
+     * When present, replaces the reward's full set of size variants (in display order). Empty array makes the reward non-sized.
+     * @maxItems 20
+     */
+  sizes?: RewardSizeInput[];
 }
 
 export type RedemptionStatus = typeof RedemptionStatus[keyof typeof RedemptionStatus];
@@ -482,6 +517,11 @@ export interface Redemption {
   buckCost: number;
   /** @nullable */
   cadValueCents?: number | null;
+  /**
+     * Chosen size for sized rewards; null for non-sized rewards.
+     * @nullable
+     */
+  sizeLabel?: string | null;
   /** @nullable */
   note?: string | null;
   /** @nullable */
@@ -492,6 +532,8 @@ export interface Redemption {
 
 export interface RedemptionInput {
   rewardId: number;
+  /** Required when the reward is sized; must match one of the reward's sizes. */
+  sizeLabel?: string;
   note?: string;
 }
 

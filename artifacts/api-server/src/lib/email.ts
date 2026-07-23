@@ -418,7 +418,14 @@ export async function sendNewRedemptionRequestEmail(
   rewardName: string,
   buckCost: number,
   note: string | null,
+  sizeLabel: string | null = null,
 ): Promise<void> {
+  const sizeRow = sizeLabel
+    ? `<tr>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Size</td>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(sizeLabel)}</td>
+       </tr>`
+    : "";
   const noteBlock = note
     ? `<p style="margin:0 0 8px;color:#888;font-size:13px;line-height:1.5;">Their note:</p>
        <p style="margin:0 0 28px;color:#4f4f51;font-size:16px;line-height:1.6;font-style:italic;background:#f5f5f5;padding:14px 18px;border-radius:6px;border-left:4px solid #00afed;">
@@ -443,6 +450,7 @@ export async function sendNewRedemptionRequestEmail(
          <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Reward</td>
          <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(rewardName)}</td>
        </tr>
+       ${sizeRow}
        <tr>
          <td style="padding:16px 20px;color:#888;font-size:13px;">Cost</td>
          <td style="padding:16px 20px;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${formatBucks(buckCost)}</td>

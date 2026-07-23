@@ -58,6 +58,15 @@ const rewardSchema = z.object({
     z.coerce.number().min(0, "Value cannot be negative").nullable(),
   ),
   imageUrls: z.array(z.string()).default([]),
+  sizes: z
+    .array(
+      z.object({
+        label: z.string().min(1, "Label required").max(40),
+        quantity: z.number().int().min(0).nullable(),
+      }),
+    )
+    .max(20)
+    .default([]),
   productCode: z.string().optional(),
   serialNumber: z.string().optional(),
   quantity: z.coerce.number().optional().nullable(),
@@ -90,6 +99,7 @@ export default function ManageRewards() {
       buckCost: 100,
       cadValue: null,
       imageUrls: [],
+      sizes: [],
       productCode: "",
       serialNumber: "",
       quantity: null,
@@ -109,6 +119,7 @@ export default function ManageRewards() {
     const { cadValue, ...rest } = data;
     const payload = {
       ...rest,
+      sizes: (data.sizes ?? []).map((s) => ({ label: s.label.trim(), quantity: s.quantity })),
       quantity: data.quantity === 0 || isNaN(data.quantity as any) ? null : data.quantity,
       locationRestriction: data.locationRestriction === "" ? null : data.locationRestriction,
       productCode: data.productCode?.trim() ? data.productCode.trim() : null,
@@ -157,6 +168,7 @@ export default function ManageRewards() {
       buckCost: reward.buckCost,
       cadValue: reward.cadValueCents != null ? reward.cadValueCents / 100 : null,
       imageUrls: reward.imageUrls?.length ? reward.imageUrls : reward.imageUrl ? [reward.imageUrl] : [],
+      sizes: reward.sizes ?? [],
       productCode: reward.productCode || "",
       serialNumber: reward.serialNumber || "",
       quantity: reward.quantity,
@@ -368,6 +380,76 @@ export default function ManageRewards() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="sizes"
+                  render={({ field }) => {
+                    const sizes = field.value ?? [];
+                    const setSize = (i: number, patch: Partial<{ label: string; quantity: number | null }>) => {
+                      field.onChange(sizes.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+                    };
+                    return (
+                      <FormItem>
+                        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <FormLabel>Sizes (Optional)</FormLabel>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                For sized items (shirts, boots...). Employees must pick a size; stock is tracked per size and the pooled quantity below is ignored.
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={sizes.length >= 20}
+                              onClick={() => field.onChange([...sizes, { label: "", quantity: null }])}
+                            >
+                              <Plus className="h-4 w-4 mr-1" /> Add Size
+                            </Button>
+                          </div>
+                          {sizes.length > 0 && (
+                            <div className="space-y-2">
+                              {sizes.map((s, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                  <Input
+                                    placeholder="Label (e.g. M)"
+                                    value={s.label}
+                                    onChange={(e) => setSize(i, { label: e.target.value })}
+                                    className="flex-1"
+                                  />
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="Unlimited"
+                                    value={s.quantity ?? ""}
+                                    onChange={(e) =>
+                                      setSize(i, { quantity: e.target.value === "" ? null : Math.max(0, parseInt(e.target.value, 10) || 0) })
+                                    }
+                                    className="w-32"
+                                    aria-label={`Stock for size ${s.label || i + 1}`}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Remove size"
+                                    onClick={() => field.onChange(sizes.filter((_, idx) => idx !== i))}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              ))}
+                              <p className="text-[11px] text-muted-foreground">Leave stock blank for unlimited. Sizes show in this order.</p>
+                            </div>
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -493,7 +575,25 @@ export default function ManageRewards() {
                     <TableCell className="text-muted-foreground">
                       {reward.cadValueCents != null ? `${(reward.cadValueCents / 100).toFixed(2)}` : '—'}
                     </TableCell>
-                    <TableCell>{reward.quantity !== null ? reward.quantity : 'Unlimited'}</TableCell>
+                    <TableCell>
+                      {reward.sizes && reward.sizes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {reward.sizes.map((s) => (
+                            <Badge
+                              key={s.label}
+                              variant={s.quantity === 0 ? "destructive" : "outline"}
+                              className="text-[10px]"
+                            >
+                              {s.label}: {s.quantity === null ? "∞" : s.quantity}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : reward.quantity !== null ? (
+                        reward.quantity
+                      ) : (
+                        "Unlimited"
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={reward.active ? "success" : "secondary"}>
                         {reward.active ? "Active" : "Inactive"}

@@ -46,18 +46,26 @@ export default function RewardDetail() {
   const [note, setNote] = useState("");
   const [open, setOpen] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   if (isLoading || !reward || !user) {
     return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
+  const sizes = reward.sizes ?? [];
+  const isSized = sizes.length > 0;
   const canAfford = (user.balance || 0) >= reward.buckCost;
-  const isAvailable = reward.active && (reward.quantity == null || reward.quantity > 0);
+  const isAvailable =
+    reward.active &&
+    (isSized
+      ? sizes.some((s) => s.quantity === null || s.quantity > 0)
+      : reward.quantity == null || reward.quantity > 0);
   const canRedeem = canAfford && isAvailable;
+  const needsSize = isSized && !selectedSize;
 
   const handleRedeem = () => {
     redeemMut.mutate(
-      { data: { rewardId: id, note: note || undefined } },
+      { data: { rewardId: id, note: note || undefined, ...(isSized && selectedSize ? { sizeLabel: selectedSize } : {}) } },
       {
         onSuccess: () => {
           setOpen(false);
@@ -70,10 +78,11 @@ export default function RewardDetail() {
           queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); // Update balance
           setLocation("/dashboard");
         },
-        onError: () => {
+        onError: (err: any) => {
           toast({
             title: "Redemption failed",
-            description: "There was an error processing your redemption.",
+            description:
+              err?.response?.data?.error || "There was an error processing your redemption.",
             variant: "destructive",
           });
         }
@@ -177,7 +186,33 @@ export default function RewardDetail() {
             </div>
 
             <div className="space-y-4 mb-8">
-              {reward.quantity !== null && (
+              {isSized && (
+                <div className="py-2 border-b border-border/50 text-sm">
+                  <div className="text-muted-foreground mb-2">Sizes</div>
+                  <div className="flex flex-wrap gap-2">
+                    {sizes.map((s) => {
+                      const out = s.quantity === 0;
+                      const low = s.quantity !== null && s.quantity > 0 && s.quantity <= 5;
+                      return (
+                        <span
+                          key={s.label}
+                          className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium ${
+                            out ? "opacity-50 line-through" : ""
+                          }`}
+                        >
+                          {s.label}
+                          {out ? (
+                            <span className="no-underline text-muted-foreground">(sold out)</span>
+                          ) : low ? (
+                            <span className="text-destructive">({s.quantity} left)</span>
+                          ) : null}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {!isSized && reward.quantity !== null && (
                 <div className="flex justify-between py-2 border-b border-border/50 text-sm">
                   <span className="text-muted-foreground">Availability</span>
                   <span className="font-medium">{reward.quantity} remaining</span>
@@ -218,6 +253,41 @@ export default function RewardDetail() {
                   </DialogDescription>
                 </DialogHeader>
                 
+                {isSized && (
+                  <div className="my-4">
+                    <label className="block text-sm font-medium mb-2">Pick a size</label>
+                    <div className="flex flex-wrap gap-2">
+                      {sizes.map((s) => {
+                        const out = s.quantity === 0;
+                        const selected = selectedSize === s.label;
+                        return (
+                          <button
+                            key={s.label}
+                            type="button"
+                            disabled={out}
+                            onClick={() => setSelectedSize(s.label)}
+                            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                              selected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : out
+                                  ? "opacity-40 line-through cursor-not-allowed"
+                                  : "hover:border-primary"
+                            }`}
+                          >
+                            {s.label}
+                            {!out && s.quantity !== null && s.quantity <= 5 && (
+                              <span className={`ml-1 text-xs ${selected ? "" : "text-destructive"}`}>({s.quantity} left)</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {needsSize && (
+                      <p className="text-xs text-muted-foreground mt-2">Select a size to continue.</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="my-4">
                   <label className="block text-sm font-medium mb-2">Note (Optional)</label>
                   <Textarea 
@@ -232,7 +302,7 @@ export default function RewardDetail() {
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                  <Button onClick={handleRedeem} disabled={redeemMut.isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button onClick={handleRedeem} disabled={redeemMut.isPending || needsSize} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     {redeemMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Confirm Purchase
                   </Button>

@@ -574,6 +574,10 @@ export const ListRewardsResponseItem = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "sizes": zod.array(zod.object({
+  "label": zod.string(),
+  "quantity": zod.number().nullable().describe('null means unlimited for this size')
+})).optional().describe('Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size.'),
   "createdAt": zod.string()
 })
 export const ListRewardsResponse = zod.array(ListRewardsResponseItem)
@@ -584,6 +588,12 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem)
  */
 
 export const createRewardBodyImageUrlsMax = 8;
+
+export const createRewardBodySizesItemLabelMax = 40;
+
+export const createRewardBodySizesItemQuantityMin = 0;
+
+export const createRewardBodySizesMax = 20;
 
 
 
@@ -600,7 +610,11 @@ export const CreateRewardBody = zod.object({
   "quantity": zod.number().nullish(),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean().optional(),
-  "approvalRequired": zod.boolean().optional()
+  "approvalRequired": zod.boolean().optional(),
+  "sizes": zod.array(zod.object({
+  "label": zod.string().min(1).max(createRewardBodySizesItemLabelMax),
+  "quantity": zod.number().min(createRewardBodySizesItemQuantityMin).nullish().describe('null (or omitted) means unlimited for this size')
+})).max(createRewardBodySizesMax).optional().describe('Full set of size variants in display order; empty\/omitted means not sized.')
 })
 
 export const CreateRewardResponse = zod.object({
@@ -618,6 +632,10 @@ export const CreateRewardResponse = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "sizes": zod.array(zod.object({
+  "label": zod.string(),
+  "quantity": zod.number().nullable().describe('null means unlimited for this size')
+})).optional().describe('Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size.'),
   "createdAt": zod.string()
 })
 
@@ -644,6 +662,10 @@ export const GetRewardResponse = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "sizes": zod.array(zod.object({
+  "label": zod.string(),
+  "quantity": zod.number().nullable().describe('null means unlimited for this size')
+})).optional().describe('Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size.'),
   "createdAt": zod.string()
 })
 
@@ -657,6 +679,12 @@ export const UpdateRewardParams = zod.object({
 
 
 export const updateRewardBodyImageUrlsMax = 8;
+
+export const updateRewardBodySizesItemLabelMax = 40;
+
+export const updateRewardBodySizesItemQuantityMin = 0;
+
+export const updateRewardBodySizesMax = 20;
 
 
 
@@ -673,7 +701,11 @@ export const UpdateRewardBody = zod.object({
   "quantity": zod.number().nullish(),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean().optional(),
-  "approvalRequired": zod.boolean().optional()
+  "approvalRequired": zod.boolean().optional(),
+  "sizes": zod.array(zod.object({
+  "label": zod.string().min(1).max(updateRewardBodySizesItemLabelMax),
+  "quantity": zod.number().min(updateRewardBodySizesItemQuantityMin).nullish().describe('null (or omitted) means unlimited for this size')
+})).max(updateRewardBodySizesMax).optional().describe('When present, replaces the reward\'s full set of size variants (in display order). Empty array makes the reward non-sized.')
 })
 
 export const UpdateRewardResponse = zod.object({
@@ -691,6 +723,10 @@ export const UpdateRewardResponse = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "sizes": zod.array(zod.object({
+  "label": zod.string(),
+  "quantity": zod.number().nullable().describe('null means unlimited for this size')
+})).optional().describe('Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size.'),
   "createdAt": zod.string()
 })
 
@@ -723,6 +759,7 @@ export const ListRedemptionsResponseItem = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -736,6 +773,7 @@ export const ListRedemptionsResponse = zod.array(ListRedemptionsResponseItem)
  */
 export const CreateRedemptionBody = zod.object({
   "rewardId": zod.number(),
+  "sizeLabel": zod.string().optional().describe('Required when the reward is sized; must match one of the reward\'s sizes.'),
   "note": zod.string().optional()
 })
 
@@ -748,6 +786,7 @@ export const CreateRedemptionResponse = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -771,6 +810,7 @@ export const GetRedemptionResponse = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -794,6 +834,7 @@ export const ApproveRedemptionResponse = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -821,6 +862,7 @@ export const RejectRedemptionResponse = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -844,6 +886,7 @@ export const CancelRedemptionResponse = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -867,6 +910,7 @@ export const FulfillRedemptionResponse = zod.object({
   "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
   "createdAt": zod.string(),

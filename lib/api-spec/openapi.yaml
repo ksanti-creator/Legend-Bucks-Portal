@@ -1697,8 +1697,38 @@ components:
           type: boolean
         approvalRequired:
           type: boolean
+        sizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RewardSize"
+          description: >-
+            Size variants in display order. Non-empty means the reward is sized:
+            redemptions must pick a size and stock is tracked per size.
         createdAt:
           type: string
+
+    RewardSize:
+      type: object
+      required: [label, quantity]
+      properties:
+        label:
+          type: string
+        quantity:
+          type: ["integer", "null"]
+          description: null means unlimited for this size
+
+    RewardSizeInput:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 40
+        quantity:
+          type: ["integer", "null"]
+          minimum: 0
+          description: null (or omitted) means unlimited for this size
 
     RewardInput:
       type: object
@@ -1734,6 +1764,12 @@ components:
           type: boolean
         approvalRequired:
           type: boolean
+        sizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RewardSizeInput"
+          maxItems: 20
+          description: Full set of size variants in display order; empty/omitted means not sized.
 
     RewardUpdate:
       type: object
@@ -1768,6 +1804,14 @@ components:
           type: boolean
         approvalRequired:
           type: boolean
+        sizes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RewardSizeInput"
+          maxItems: 20
+          description: >-
+            When present, replaces the reward's full set of size variants (in
+            display order). Empty array makes the reward non-sized.
 
     Redemption:
       type: object
@@ -1790,6 +1834,9 @@ components:
           type: integer
         cadValueCents:
           type: ["integer", "null"]
+        sizeLabel:
+          type: ["string", "null"]
+          description: Chosen size for sized rewards; null for non-sized rewards.
         note:
           type: ["string", "null"]
         adminNote:
@@ -1805,6 +1852,9 @@ components:
       properties:
         rewardId:
           type: integer
+        sizeLabel:
+          type: string
+          description: Required when the reward is sized; must match one of the reward's sizes.
         note:
           type: string
 

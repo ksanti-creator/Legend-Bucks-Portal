@@ -17,6 +17,7 @@ export const redemptionsTable = pgTable("redemptions", {
   status: redemptionStatusEnum("status").notNull().default("requested"),
   buckCost: integer("buck_cost").notNull(), // snapshot of cost at time of redemption
   cadValueCents: integer("cad_value_cents"), // snapshot of reward's CAD value (cents) at redemption time. Accounting-only.
+  sizeLabel: text("size_label"), // chosen size for sized rewards; null for non-sized
   note: text("note"),
   adminNote: text("admin_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

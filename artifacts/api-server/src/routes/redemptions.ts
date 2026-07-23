@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, redemptionsTable, rewardsTable, employeesTable, transactionsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { db, redemptionsTable, rewardsTable, rewardSizesTable, employeesTable, transactionsTable } from "@workspace/db";
+import { eq, and, or, isNull, gt, sql } from "drizzle-orm";
 import {
   ListRedemptionsQueryParams,
   ListRedemptionsResponse,
@@ -31,6 +31,28 @@ import {
 
 const router: IRouter = Router();
 
+// Restore stock when a redemption is rejected/cancelled: per-size stock for
+// sized redemptions, pooled quantity otherwise. Unlimited stock is untouched.
+async function restoreStock(redemption: { rewardId: number; sizeLabel: string | null }) {
+  if (redemption.sizeLabel) {
+    await db
+      .update(rewardSizesTable)
+      .set({ quantity: sql`quantity + 1` })
+      .where(
+        and(
+          eq(rewardSizesTable.rewardId, redemption.rewardId),
+          eq(rewardSizesTable.label, redemption.sizeLabel),
+          sql`quantity IS NOT NULL`,
+        ),
+      );
+    return;
+  }
+  const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+  if (reward && reward.quantity !== null) {
+    await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
+  }
+}
+
 async function enrichRedemption(r: any, isAdmin: boolean) {
   const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, r.employeeId)).limit(1);
   const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, r.rewardId)).limit(1);
@@ -44,6 +66,7 @@ async function enrichRedemption(r: any, isAdmin: boolean) {
     buckCost: r.buckCost,
     // CAD value is accounting-only: only expose it to admins, never to managers or staff.
     cadValueCents: isAdmin ? (r.cadValueCents ?? null) : null,
+    sizeLabel: r.sizeLabel ?? null,
     note: r.note,
     adminNote: r.adminNote,
     createdAt: r.createdAt.toISOString(),
@@ -102,8 +125,30 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  if (reward.quantity !== null && reward.quantity <= 0) {
+  // Sized rewards ignore the pooled quantity entirely — reward_sizes is the
+  // source of truth for their stock.
+  const sizes = await db
+    .select()
+    .from(rewardSizesTable)
+    .where(eq(rewardSizesTable.rewardId, reward.id));
+  const isSized = sizes.length > 0;
+
+  if (!isSized && reward.quantity !== null && reward.quantity <= 0) {
     res.status(400).json({ error: "Reward is out of stock" });
+    return;
+  }
+  const chosenSize = body.data.sizeLabel ?? null;
+  if (isSized) {
+    if (!chosenSize) {
+      res.status(400).json({ error: "Please pick a size for this reward" });
+      return;
+    }
+    if (!sizes.some((s) => s.label === chosenSize)) {
+      res.status(400).json({ error: "Invalid size for this reward" });
+      return;
+    }
+  } else if (chosenSize) {
+    res.status(400).json({ error: "This reward does not have sizes" });
     return;
   }
 
@@ -113,17 +158,39 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Atomically decrement the chosen size's stock (no-op condition-wise for
+  // unlimited sizes). If no row comes back, the size just sold out — reject
+  // before any bucks move.
+  if (isSized && chosenSize) {
+    const decremented = await db
+      .update(rewardSizesTable)
+      .set({ quantity: sql`CASE WHEN quantity IS NULL THEN NULL ELSE quantity - 1 END` })
+      .where(
+        and(
+          eq(rewardSizesTable.rewardId, reward.id),
+          eq(rewardSizesTable.label, chosenSize),
+          or(isNull(rewardSizesTable.quantity), gt(rewardSizesTable.quantity, 0)),
+        ),
+      )
+      .returning();
+    if (decremented.length === 0) {
+      res.status(400).json({ error: `Size ${chosenSize} is out of stock` });
+      return;
+    }
+  }
+
   // Deduct bucks immediately via ledger
   await db.insert(transactionsTable).values({
     type: "redemption_debit",
     amount: reward.buckCost,
     fromEmployeeId: user.id,
     toEmployeeId: null,
-    note: `Redemption: ${reward.name}`,
+    note: `Redemption: ${reward.name}${isSized && chosenSize ? ` (Size ${chosenSize})` : ""}`,
   });
 
-  // Decrement quantity if limited
-  if (reward.quantity !== null) {
+  // Decrement pooled quantity if limited (non-sized rewards only; sized
+  // rewards track stock per size instead).
+  if (!isSized && reward.quantity !== null) {
     await db.update(rewardsTable).set({ quantity: reward.quantity - 1 }).where(eq(rewardsTable.id, reward.id));
   }
 
@@ -136,6 +203,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
       status: initialStatus,
       buckCost: reward.buckCost,
       cadValueCents: reward.cadValueCents ?? null,
+      sizeLabel: isSized ? chosenSize : null,
       note: body.data.note ?? null,
     })
     .returning();
@@ -195,6 +263,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
           reward.name,
           redemption.buckCost,
           redemption.note,
+          redemption.sizeLabel,
         );
         req.log.info({ redemptionId: redemption.id, approverId: approver.id }, "New redemption request email sent");
       } catch (err) {
@@ -330,11 +399,9 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
     redemptionId: redemption.id,
   });
 
-  // Restore quantity
+  // Restore stock (per-size for sized redemptions, pooled otherwise)
+  await restoreStock(redemption);
   const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
-  if (reward && reward.quantity !== null) {
-    await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
-  }
 
   // Notify the employee their redemption was rejected (and refunded) — best-effort, never blocks.
   try {
@@ -396,11 +463,8 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
     redemptionId: redemption.id,
   });
 
-  // Restore quantity
-  const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
-  if (reward && reward.quantity !== null) {
-    await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
-  }
+  // Restore stock (per-size for sized redemptions, pooled otherwise)
+  await restoreStock(redemption);
 
   res.json(CancelRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
 });

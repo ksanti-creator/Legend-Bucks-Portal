@@ -17,6 +17,11 @@ export interface Redemption {
   buckCost: number;
   /** @nullable */
   cadValueCents?: number | null;
+  /**
+     * Chosen size for sized rewards; null for non-sized rewards.
+     * @nullable
+     */
+  sizeLabel?: string | null;
   /** @nullable */
   note?: string | null;
   /** @nullable */

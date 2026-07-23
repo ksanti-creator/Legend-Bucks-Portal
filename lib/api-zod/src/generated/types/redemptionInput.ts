@@ -8,5 +8,7 @@
 
 export interface RedemptionInput {
   rewardId: number;
+  /** Required when the reward is sized; must match one of the reward's sizes. */
+  sizeLabel?: string;
   note?: string;
 }

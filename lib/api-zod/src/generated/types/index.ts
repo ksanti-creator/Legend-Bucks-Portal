@@ -57,6 +57,8 @@ export * from './redemptionInput';
 export * from './redemptionStatus';
 export * from './reward';
 export * from './rewardInput';
+export * from './rewardSize';
+export * from './rewardSizeInput';
 export * from './rewardUpdate';
 export * from './sendBucksInput';
 export * from './settings';
