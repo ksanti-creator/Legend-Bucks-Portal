@@ -19,6 +19,8 @@ export interface RewardInput {
   /** @nullable */
   serialNumber?: string | null;
   imageUrl?: string;
+  /** @maxItems 8 */
+  imageUrls?: string[];
   /** @nullable */
   quantity?: number | null;
   /** @nullable */

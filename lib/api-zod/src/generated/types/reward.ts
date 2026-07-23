@@ -29,8 +29,13 @@ export interface Reward {
      * @nullable
      */
   serialNumber?: string | null;
-  /** @nullable */
+  /**
+     * Cover image (first photo). Kept for backward compatibility.
+     * @nullable
+     */
   imageUrl?: string | null;
+  /** Ordered photo URLs; first entry is the cover image. */
+  imageUrls?: string[];
   /**
      * null means unlimited
      * @nullable

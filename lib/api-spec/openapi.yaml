@@ -1677,6 +1677,12 @@ components:
           description: Internal serial number. Only returned to admins.
         imageUrl:
           type: ["string", "null"]
+          description: Cover image (first photo). Kept for backward compatibility.
+        imageUrls:
+          type: array
+          items:
+            type: string
+          description: Ordered photo URLs; first entry is the cover image.
         quantity:
           type: ["integer", "null"]
           description: null means unlimited
@@ -1710,6 +1716,11 @@ components:
           type: ["string", "null"]
         imageUrl:
           type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+          maxItems: 8
         quantity:
           type: ["integer", "null"]
         locationRestriction:
@@ -1739,6 +1750,11 @@ components:
           type: ["string", "null"]
         imageUrl:
           type: ["string", "null"]
+        imageUrls:
+          type: array
+          items:
+            type: string
+          maxItems: 8
         quantity:
           type: ["integer", "null"]
         locationRestriction:

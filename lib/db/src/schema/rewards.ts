@@ -12,6 +12,9 @@ export const rewardsTable = pgTable("rewards", {
   productCode: text("product_code"), // internal SKU / product code; null = not set. Admin-only.
   serialNumber: text("serial_number"), // internal serial number; null = not set. Admin-only.
   imageUrl: text("image_url"),
+  // Ordered list of photo URLs; first entry is the cover image. imageUrl is
+  // kept in sync with imageUrls[0] for backward compatibility.
+  imageUrls: text("image_urls").array().notNull().default([]),
   quantity: integer("quantity"), // null = unlimited
   locationRestriction: text("location_restriction"),
   active: boolean("active").notNull().default(true),

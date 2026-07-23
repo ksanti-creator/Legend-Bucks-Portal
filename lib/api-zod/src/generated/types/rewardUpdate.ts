@@ -22,6 +22,8 @@ export interface RewardUpdate {
   serialNumber?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @maxItems 8 */
+  imageUrls?: string[];
   /** @nullable */
   quantity?: number | null;
   /** @nullable */

@@ -31,7 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch"; // Need to generate this
-import { ImageUpload } from "@/components/image-upload";
+import { MultiImageUpload } from "@/components/image-upload";
 
 import giftCardImg from "@assets/generated_images/gift-card.png";
 import ptoImg from "@assets/generated_images/pto.png";
@@ -57,7 +57,7 @@ const rewardSchema = z.object({
     (v) => (v === "" || v === null || v === undefined ? null : v),
     z.coerce.number().min(0, "Value cannot be negative").nullable(),
   ),
-  imageUrl: z.string().optional(),
+  imageUrls: z.array(z.string()).default([]),
   productCode: z.string().optional(),
   serialNumber: z.string().optional(),
   quantity: z.coerce.number().optional().nullable(),
@@ -89,7 +89,7 @@ export default function ManageRewards() {
       category: "",
       buckCost: 100,
       cadValue: null,
-      imageUrl: "",
+      imageUrls: [],
       productCode: "",
       serialNumber: "",
       quantity: null,
@@ -156,7 +156,7 @@ export default function ManageRewards() {
       category: reward.category || "",
       buckCost: reward.buckCost,
       cadValue: reward.cadValueCents != null ? reward.cadValueCents / 100 : null,
-      imageUrl: reward.imageUrl || "",
+      imageUrls: reward.imageUrls?.length ? reward.imageUrls : reward.imageUrl ? [reward.imageUrl] : [],
       productCode: reward.productCode || "",
       serialNumber: reward.serialNumber || "",
       quantity: reward.quantity,
@@ -349,23 +349,24 @@ export default function ManageRewards() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Image (Optional)</FormLabel>
-                        <FormControl>
-                          <ImageUpload
-                            value={field.value}
-                            onChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="imageUrls"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Photos (Optional)</FormLabel>
+                      <FormControl>
+                        <MultiImageUpload
+                          value={field.value ?? []}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

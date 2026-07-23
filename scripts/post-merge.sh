@@ -50,6 +50,15 @@ COMMIT;
 SQL
 fi
 
+# Multi-photo rewards: add ordered photo list and backfill from the legacy
+# single image column. Idempotent — safe to re-run.
+if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}';
+UPDATE rewards SET image_urls = ARRAY[image_url] WHERE image_url IS NOT NULL AND image_urls = '{}';
+SQL
+fi
+
 # Reconcile anything else with the Drizzle schema. After the SQL above there is
 # no ambiguous rename left, so push runs cleanly and non-interactively.
 pnpm --filter db push-force

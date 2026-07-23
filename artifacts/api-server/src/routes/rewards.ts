@@ -19,6 +19,9 @@ import { requireAuth, getCurrentUser } from "../lib/auth";
 const router: IRouter = Router();
 
 function rewardToResponse(r: any, isAdmin: boolean) {
+  // Legacy rewards may have imageUrl set but an empty imageUrls array.
+  const imageUrls: string[] =
+    r.imageUrls && r.imageUrls.length > 0 ? r.imageUrls : r.imageUrl ? [r.imageUrl] : [];
   return {
     id: r.id,
     name: r.name,
@@ -30,7 +33,8 @@ function rewardToResponse(r: any, isAdmin: boolean) {
     // Product code & serial number are internal inventory data: admins only.
     productCode: isAdmin ? (r.productCode ?? null) : null,
     serialNumber: isAdmin ? (r.serialNumber ?? null) : null,
-    imageUrl: r.imageUrl,
+    imageUrl: imageUrls[0] ?? null,
+    imageUrls,
     quantity: r.quantity,
     locationRestriction: r.locationRestriction,
     active: r.active,
@@ -85,7 +89,13 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
       cadValueCents: body.data.cadValueCents ?? null,
       productCode: body.data.productCode ?? null,
       serialNumber: body.data.serialNumber ?? null,
-      imageUrl: body.data.imageUrl ?? null,
+      // imageUrls is the source of truth; imageUrl always mirrors the cover
+      // photo (imageUrls[0]). Legacy imageUrl-only payloads seed the array.
+      ...(() => {
+        const imageUrls =
+          body.data.imageUrls ?? (body.data.imageUrl ? [body.data.imageUrl] : []);
+        return { imageUrls, imageUrl: imageUrls[0] ?? null };
+      })(),
       quantity: body.data.quantity ?? null,
       locationRestriction: body.data.locationRestriction ?? null,
       active: body.data.active ?? true,
@@ -140,7 +150,13 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
   if ("cadValueCents" in body.data) updates.cadValueCents = body.data.cadValueCents;
   if ("productCode" in body.data) updates.productCode = body.data.productCode;
   if ("serialNumber" in body.data) updates.serialNumber = body.data.serialNumber;
-  if ("imageUrl" in body.data) updates.imageUrl = body.data.imageUrl;
+  if ("imageUrls" in body.data && body.data.imageUrls !== undefined) {
+    updates.imageUrls = body.data.imageUrls;
+    updates.imageUrl = body.data.imageUrls[0] ?? null;
+  } else if ("imageUrl" in body.data) {
+    updates.imageUrl = body.data.imageUrl;
+    updates.imageUrls = body.data.imageUrl ? [body.data.imageUrl] : [];
+  }
   if ("quantity" in body.data) updates.quantity = body.data.quantity;
   if ("locationRestriction" in body.data) updates.locationRestriction = body.data.locationRestriction;
   if (body.data.active !== undefined) updates.active = body.data.active;

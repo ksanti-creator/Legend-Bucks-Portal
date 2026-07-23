@@ -390,8 +390,13 @@ export interface Reward {
      * @nullable
      */
   serialNumber?: string | null;
-  /** @nullable */
+  /**
+     * Cover image (first photo). Kept for backward compatibility.
+     * @nullable
+     */
   imageUrl?: string | null;
+  /** Ordered photo URLs; first entry is the cover image. */
+  imageUrls?: string[];
   /**
      * null means unlimited
      * @nullable
@@ -417,6 +422,8 @@ export interface RewardInput {
   /** @nullable */
   serialNumber?: string | null;
   imageUrl?: string;
+  /** @maxItems 8 */
+  imageUrls?: string[];
   /** @nullable */
   quantity?: number | null;
   /** @nullable */
@@ -441,6 +448,8 @@ export interface RewardUpdate {
   serialNumber?: string | null;
   /** @nullable */
   imageUrl?: string | null;
+  /** @maxItems 8 */
+  imageUrls?: string[];
   /** @nullable */
   quantity?: number | null;
   /** @nullable */

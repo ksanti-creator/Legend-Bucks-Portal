@@ -565,7 +565,8 @@ export const ListRewardsResponseItem = zod.object({
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
   "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
   "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
-  "imageUrl": zod.string().nullish(),
+  "imageUrl": zod.string().nullish().describe('Cover image (first photo). Kept for backward compatibility.'),
+  "imageUrls": zod.array(zod.string()).optional().describe('Ordered photo URLs; first entry is the cover image.'),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
@@ -579,6 +580,8 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem)
  * @summary Create a new reward (admin only)
  */
 
+export const createRewardBodyImageUrlsMax = 8;
+
 
 
 export const CreateRewardBody = zod.object({
@@ -590,6 +593,7 @@ export const CreateRewardBody = zod.object({
   "productCode": zod.string().nullish(),
   "serialNumber": zod.string().nullish(),
   "imageUrl": zod.string().optional(),
+  "imageUrls": zod.array(zod.string()).max(createRewardBodyImageUrlsMax).optional(),
   "quantity": zod.number().nullish(),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean().optional(),
@@ -605,7 +609,8 @@ export const CreateRewardResponse = zod.object({
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
   "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
   "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
-  "imageUrl": zod.string().nullish(),
+  "imageUrl": zod.string().nullish().describe('Cover image (first photo). Kept for backward compatibility.'),
+  "imageUrls": zod.array(zod.string()).optional().describe('Ordered photo URLs; first entry is the cover image.'),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
@@ -630,7 +635,8 @@ export const GetRewardResponse = zod.object({
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
   "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
   "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
-  "imageUrl": zod.string().nullish(),
+  "imageUrl": zod.string().nullish().describe('Cover image (first photo). Kept for backward compatibility.'),
+  "imageUrls": zod.array(zod.string()).optional().describe('Ordered photo URLs; first entry is the cover image.'),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
@@ -647,6 +653,8 @@ export const UpdateRewardParams = zod.object({
 })
 
 
+export const updateRewardBodyImageUrlsMax = 8;
+
 
 
 export const UpdateRewardBody = zod.object({
@@ -658,6 +666,7 @@ export const UpdateRewardBody = zod.object({
   "productCode": zod.string().nullish(),
   "serialNumber": zod.string().nullish(),
   "imageUrl": zod.string().nullish(),
+  "imageUrls": zod.array(zod.string()).max(updateRewardBodyImageUrlsMax).optional(),
   "quantity": zod.number().nullish(),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean().optional(),
@@ -673,7 +682,8 @@ export const UpdateRewardResponse = zod.object({
   "cadValueCents": zod.number().nullish().describe('Real-money value in CAD cents. Only returned to admins (accounting-only).'),
   "productCode": zod.string().nullish().describe('Internal product code \/ SKU. Only returned to admins.'),
   "serialNumber": zod.string().nullish().describe('Internal serial number. Only returned to admins.'),
-  "imageUrl": zod.string().nullish(),
+  "imageUrl": zod.string().nullish().describe('Cover image (first photo). Kept for backward compatibility.'),
+  "imageUrls": zod.array(zod.string()).optional().describe('Ordered photo URLs; first entry is the cover image.'),
   "quantity": zod.number().nullish().describe('null means unlimited'),
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),

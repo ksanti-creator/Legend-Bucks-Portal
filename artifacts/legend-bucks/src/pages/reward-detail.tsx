@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Gift, Coins, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Gift, Coins, AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ export default function RewardDetail() {
 
   const [note, setNote] = useState("");
   const [open, setOpen] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   if (isLoading || !reward || !user) {
     return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -91,13 +92,69 @@ export default function RewardDetail() {
 
       <Card className="border-none shadow-md overflow-hidden bg-card">
         <div className="grid grid-cols-1 md:grid-cols-2">
-          {/* Image Side */}
-          <div className="bg-muted aspect-square md:aspect-auto flex items-center justify-center relative overflow-hidden border-r border-border">
-            {reward.imageUrl || fallbackImages[reward.category || ""] ? (
-              <img src={reward.imageUrl || fallbackImages[reward.category || ""]} alt={reward.name} className="object-cover w-full h-full" />
-            ) : (
-              <Gift className="h-24 w-24 text-muted-foreground/30" />
-            )}
+          {/* Photo gallery side */}
+          <div className="border-r border-border">
+            {(() => {
+              const photos = reward.imageUrls?.length
+                ? reward.imageUrls
+                : reward.imageUrl
+                  ? [reward.imageUrl]
+                  : [];
+              const fallback = fallbackImages[reward.category || ""];
+              const current = Math.min(photoIndex, Math.max(photos.length - 1, 0));
+              const mainSrc = photos[current] ?? fallback;
+              return (
+                <div className="flex h-full flex-col">
+                  <div className="bg-muted aspect-square md:aspect-auto md:flex-1 flex items-center justify-center relative overflow-hidden">
+                    {mainSrc ? (
+                      <img src={mainSrc} alt={reward.name} className="object-cover w-full h-full" />
+                    ) : (
+                      <Gift className="h-24 w-24 text-muted-foreground/30" />
+                    )}
+                    {photos.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Previous photo"
+                          onClick={() => setPhotoIndex((current - 1 + photos.length) % photos.length)}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60 transition-colors"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Next photo"
+                          onClick={() => setPhotoIndex((current + 1) % photos.length)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60 transition-colors"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                        <span className="absolute bottom-2 right-2 rounded bg-black/50 px-2 py-0.5 text-xs text-white">
+                          {current + 1} / {photos.length}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {photos.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto bg-card p-2">
+                      {photos.map((url, i) => (
+                        <button
+                          key={`${url}-${i}`}
+                          type="button"
+                          aria-label={`Show photo ${i + 1}`}
+                          onClick={() => setPhotoIndex(i)}
+                          className={`h-14 w-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors ${
+                            i === current ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
+                          }`}
+                        >
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Details Side */}
