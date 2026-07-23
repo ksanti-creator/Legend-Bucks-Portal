@@ -75,6 +75,25 @@ const rewardSchema = z.object({
   approvalRequired: z.boolean().default(false),
 });
 
+// Explicit blank form values. react-hook-form's reset(values) replaces the
+// stored defaults, so a bare reset() after editing would re-fill the last
+// edited reward — always reset to these instead.
+const emptyRewardValues: z.infer<typeof rewardSchema> = {
+  name: "",
+  description: "",
+  category: "",
+  buckCost: 100,
+  cadValue: null,
+  imageUrls: [],
+  sizes: [],
+  productCode: "",
+  serialNumber: "",
+  quantity: null,
+  locationRestriction: "",
+  active: true,
+  approvalRequired: false,
+};
+
 export default function ManageRewards() {
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
@@ -92,21 +111,7 @@ export default function ManageRewards() {
 
   const form = useForm<z.infer<typeof rewardSchema>>({
     resolver: zodResolver(rewardSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      category: "",
-      buckCost: 100,
-      cadValue: null,
-      imageUrls: [],
-      sizes: [],
-      productCode: "",
-      serialNumber: "",
-      quantity: null,
-      locationRestriction: "",
-      active: true,
-      approvalRequired: false,
-    },
+    defaultValues: emptyRewardValues,
   });
 
   if (!isAdmin && user) {
@@ -139,7 +144,7 @@ export default function ManageRewards() {
             setEditingId(null);
             toast({ title: "Reward updated successfully" });
             queryClient.invalidateQueries({ queryKey: ["/api/rewards"] });
-            form.reset();
+            form.reset(emptyRewardValues);
           },
           onError: () => toast({ title: "Failed to update reward", variant: "destructive" })
         }
@@ -152,7 +157,7 @@ export default function ManageRewards() {
             setOpenCreate(false);
             toast({ title: "Reward created successfully" });
             queryClient.invalidateQueries({ queryKey: ["/api/rewards"] });
-            form.reset();
+            form.reset(emptyRewardValues);
           },
           onError: () => toast({ title: "Failed to create reward", variant: "destructive" })
         }
@@ -211,7 +216,7 @@ export default function ManageRewards() {
           setOpenCreate(open);
           if (!open) {
             setEditingId(null);
-            form.reset();
+            form.reset(emptyRewardValues);
           }
         }}>
           <DialogTrigger asChild>
