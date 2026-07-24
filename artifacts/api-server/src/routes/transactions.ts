@@ -9,6 +9,8 @@ import {
   SendBucksResponse,
   GetTransactionParams,
   GetTransactionResponse,
+  AdjustBalanceBody,
+  AdjustBalanceResponse,
   ExportTransactionsQueryParams,
   GetTransactionSummaryQueryParams,
   GetTransactionSummaryResponse,
@@ -47,6 +49,12 @@ async function enrichTransaction(tx: any, isAdmin: boolean) {
 
   // CAD value is accounting-only: only surface it to admins, and only for
   // redemption rows (via the redemption's snapshotted value).
+  let createdByName: string | null = null;
+  if (tx.createdById) {
+    const [e] = await db.select().from(employeesTable).where(eq(employeesTable.id, tx.createdById)).limit(1);
+    if (e) createdByName = `${e.firstName} ${e.lastName}`;
+  }
+
   let cadValueCents: number | null = null;
   if (isAdmin && tx.redemptionId) {
     const [redemption] = await db
@@ -69,6 +77,8 @@ async function enrichTransaction(tx: any, isAdmin: boolean) {
     redemptionId: tx.redemptionId,
     cadValueCents,
     goalId: tx.goalId,
+    createdById: tx.createdById ?? null,
+    createdByName,
     createdAt: tx.createdAt.toISOString(),
   };
 }
@@ -224,6 +234,76 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(SendBucksResponse.parse(await enrichTransaction(tx, user.role === "admin")));
 });
 
+// Admin-only balance adjustment: credit or debit an employee's ledger, e.g. to
+// credit a starting balance when someone turns in physical Legend Bucks.
+// Deliberately skips award-budget and max-single-award checks — this is a
+// bookkeeping correction, not an award.
+router.post("/transactions/adjustments", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  // Positive allow-list: only full admins may adjust balances.
+  if (user.role !== "admin") {
+    res.status(403).json({ error: "Only admins can record balance adjustments" });
+    return;
+  }
+
+  const body = AdjustBalanceBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const { employeeId, direction, amount } = body.data;
+  const note = body.data.note.trim();
+  if (!note) {
+    res.status(400).json({ error: "A note explaining the adjustment is required" });
+    return;
+  }
+
+  const [employee] = await db
+    .select()
+    .from(employeesTable)
+    .where(eq(employeesTable.id, employeeId))
+    .limit(1);
+
+  if (!employee) {
+    res.status(404).json({ error: "Employee not found" });
+    return;
+  }
+
+  // Matches the balance SQL: adjustment with to_employee_id credits the
+  // employee; adjustment with from_employee_id debits them.
+  const [tx] = await db
+    .insert(transactionsTable)
+    .values({
+      type: "adjustment",
+      amount,
+      toEmployeeId: direction === "credit" ? employeeId : null,
+      fromEmployeeId: direction === "debit" ? employeeId : null,
+      note,
+      createdById: user.id,
+    })
+    .returning();
+
+  // Notify the employee about credits, same as receiving bucks — best-effort
+  // and respecting their notification opt-out.
+  if (direction === "credit" && employee.email && employee.notifyBucksReceived) {
+    try {
+      await sendBucksReceivedEmail(
+        employee.email,
+        employee.firstName,
+        `${user.firstName} ${user.lastName}`,
+        amount,
+        note,
+      );
+      req.log.info({ employeeId }, "Adjustment credit email sent");
+    } catch (err) {
+      req.log.error({ err, employeeId }, "Failed to send adjustment credit email");
+    }
+  }
+
+  res.status(201).json(AdjustBalanceResponse.parse(await enrichTransaction(tx, true)));
+});
+
 router.get("/transactions/export", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
   if (!canViewAccounting(user.role)) {
@@ -248,7 +328,7 @@ router.get("/transactions/export", requireAuth, async (req, res): Promise<void> 
     all = all.filter((tx) => tx.createdAt <= to);
   }
 
-  const header = "id,type,amount,fromEmployeeId,toEmployeeId,note,redemptionId,goalId,createdAt\n";
+  const header = "id,type,amount,fromEmployeeId,toEmployeeId,note,redemptionId,goalId,recordedById,createdAt\n";
   const rows = all.map((tx) =>
     [
       tx.id,
@@ -259,6 +339,7 @@ router.get("/transactions/export", requireAuth, async (req, res): Promise<void> 
       `"${(tx.note ?? "").replace(/"/g, '""')}"`,
       tx.redemptionId ?? "",
       tx.goalId ?? "",
+      tx.createdById ?? "",
       tx.createdAt.toISOString(),
     ].join(","),
   );

@@ -8,3 +8,5 @@ When `lib/db/src/schema/` is changed and `pnpm --filter @workspace/db run push` 
 **Why:** The API server imports tables from `@workspace/db` using the compiled `.d.ts` declarations. If those are stale, every import shows TS2305 ("Module has no exported member").
 
 **How to apply:** After any schema file edit → push → run `pnpm run typecheck:libs` → then run `pnpm --filter @workspace/api-server run typecheck`.
+
+**Balance SQL is duplicated:** the ledger-balance formula lives in BOTH lib/auth (getEmployeeBalance) and the employees /balance route. Any new transaction type or direction rule must be added in both, or the two balances silently disagree (adjustments were missing from the route until a test caught it).

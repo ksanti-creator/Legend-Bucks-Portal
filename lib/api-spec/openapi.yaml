@@ -392,6 +392,29 @@ paths:
         "403":
           description: Forbidden
 
+  /transactions/adjustments:
+    post:
+      operationId: adjustBalance
+      tags: [transactions]
+      summary: Record an admin-only balance adjustment (credit or debit)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjustBalanceInput"
+      responses:
+        "201":
+          description: Adjustment transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Bad request
+        "403":
+          description: Forbidden (admins only)
+
   /transactions/{id}:
     get:
       operationId: getTransaction
@@ -1680,6 +1703,11 @@ components:
           description: For redemption rows, the reward's CAD value in cents. Only populated for admins (accounting).
         goalId:
           type: ["integer", "null"]
+        createdById:
+          type: ["integer", "null"]
+          description: Who recorded this entry (set for admin balance adjustments).
+        createdByName:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -1709,6 +1737,23 @@ components:
           minimum: 1
         note:
           type: string
+
+    AdjustBalanceInput:
+      type: object
+      required: [employeeId, direction, amount, note]
+      properties:
+        employeeId:
+          type: integer
+        direction:
+          type: string
+          enum: [credit, debit]
+        amount:
+          type: integer
+          minimum: 1
+        note:
+          type: string
+          minLength: 1
+          description: Required reason, e.g. "Starting balance – turned in physical bucks".
 
     TransactionSummary:
       type: object

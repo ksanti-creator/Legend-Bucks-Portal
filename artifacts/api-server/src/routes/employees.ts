@@ -254,10 +254,10 @@ router.get("/employees/:id/balance", requireAuth, async (req, res): Promise<void
 
   // Calculate from ledger
   const creditResult = await db.execute<{ total: string }>(
-    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('award','refund') AND to_employee_id = ${emp.id}`
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('award','refund','adjustment') AND to_employee_id = ${emp.id}`
   );
   const debitResult = await db.execute<{ total: string }>(
-    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('redemption_debit','contribution') AND from_employee_id = ${emp.id}`
+    `SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE type IN ('redemption_debit','contribution','adjustment') AND from_employee_id = ${emp.id}`
   );
 
   const credits = parseInt(creditResult.rows[0]?.total ?? "0", 10);

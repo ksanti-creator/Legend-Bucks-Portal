@@ -11,6 +11,7 @@ import {
   useListLocations,
   useGetMe,
   useGetEmployeeAwardBudget,
+  useAdjustBalance,
   getGetEmployeeQueryKey,
   getGetEmployeeBalanceQueryKey,
   getGetEmployeeAwardBudgetQueryKey,
@@ -70,6 +71,41 @@ export default function EmployeeDetail() {
   const { data: locations } = useListLocations();
   const { data: allEmployees } = useListEmployees();
   const managers = allEmployees?.filter((e) => (e.role === "manager" || e.role === "admin") && e.id !== id) || [];
+
+  const adjustMut = useAdjustBalance();
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustDirection, setAdjustDirection] = useState<"credit" | "debit">("credit");
+  const [adjustNote, setAdjustNote] = useState("");
+
+  const handleAdjust = () => {
+    const amount = parseInt(adjustAmount, 10);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({ title: "Enter a positive amount", variant: "destructive" });
+      return;
+    }
+    if (!adjustNote.trim()) {
+      toast({ title: "A note is required", description: "Explain why the balance is being adjusted.", variant: "destructive" });
+      return;
+    }
+    adjustMut.mutate(
+      { data: { employeeId: id, direction: adjustDirection, amount, note: adjustNote.trim() } },
+      {
+        onSuccess: () => {
+          toast({ title: "Balance adjusted", description: `${adjustDirection === "credit" ? "Credited" : "Debited"} ${amount} Legend Bucks.` });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeBalanceQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getListTransactionsQueryKey({ employeeId: id }) });
+          setAdjustOpen(false);
+          setAdjustAmount("");
+          setAdjustNote("");
+          setAdjustDirection("credit");
+        },
+        onError: (err: any) =>
+          toast({ title: "Failed to adjust balance", description: err?.message, variant: "destructive" }),
+      },
+    );
+  };
 
   const [editOpen, setEditOpen] = useState(false);
   const [editDept, setEditDept] = useState<string>("none");
@@ -211,6 +247,71 @@ export default function EmployeeDetail() {
                   Send Bucks
                 </Link>
               </Button>
+            )}
+
+            {isAdmin && (
+              <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full mt-3">
+                    <Coins className="h-4 w-4 mr-2" />
+                    Adjust Balance
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Adjust Balance</DialogTitle>
+                    <DialogDescription>
+                      Credit or debit {employee.firstName}'s balance directly — for example, a starting
+                      balance when they turn in physical Legend Bucks. This doesn't use your award budget.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label>Direction</Label>
+                      <Select value={adjustDirection} onValueChange={(v) => setAdjustDirection(v as "credit" | "debit")}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="credit">Credit (add bucks)</SelectItem>
+                          <SelectItem value="debit">Debit (remove bucks)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Amount</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 250"
+                        value={adjustAmount}
+                        onChange={(e) => setAdjustAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Note (required)</Label>
+                      <Input
+                        placeholder="e.g. Starting balance – turned in physical bucks"
+                        value={adjustNote}
+                        onChange={(e) => setAdjustNote(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown in the ledger along with your name.
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancel</Button>
+                    <Button onClick={handleAdjust} disabled={adjustMut.isPending} className="bg-primary hover:bg-primary/90">
+                      {adjustMut.isPending
+                        ? "Saving..."
+                        : adjustDirection === "credit"
+                          ? "Credit Bucks"
+                          : "Debit Bucks"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             )}
 
             {isAdmin && (
@@ -394,7 +495,7 @@ export default function EmployeeDetail() {
                       const isPositive = 
                         (tx.type === 'award' && tx.toEmployeeId === id) || 
                         (tx.type === 'refund' && tx.toEmployeeId === id) ||
-                        (tx.type === 'adjustment' && tx.amount > 0);
+                        (tx.type === 'adjustment' && tx.toEmployeeId === id);
                         
                       return (
                         <TableRow key={tx.id}>
@@ -409,6 +510,7 @@ export default function EmployeeDetail() {
                           <TableCell className="max-w-[250px] truncate">
                             {tx.type === 'award' && tx.fromEmployeeId ? `From ${tx.fromEmployeeName}` : ''}
                             {tx.type === 'award' && tx.toEmployeeId && tx.fromEmployeeId === id ? `To ${tx.toEmployeeName}` : ''}
+                            {tx.type === 'adjustment' && tx.createdByName ? `Recorded by ${tx.createdByName}` : ''}
                             {tx.note ? ` - ${tx.note}` : ''}
                           </TableCell>
                           <TableCell className={`text-right font-medium ${isPositive ? 'text-green-600' : 'text-foreground'}`}>

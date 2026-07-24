@@ -159,6 +159,9 @@ export default function Transactions() {
                       </TableCell>
                       <TableCell className="max-w-[300px] truncate text-sm">
                         {tx.note}
+                        {tx.type === "adjustment" && tx.createdByName && (
+                          <span className="text-muted-foreground"> · Recorded by {tx.createdByName}</span>
+                        )}
                       </TableCell>
                       {canViewAll && (
                         <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">

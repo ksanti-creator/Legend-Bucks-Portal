@@ -346,6 +346,8 @@ export const ListTransactionsResponse = zod.object({
   "redemptionId": zod.number().nullish(),
   "cadValueCents": zod.number().nullish().describe('For redemption rows, the reward\'s CAD value in cents. Only populated for admins (accounting).'),
   "goalId": zod.number().nullish(),
+  "createdById": zod.number().nullish().describe('Who recorded this entry (set for admin balance adjustments).'),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string()
 })),
   "total": zod.number(),
@@ -378,6 +380,40 @@ export const SendBucksResponse = zod.object({
   "redemptionId": zod.number().nullish(),
   "cadValueCents": zod.number().nullish().describe('For redemption rows, the reward\'s CAD value in cents. Only populated for admins (accounting).'),
   "goalId": zod.number().nullish(),
+  "createdById": zod.number().nullish().describe('Who recorded this entry (set for admin balance adjustments).'),
+  "createdByName": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Record an admin-only balance adjustment (credit or debit)
+ */
+
+
+
+
+export const AdjustBalanceBody = zod.object({
+  "employeeId": zod.number(),
+  "direction": zod.enum(['credit', 'debit']),
+  "amount": zod.number().min(1),
+  "note": zod.string().min(1).describe('Required reason, e.g. \"Starting balance – turned in physical bucks\".')
+})
+
+export const AdjustBalanceResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment']),
+  "amount": zod.number(),
+  "fromEmployeeId": zod.number().nullish(),
+  "fromEmployeeName": zod.string().nullish(),
+  "toEmployeeId": zod.number().nullish(),
+  "toEmployeeName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "redemptionId": zod.number().nullish(),
+  "cadValueCents": zod.number().nullish().describe('For redemption rows, the reward\'s CAD value in cents. Only populated for admins (accounting).'),
+  "goalId": zod.number().nullish(),
+  "createdById": zod.number().nullish().describe('Who recorded this entry (set for admin balance adjustments).'),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -401,6 +437,8 @@ export const GetTransactionResponse = zod.object({
   "redemptionId": zod.number().nullish(),
   "cadValueCents": zod.number().nullish().describe('For redemption rows, the reward\'s CAD value in cents. Only populated for admins (accounting).'),
   "goalId": zod.number().nullish(),
+  "createdById": zod.number().nullish().describe('Who recorded this entry (set for admin balance adjustments).'),
+  "createdByName": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

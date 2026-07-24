@@ -19,6 +19,9 @@ export const transactionsTable = pgTable("transactions", {
   note: text("note"),
   redemptionId: integer("redemption_id"),
   goalId: integer("goal_id"),
+  // Who recorded the transaction, when it wasn't initiated by from/to parties.
+  // Used for admin balance adjustments so the ledger shows who entered them.
+  createdById: integer("created_by_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

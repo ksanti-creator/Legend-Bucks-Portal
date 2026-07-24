@@ -385,6 +385,13 @@ export interface Transaction {
   cadValueCents?: number | null;
   /** @nullable */
   goalId?: number | null;
+  /**
+     * Who recorded this entry (set for admin balance adjustments).
+     * @nullable
+     */
+  createdById?: number | null;
+  /** @nullable */
+  createdByName?: string | null;
   createdAt: string;
 }
 
@@ -400,6 +407,26 @@ export interface SendBucksInput {
   /** @minimum 1 */
   amount: number;
   note?: string;
+}
+
+export type AdjustBalanceInputDirection = typeof AdjustBalanceInputDirection[keyof typeof AdjustBalanceInputDirection];
+
+
+export const AdjustBalanceInputDirection = {
+  credit: 'credit',
+  debit: 'debit',
+} as const;
+
+export interface AdjustBalanceInput {
+  employeeId: number;
+  direction: AdjustBalanceInputDirection;
+  /** @minimum 1 */
+  amount: number;
+  /**
+     * Required reason, e.g. "Starting balance – turned in physical bucks".
+     * @minLength 1
+     */
+  note: string;
 }
 
 export interface TransactionSummary {

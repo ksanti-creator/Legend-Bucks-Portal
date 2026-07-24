@@ -30,5 +30,12 @@ export interface Transaction {
   cadValueCents?: number | null;
   /** @nullable */
   goalId?: number | null;
+  /**
+     * Who recorded this entry (set for admin balance adjustments).
+     * @nullable
+     */
+  createdById?: number | null;
+  /** @nullable */
+  createdByName?: string | null;
   createdAt: string;
 }

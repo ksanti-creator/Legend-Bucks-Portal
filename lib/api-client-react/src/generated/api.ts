@@ -21,6 +21,7 @@ import type {
 
 import type {
   ActivityItem,
+  AdjustBalanceInput,
   AuthSession,
   AwardBudgetInfo,
   BalanceSummary,
@@ -1282,6 +1283,76 @@ export const useSendBucks = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSendBucksMutationOptions(options));
+    }
+
+export const getAdjustBalanceUrl = () => {
+
+
+
+
+  return `/api/transactions/adjustments`
+}
+
+/**
+ * @summary Record an admin-only balance adjustment (credit or debit)
+ */
+export const adjustBalance = async (adjustBalanceInput: AdjustBalanceInput, options?: RequestInit): Promise<Transaction> => {
+
+  return customFetch<Transaction>(getAdjustBalanceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adjustBalanceInput)
+  }
+);}
+
+
+
+
+export const getAdjustBalanceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adjustBalance>>, TError,{data: BodyType<AdjustBalanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adjustBalance>>, TError,{data: BodyType<AdjustBalanceInput>}, TContext> => {
+
+const mutationKey = ['adjustBalance'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adjustBalance>>, {data: BodyType<AdjustBalanceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adjustBalance(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdjustBalanceMutationResult = NonNullable<Awaited<ReturnType<typeof adjustBalance>>>
+    export type AdjustBalanceMutationBody = BodyType<AdjustBalanceInput>
+    export type AdjustBalanceMutationError = ErrorType<void>
+
+    /**
+ * @summary Record an admin-only balance adjustment (credit or debit)
+ */
+export const useAdjustBalance = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adjustBalance>>, TError,{data: BodyType<AdjustBalanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adjustBalance>>,
+        TError,
+        {data: BodyType<AdjustBalanceInput>},
+        TContext
+      > => {
+      return useMutation(getAdjustBalanceMutationOptions(options));
     }
 
 export const getGetTransactionUrl = (id: number,) => {

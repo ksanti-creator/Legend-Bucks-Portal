@@ -68,6 +68,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS reward_sizes_reward_id_label_unique ON reward_
 SQL
 fi
 
+# Admin balance adjustments: track who recorded a ledger entry. Idempotent.
+if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_by_id integer;"
+fi
+
 # Reconcile anything else with the Drizzle schema. After the SQL above there is
 # no ambiguous rename left, so push runs cleanly and non-interactively.
 pnpm --filter db push-force
