@@ -10,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, ArrowLeft, Loader2, Upload, UserPlus } from "lucide-react";
 import { Link } from "wouter";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BulkInviteUpload from "@/components/bulk-invite-upload";
 
 const inviteSchema = z.object({
   email: z.string().email("Valid email required"),
@@ -103,6 +105,20 @@ export default function InviteEmployee() {
         </Link>
       </Button>
 
+      <Tabs defaultValue="single">
+        {user?.role === "admin" && (
+          <TabsList className="mb-4">
+            <TabsTrigger value="single">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Single Invite
+            </TabsTrigger>
+            <TabsTrigger value="bulk">
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
+            </TabsTrigger>
+          </TabsList>
+        )}
+        <TabsContent value="single">
       <Card className="border-none shadow-md">
         <CardHeader className="border-b bg-muted/20">
           <CardTitle className="text-2xl font-display">Invite New Employee</CardTitle>
@@ -316,6 +332,11 @@ export default function InviteEmployee() {
           </Form>
         </CardContent>
       </Card>
+        </TabsContent>
+        <TabsContent value="bulk">
+          <BulkInviteUpload />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

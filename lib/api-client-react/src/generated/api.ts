@@ -24,6 +24,8 @@ import type {
   AuthSession,
   AwardBudgetInfo,
   BalanceSummary,
+  BulkInviteInput,
+  BulkInviteResponse,
   CurrentUser,
   DashboardSummary,
   Department,
@@ -600,6 +602,76 @@ export const useInviteEmployee = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getInviteEmployeeMutationOptions(options));
+    }
+
+export const getBulkInviteEmployeesUrl = () => {
+
+
+
+
+  return `/api/auth/bulk-invite`
+}
+
+/**
+ * @summary Admin invites many employees at once (spreadsheet upload)
+ */
+export const bulkInviteEmployees = async (bulkInviteInput: BulkInviteInput, options?: RequestInit): Promise<BulkInviteResponse> => {
+
+  return customFetch<BulkInviteResponse>(getBulkInviteEmployeesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkInviteInput)
+  }
+);}
+
+
+
+
+export const getBulkInviteEmployeesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkInviteEmployees>>, TError,{data: BodyType<BulkInviteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkInviteEmployees>>, TError,{data: BodyType<BulkInviteInput>}, TContext> => {
+
+const mutationKey = ['bulkInviteEmployees'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkInviteEmployees>>, {data: BodyType<BulkInviteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkInviteEmployees(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkInviteEmployeesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkInviteEmployees>>>
+    export type BulkInviteEmployeesMutationBody = BodyType<BulkInviteInput>
+    export type BulkInviteEmployeesMutationError = ErrorType<void>
+
+    /**
+ * @summary Admin invites many employees at once (spreadsheet upload)
+ */
+export const useBulkInviteEmployees = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkInviteEmployees>>, TError,{data: BodyType<BulkInviteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkInviteEmployees>>,
+        TError,
+        {data: BodyType<BulkInviteInput>},
+        TContext
+      > => {
+      return useMutation(getBulkInviteEmployeesMutationOptions(options));
     }
 
 export const getListEmployeesUrl = (params?: ListEmployeesParams,) => {

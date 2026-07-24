@@ -154,6 +154,29 @@ paths:
         "403":
           description: Forbidden
 
+  /auth/bulk-invite:
+    post:
+      operationId: bulkInviteEmployees
+      tags: [auth]
+      summary: Admin invites many employees at once (spreadsheet upload)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkInviteInput"
+      responses:
+        "200":
+          description: Per-row results (partial success allowed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkInviteResponse"
+        "400":
+          description: Bad request
+        "403":
+          description: Forbidden
+
   # Employees
   /employees:
     get:
@@ -1567,6 +1590,49 @@ components:
             Optional yearly award budget (in bucks) this user may draw down when
             awarding bucks. Omit to leave unset; null means no budget (cannot
             award). Admin-only.
+
+    BulkInviteInput:
+      type: object
+      required: [invites]
+      properties:
+        invites:
+          type: array
+          minItems: 1
+          maxItems: 300
+          items:
+            $ref: "#/components/schemas/InviteInput"
+
+    BulkInviteRowResult:
+      type: object
+      required: [index, email, status]
+      properties:
+        index:
+          type: integer
+          description: Zero-based index of the row in the submitted invites array.
+        email:
+          type: string
+        status:
+          type: string
+          enum: [invited, skipped]
+        error:
+          type: ["string", "null"]
+          description: Reason the row was skipped, when status is skipped.
+        id:
+          type: ["integer", "null"]
+          description: New employee id, when status is invited.
+
+    BulkInviteResponse:
+      type: object
+      required: [invitedCount, skippedCount, results]
+      properties:
+        invitedCount:
+          type: integer
+        skippedCount:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/BulkInviteRowResult"
 
     AwardBudgetInfo:
       type: object

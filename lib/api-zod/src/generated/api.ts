@@ -132,6 +132,40 @@ export const InviteEmployeeResponse = zod.object({
 
 
 /**
+ * @summary Admin invites many employees at once (spreadsheet upload)
+ */
+
+export const bulkInviteEmployeesBodyInvitesMax = 300;
+
+
+
+export const BulkInviteEmployeesBody = zod.object({
+  "invites": zod.array(zod.object({
+  "email": zod.string().email(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "role": zod.enum(['admin', 'manager', 'team_member', 'accounting_admin']),
+  "departmentId": zod.number().nullish(),
+  "locationId": zod.number().nullish(),
+  "managerId": zod.number().nullish(),
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.')
+})).min(1).max(bulkInviteEmployeesBodyInvitesMax)
+})
+
+export const BulkInviteEmployeesResponse = zod.object({
+  "invitedCount": zod.number(),
+  "skippedCount": zod.number(),
+  "results": zod.array(zod.object({
+  "index": zod.number().describe('Zero-based index of the row in the submitted invites array.'),
+  "email": zod.string(),
+  "status": zod.enum(['invited', 'skipped']),
+  "error": zod.string().nullish().describe('Reason the row was skipped, when status is skipped.'),
+  "id": zod.number().nullish().describe('New employee id, when status is invited.')
+}))
+})
+
+
+/**
  * @summary List all employees
  */
 export const ListEmployeesQueryParams = zod.object({

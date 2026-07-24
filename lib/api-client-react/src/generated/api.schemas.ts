@@ -296,6 +296,45 @@ export interface InviteInput {
   awardBudgetYearly?: number | null;
 }
 
+export interface BulkInviteInput {
+  /**
+     * @minItems 1
+     * @maxItems 300
+     */
+  invites: InviteInput[];
+}
+
+export type BulkInviteRowResultStatus = typeof BulkInviteRowResultStatus[keyof typeof BulkInviteRowResultStatus];
+
+
+export const BulkInviteRowResultStatus = {
+  invited: 'invited',
+  skipped: 'skipped',
+} as const;
+
+export interface BulkInviteRowResult {
+  /** Zero-based index of the row in the submitted invites array. */
+  index: number;
+  email: string;
+  status: BulkInviteRowResultStatus;
+  /**
+     * Reason the row was skipped, when status is skipped.
+     * @nullable
+     */
+  error?: string | null;
+  /**
+     * New employee id, when status is invited.
+     * @nullable
+     */
+  id?: number | null;
+}
+
+export interface BulkInviteResponse {
+  invitedCount: number;
+  skippedCount: number;
+  results: BulkInviteRowResult[];
+}
+
 export interface AwardBudgetInfo {
   employeeId: number;
   /**
