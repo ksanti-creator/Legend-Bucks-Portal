@@ -466,6 +466,48 @@ export async function sendNewRedemptionRequestEmail(
 }
 
 /**
+ * Notify an accounting admin (payroll) that a Time Off redemption is waiting
+ * for their sign-off. Buck cost only — never include accounting-only CAD here
+ * either, since this template flows through the same escaping rules.
+ */
+export async function sendPayrollApprovalNeededEmail(
+  to: string,
+  firstName: string,
+  employeeName: string,
+  rewardName: string,
+  buckCost: number,
+): Promise<void> {
+  const html = emailShell(
+    "Payroll sign-off needed",
+    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       Hi ${escapeHtml(firstName)},
+     </p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;line-height:1.6;">
+       A <strong>Time Off</strong> redemption by <strong>${escapeHtml(employeeName)}</strong> has been approved and now needs your payroll sign-off before it can be fulfilled.
+     </p>
+     <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;background:#f5f5f5;border-radius:8px;">
+       <tr>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Employee</td>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(employeeName)}</td>
+       </tr>
+       <tr>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Reward</td>
+         <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(rewardName)}</td>
+       </tr>
+       <tr>
+         <td style="padding:16px 20px;color:#888;font-size:13px;">Cost</td>
+         <td style="padding:16px 20px;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${formatBucks(buckCost)}</td>
+       </tr>
+     </table>
+     <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
+       Sign in to Legend Bucks to review this request in the Fulfillment Center.
+     </p>`,
+  );
+
+  await sendBrandedEmail(to, `Payroll sign-off needed: ${rewardName}`, html, "Failed to send payroll approval needed email");
+}
+
+/**
  * Notify an employee that their redemption was approved.
  */
 export async function sendRedemptionApprovedEmail(

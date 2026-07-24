@@ -5,6 +5,10 @@ import { z } from "zod/v4";
 export const redemptionStatusEnum = pgEnum("redemption_status", [
   "requested",
   "approved",
+  // Time Off rewards: waits for accounting (payroll) sign-off between
+  // first-line approval and "approved". Appended last to match Postgres
+  // ALTER TYPE ... ADD VALUE ordering.
+  "pending_payroll",
   "rejected",
   "fulfilled",
   "cancelled",

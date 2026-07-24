@@ -148,6 +148,16 @@ export function canSpendBucks(role: string): boolean {
  * Positive allow-list: every other role is denied by default.
  * Fulfillment is NOT covered here — it stays admin-only at the endpoint.
  */
+/**
+ * Roles allowed to give the PAYROLL sign-off on pending_payroll redemptions
+ * (Time Off rewards). Positive allow-list on purpose: managers and any future
+ * role are denied by default — first-line approvers can never self-serve the
+ * payroll step.
+ */
+export function canPayrollApprove(role: string): boolean {
+  return role === "admin" || role === "accounting_admin";
+}
+
 export async function canDecideRedemptionFor(user: Employee, redeemerEmployeeId: number): Promise<boolean> {
   if (user.role === "admin") return true;
   if (user.role !== "manager") return false;

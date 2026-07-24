@@ -568,6 +568,7 @@ export type RedemptionStatus = typeof RedemptionStatus[keyof typeof RedemptionSt
 export const RedemptionStatus = {
   requested: 'requested',
   approved: 'approved',
+  pending_payroll: 'pending_payroll',
   rejected: 'rejected',
   fulfilled: 'fulfilled',
   cancelled: 'cancelled',

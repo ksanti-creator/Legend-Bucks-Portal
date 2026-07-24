@@ -828,7 +828,7 @@ export const ListRedemptionsResponseItem = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
@@ -855,7 +855,7 @@ export const CreateRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
@@ -879,7 +879,7 @@ export const GetRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
@@ -903,7 +903,7 @@ export const ApproveRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
@@ -931,7 +931,59 @@ export const RejectRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
+  "buckCost": zod.number(),
+  "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
+  "note": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Payroll sign-off on a pending_payroll redemption (accounting admins and admins only)
+ */
+export const PayrollApproveRedemptionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PayrollApproveRedemptionResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().optional(),
+  "rewardId": zod.number(),
+  "rewardName": zod.string().optional(),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
+  "buckCost": zod.number(),
+  "cadValueCents": zod.number().nullish(),
+  "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
+  "note": zod.string().nullish(),
+  "adminNote": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Payroll rejects a pending_payroll redemption, refunding bucks (accounting admins and admins only)
+ */
+export const PayrollRejectRedemptionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PayrollRejectRedemptionBody = zod.object({
+  "adminNote": zod.string().optional()
+})
+
+export const PayrollRejectRedemptionResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().optional(),
+  "rewardId": zod.number(),
+  "rewardName": zod.string().optional(),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
@@ -955,7 +1007,7 @@ export const CancelRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
@@ -979,7 +1031,7 @@ export const FulfillRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
-  "status": zod.enum(['requested', 'approved', 'rejected', 'fulfilled', 'cancelled']),
+  "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),

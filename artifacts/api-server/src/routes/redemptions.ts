@@ -19,7 +19,7 @@ import {
   FulfillRedemptionParams,
   FulfillRedemptionResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks, canDecideRedemptionFor } from "../lib/auth";
+import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks, canDecideRedemptionFor, canPayrollApprove } from "../lib/auth";
 import { getSubtreeIds, getManagerChain } from "../lib/orgChain";
 import {
   sendRedemptionReceiptEmail,
@@ -27,6 +27,7 @@ import {
   sendRedemptionApprovedEmail,
   sendRedemptionRejectedEmail,
   sendRedemptionFulfilledEmail,
+  sendPayrollApprovalNeededEmail,
 } from "../lib/email";
 
 const router: IRouter = Router();
@@ -50,6 +51,39 @@ async function restoreStock(redemption: { rewardId: number; sizeLabel: string | 
   const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
   if (reward && reward.quantity !== null) {
     await db.update(rewardsTable).set({ quantity: reward.quantity + 1 }).where(eq(rewardsTable.id, reward.id));
+  }
+}
+
+// Time Off rewards affect payroll (PTO balances), so their redemptions need an
+// accounting-admin sign-off after the normal approval before fulfillment.
+// Identified by the reward's category (case-insensitive to be safe).
+function requiresPayrollApproval(reward: { category: string | null } | undefined): boolean {
+  return (reward?.category ?? "").trim().toLowerCase() === "time off";
+}
+
+// Email every active accounting admin that a redemption is waiting for payroll
+// sign-off. Best-effort per recipient; respects the new-redemption-request
+// notification preference; never blocks or fails the request.
+async function notifyPayrollApprovers(
+  log: { info: (o: object, m: string) => void; error: (o: object, m: string) => void },
+  redemption: { id: number; buckCost: number },
+  reward: { name: string },
+  employeeName: string,
+): Promise<void> {
+  try {
+    const accountants = (await db.select().from(employeesTable)).filter(
+      (e) => e.role === "accounting_admin" && e.status === "active" && !!e.email && e.notifyNewRedemptionRequests,
+    );
+    for (const acct of accountants) {
+      try {
+        await sendPayrollApprovalNeededEmail(acct.email, acct.firstName, employeeName, reward.name, redemption.buckCost);
+        log.info({ redemptionId: redemption.id, accountantId: acct.id }, "Payroll approval needed email sent");
+      } catch (err) {
+        log.error({ err, redemptionId: redemption.id, accountantId: acct.id }, "Failed to send payroll approval needed email");
+      }
+    }
+  } catch (err) {
+    log.error({ err, redemptionId: redemption.id }, "Failed to notify payroll approvers");
   }
 }
 
@@ -194,7 +228,10 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     await db.update(rewardsTable).set({ quantity: reward.quantity - 1 }).where(eq(rewardsTable.id, reward.id));
   }
 
-  const initialStatus = reward.approvalRequired ? "requested" : "approved";
+  // Time Off rewards can never skip payroll sign-off: even when the first
+  // approval is not required, they stop at pending_payroll instead of approved.
+  const needsPayroll = requiresPayrollApproval(reward);
+  const initialStatus = reward.approvalRequired ? "requested" : needsPayroll ? "pending_payroll" : "approved";
   const [redemption] = await db
     .insert(redemptionsTable)
     .values({
@@ -274,6 +311,12 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     req.log.error({ err, redemptionId: redemption.id }, "Failed to notify approvers of new redemption");
   }
 
+  // If it went straight to pending_payroll (Time Off, no first approval),
+  // accounting admins need to hear about it now.
+  if (redemption.status === "pending_payroll") {
+    await notifyPayrollApprovers(req.log, redemption, reward, `${user.firstName} ${user.lastName}`);
+  }
+
   res.status(201).json(CreateRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));
 });
 
@@ -335,6 +378,65 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
     return;
   }
 
+  // Time Off redemptions don't become approved here — they move to the payroll
+  // sign-off queue instead. Everything else approves exactly as before.
+  const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+  const nextStatus = requiresPayrollApproval(reward) ? "pending_payroll" : "approved";
+
+  const [updated] = await db
+    .update(redemptionsTable)
+    .set({ status: nextStatus })
+    .where(eq(redemptionsTable.id, params.data.id))
+    .returning();
+
+  const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
+
+  if (nextStatus === "pending_payroll") {
+    // Accounting admins take it from here.
+    if (reward && emp) {
+      await notifyPayrollApprovers(req.log, updated, reward, `${emp.firstName} ${emp.lastName}`);
+    }
+  } else {
+    // Notify the employee their redemption was approved — best-effort, never blocks.
+    try {
+      if (emp?.email && emp.notifyRedemptionUpdates) {
+        await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
+        req.log.info({ redemptionId: updated.id }, "Redemption approved email sent");
+      }
+    } catch (err) {
+      req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption approved email");
+    }
+  }
+
+  res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated, canViewAccounting(user.role))));
+});
+
+// Payroll sign-off: second approval for Time Off redemptions. Positive
+// allow-list — only accounting admins and admins; managers (who did the first
+// approval) can never action this step.
+router.patch("/redemptions/:id/payroll-approve", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (!canPayrollApprove(user.role)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const params = ApproveRedemptionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [redemption] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, params.data.id)).limit(1);
+  if (!redemption) {
+    res.status(404).json({ error: "Redemption not found" });
+    return;
+  }
+  if (redemption.status !== "pending_payroll") {
+    res.status(400).json({ error: "Redemption is not awaiting payroll sign-off" });
+    return;
+  }
+
   const [updated] = await db
     .update(redemptionsTable)
     .set({ status: "approved" })
@@ -354,6 +456,66 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
   }
 
   res.json(ApproveRedemptionResponse.parse(await enrichRedemption(updated, canViewAccounting(user.role))));
+});
+
+// Payroll rejection: refunds bucks and restores stock, exactly like a normal
+// rejection. Same allow-list as payroll-approve.
+router.patch("/redemptions/:id/payroll-reject", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (!canPayrollApprove(user.role)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const params = RejectRedemptionParams.safeParse(req.params);
+  const body = RejectRedemptionBody.safeParse(req.body);
+  if (!params.success || !body.success) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+
+  const [redemption] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, params.data.id)).limit(1);
+  if (!redemption) {
+    res.status(404).json({ error: "Redemption not found" });
+    return;
+  }
+  if (redemption.status !== "pending_payroll") {
+    res.status(400).json({ error: "Redemption is not awaiting payroll sign-off" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(redemptionsTable)
+    .set({ status: "rejected", adminNote: body.data.adminNote ?? null })
+    .where(eq(redemptionsTable.id, params.data.id))
+    .returning();
+
+  // Refund bucks
+  await db.insert(transactionsTable).values({
+    type: "refund",
+    amount: redemption.buckCost,
+    fromEmployeeId: null,
+    toEmployeeId: redemption.employeeId,
+    note: `Refund for rejected redemption #${redemption.id}`,
+    redemptionId: redemption.id,
+  });
+
+  // Restore stock (per-size for sized redemptions, pooled otherwise)
+  await restoreStock(redemption);
+  const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+
+  // Notify the employee their redemption was rejected (and refunded) — best-effort, never blocks.
+  try {
+    const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
+    if (emp?.email && emp.notifyRedemptionUpdates) {
+      await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? "your reward", updated.buckCost, updated.adminNote);
+      req.log.info({ redemptionId: updated.id }, "Redemption rejected email sent");
+    }
+  } catch (err) {
+    req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption rejected email");
+  }
+
+  res.json(RejectRedemptionResponse.parse(await enrichRedemption(updated, canViewAccounting(user.role))));
 });
 
 router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<void> => {

@@ -68,6 +68,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS reward_sizes_reward_id_label_unique ON reward_
 SQL
 fi
 
+# Payroll approval step for Time Off redemptions: new redemption status.
+# ALTER TYPE ... ADD VALUE cannot run inside a transaction, so it gets its own
+# psql -c call. Idempotent via IF NOT EXISTS.
+if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TYPE redemption_status ADD VALUE IF NOT EXISTS 'pending_payroll' AFTER 'approved';"
+fi
+
 # Admin balance adjustments: track who recorded a ledger entry. Idempotent.
 if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "ALTER TABLE transactions ADD COLUMN IF NOT EXISTS created_by_id integer;"

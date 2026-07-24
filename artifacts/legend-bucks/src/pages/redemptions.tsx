@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, useGetMe, getListRedemptionsQueryKey } from "@workspace/api-client-react";
+import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, usePayrollApproveRedemption, usePayrollRejectRedemption, useGetMe, getListRedemptionsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ export default function Redemptions() {
   // but never their own. Fulfillment is admin-only.
   const canDecide = (item: { employeeId?: number }) =>
     isAdmin || (isManager && item.employeeId !== user?.id);
+  // Payroll sign-off on Time Off redemptions: accounting admins and admins only.
+  const canPayroll = isAdmin || user?.role === "accounting_admin";
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -35,8 +37,10 @@ export default function Redemptions() {
   const approveMut = useApproveRedemption();
   const rejectMut = useRejectRedemption();
   const fulfillMut = useFulfillRedemption();
+  const payrollApproveMut = usePayrollApproveRedemption();
+  const payrollRejectMut = usePayrollRejectRedemption();
 
-  const handleAction = (id: number, action: 'approve' | 'reject' | 'fulfill') => {
+  const handleAction = (id: number, action: 'approve' | 'reject' | 'fulfill' | 'payroll-approve' | 'payroll-reject') => {
     const callbacks = {
       onSuccess: () => {
         toast({ title: `Redemption ${action}ed` });
@@ -48,6 +52,8 @@ export default function Redemptions() {
     };
     if (action === 'approve') approveMut.mutate({ id }, callbacks);
     else if (action === 'reject') rejectMut.mutate({ id, data: {} }, callbacks);
+    else if (action === 'payroll-approve') payrollApproveMut.mutate({ id }, callbacks);
+    else if (action === 'payroll-reject') payrollRejectMut.mutate({ id, data: {} }, callbacks);
     else fulfillMut.mutate({ id }, callbacks);
   };
 
@@ -74,8 +80,9 @@ export default function Redemptions() {
       </div>
 
       <Tabs value={statusTab} onValueChange={setStatusTab}>
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl mb-6">
+        <TabsList className="grid grid-cols-6 w-full max-w-4xl mb-6">
           <TabsTrigger value="requested">Pending Approval</TabsTrigger>
+          <TabsTrigger value="pending_payroll">Payroll</TabsTrigger>
           <TabsTrigger value="approved">To Fulfill</TabsTrigger>
           <TabsTrigger value="fulfilled">Fulfilled</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
@@ -100,10 +107,11 @@ export default function Redemptions() {
                       <div className="flex items-center gap-3 mb-2">
                         <Badge variant={
                           item.status === 'requested' ? 'warning' :
+                          item.status === 'pending_payroll' ? 'warning' :
                           item.status === 'approved' ? 'default' :
                           item.status === 'fulfilled' ? 'success' : 'secondary'
                         } className="uppercase tracking-wider text-[10px]">
-                          {item.status}
+                          {item.status === 'pending_payroll' ? 'Awaiting Payroll' : item.status}
                         </Badge>
                         <span className="text-sm text-muted-foreground">{formatDate(item.createdAt)}</span>
                       </div>
@@ -143,11 +151,11 @@ export default function Redemptions() {
                   
                   {/* Action Area based on status */}
                   <div className="bg-muted/30 p-6 flex items-center justify-end md:justify-center md:w-[200px] border-t md:border-t-0 md:border-l border-border">
-                    {!canDecide(item) && !isAdmin && (
+                    {!canDecide(item) && !isAdmin && !(canPayroll && item.status === 'pending_payroll') && (
                       <span className="text-sm text-muted-foreground font-medium capitalize flex items-center">
                         {item.status === 'fulfilled' && <Check className="h-4 w-4 mr-2 text-green-600" />}
                         {item.status === 'rejected' && <X className="h-4 w-4 mr-2 text-destructive" />}
-                        {item.status}
+                        {item.status === 'pending_payroll' ? 'Awaiting Payroll' : item.status}
                       </span>
                     )}
                     {canDecide(item) && item.status === 'requested' && (
@@ -172,6 +180,33 @@ export default function Redemptions() {
                       </div>
                     )}
                     
+                    {canPayroll && item.status === 'pending_payroll' && (
+                      <div className="flex gap-2 w-full">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => handleAction(item.id, 'payroll-reject')}
+                          disabled={payrollRejectMut.isPending}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => handleAction(item.id, 'payroll-approve')}
+                          disabled={payrollApproveMut.isPending}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    {!canPayroll && item.status === 'pending_payroll' && (canDecide(item) || isManager) && (
+                      <span className="text-sm text-muted-foreground font-medium flex items-center text-center">
+                        Awaiting payroll sign-off
+                      </span>
+                    )}
+
                     {isAdmin && item.status === 'approved' && (
                       <Button 
                         className="w-full bg-primary hover:bg-primary/90"
@@ -183,7 +218,7 @@ export default function Redemptions() {
                       </Button>
                     )}
 
-                    {canDecide(item) && item.status !== 'requested' && item.status !== 'approved' && (
+                    {canDecide(item) && item.status !== 'requested' && item.status !== 'approved' && item.status !== 'pending_payroll' && (
                       <span className="text-sm text-muted-foreground font-medium flex items-center">
                         {item.status === 'fulfilled' && <Check className="h-4 w-4 mr-2 text-green-600" />}
                         {item.status === 'rejected' && <X className="h-4 w-4 mr-2 text-destructive" />}

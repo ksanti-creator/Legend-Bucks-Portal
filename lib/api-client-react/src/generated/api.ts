@@ -3064,6 +3064,147 @@ export const useRejectRedemption = <TError = ErrorType<unknown>,
       return useMutation(getRejectRedemptionMutationOptions(options));
     }
 
+export const getPayrollApproveRedemptionUrl = (id: number,) => {
+
+
+
+
+  return `/api/redemptions/${id}/payroll-approve`
+}
+
+/**
+ * @summary Payroll sign-off on a pending_payroll redemption (accounting admins and admins only)
+ */
+export const payrollApproveRedemption = async (id: number, options?: RequestInit): Promise<Redemption> => {
+
+  return customFetch<Redemption>(getPayrollApproveRedemptionUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getPayrollApproveRedemptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollApproveRedemption>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payrollApproveRedemption>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['payrollApproveRedemption'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payrollApproveRedemption>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  payrollApproveRedemption(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayrollApproveRedemptionMutationResult = NonNullable<Awaited<ReturnType<typeof payrollApproveRedemption>>>
+
+    export type PayrollApproveRedemptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Payroll sign-off on a pending_payroll redemption (accounting admins and admins only)
+ */
+export const usePayrollApproveRedemption = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollApproveRedemption>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof payrollApproveRedemption>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPayrollApproveRedemptionMutationOptions(options));
+    }
+
+export const getPayrollRejectRedemptionUrl = (id: number,) => {
+
+
+
+
+  return `/api/redemptions/${id}/payroll-reject`
+}
+
+/**
+ * @summary Payroll rejects a pending_payroll redemption, refunding bucks (accounting admins and admins only)
+ */
+export const payrollRejectRedemption = async (id: number,
+    redemptionDecision: RedemptionDecision, options?: RequestInit): Promise<Redemption> => {
+
+  return customFetch<Redemption>(getPayrollRejectRedemptionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(redemptionDecision)
+  }
+);}
+
+
+
+
+export const getPayrollRejectRedemptionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollRejectRedemption>>, TError,{id: number;data: BodyType<RedemptionDecision>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payrollRejectRedemption>>, TError,{id: number;data: BodyType<RedemptionDecision>}, TContext> => {
+
+const mutationKey = ['payrollRejectRedemption'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payrollRejectRedemption>>, {id: number;data: BodyType<RedemptionDecision>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  payrollRejectRedemption(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayrollRejectRedemptionMutationResult = NonNullable<Awaited<ReturnType<typeof payrollRejectRedemption>>>
+    export type PayrollRejectRedemptionMutationBody = BodyType<RedemptionDecision>
+    export type PayrollRejectRedemptionMutationError = ErrorType<void>
+
+    /**
+ * @summary Payroll rejects a pending_payroll redemption, refunding bucks (accounting admins and admins only)
+ */
+export const usePayrollRejectRedemption = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payrollRejectRedemption>>, TError,{id: number;data: BodyType<RedemptionDecision>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof payrollRejectRedemption>>,
+        TError,
+        {id: number;data: BodyType<RedemptionDecision>},
+        TContext
+      > => {
+      return useMutation(getPayrollRejectRedemptionMutationOptions(options));
+    }
+
 export const getCancelRedemptionUrl = (id: number,) => {
 
 
