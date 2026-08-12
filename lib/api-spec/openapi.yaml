@@ -1661,6 +1661,13 @@ components:
             Optional yearly award budget (in bucks) this user may draw down when
             awarding bucks. Omit to leave unset; null means no budget (cannot
             award). Admin-only.
+        startingBalance:
+          type: ["integer", "null"]
+          minimum: 1
+          description: >-
+            Optional starting Legend Bucks balance (e.g. turned-in physical
+            bucks). Creates an adjustment credit at invite time attributed to
+            the inviting admin. Omit or null for no starting balance.
 
     BulkInviteInput:
       type: object

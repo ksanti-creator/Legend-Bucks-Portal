@@ -24,4 +24,10 @@ export interface InviteInput {
      * @nullable
      */
   awardBudgetYearly?: number | null;
+  /**
+     * Optional starting Legend Bucks balance (e.g. turned-in physical bucks). Creates an adjustment credit at invite time attributed to the inviting admin. Omit or null for no starting balance.
+     * @minimum 1
+     * @nullable
+     */
+  startingBalance?: number | null;
 }

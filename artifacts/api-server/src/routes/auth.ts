@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, employeesTable, magicTokensTable } from "@workspace/db";
+import { db, employeesTable, magicTokensTable, transactionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   RequestMagicLinkBody,
@@ -229,20 +229,46 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [employee] = await db
-    .insert(employeesTable)
-    .values({
-      firstName: parsed.data.firstName,
-      lastName: parsed.data.lastName,
-      email: parsed.data.email.toLowerCase(),
-      role: parsed.data.role,
-      departmentId: parsed.data.departmentId ?? null,
-      locationId: parsed.data.locationId ?? null,
-      managerId: parsed.data.managerId ?? null,
-      awardBudgetYearly: parsed.data.awardBudgetYearly ?? null,
-      status: "invited",
-    })
-    .returning();
+  // The generated schema only enforces min(1); require a whole number
+  // explicitly so fractional bucks can never reach the ledger.
+  if (parsed.data.startingBalance != null && !Number.isInteger(parsed.data.startingBalance)) {
+    res.status(400).json({ error: "Starting balance must be a whole number of bucks" });
+    return;
+  }
+
+  // Employee + optional starting-balance credit are atomic: either both exist
+  // or neither, so an invited employee can never silently miss their credit.
+  const employee = await db.transaction(async (trx) => {
+    const [emp] = await trx
+      .insert(employeesTable)
+      .values({
+        firstName: parsed.data.firstName,
+        lastName: parsed.data.lastName,
+        email: parsed.data.email.toLowerCase(),
+        role: parsed.data.role,
+        departmentId: parsed.data.departmentId ?? null,
+        locationId: parsed.data.locationId ?? null,
+        managerId: parsed.data.managerId ?? null,
+        awardBudgetYearly: parsed.data.awardBudgetYearly ?? null,
+        status: "invited",
+      })
+      .returning();
+
+    // Optional starting balance (e.g. turned-in physical bucks): recorded as an
+    // adjustment credit attributed to the inviting admin — same ledger shape as
+    // the balance-adjustment tool.
+    if (parsed.data.startingBalance != null) {
+      await trx.insert(transactionsTable).values({
+        type: "adjustment",
+        amount: parsed.data.startingBalance,
+        toEmployeeId: emp.id,
+        fromEmployeeId: null,
+        note: "Starting balance – turned in physical bucks",
+        createdById: user.id,
+      });
+    }
+    return emp;
+  });
 
   const orgNames = await resolveOrgNames(employee.departmentId, employee.locationId);
 
@@ -350,6 +376,12 @@ router.post("/auth/bulk-invite", requireAuth, async (req, res): Promise<void> =>
       continue;
     }
 
+    // Generated schema only enforces min(1); require whole bucks explicitly.
+    if (row.startingBalance != null && !Number.isInteger(row.startingBalance)) {
+      skip("Starting balance must be a whole number of bucks");
+      continue;
+    }
+
     const orgError = await validateOrgIds(row.departmentId ?? null, row.locationId ?? null);
     if (orgError) {
       skip(orgError);
@@ -357,20 +389,39 @@ router.post("/auth/bulk-invite", requireAuth, async (req, res): Promise<void> =>
     }
 
     try {
-      const [employee] = await db
-        .insert(employeesTable)
-        .values({
-          firstName: row.firstName,
-          lastName: row.lastName,
-          email,
-          role: row.role,
-          departmentId: row.departmentId ?? null,
-          locationId: row.locationId ?? null,
-          managerId: row.managerId ?? null,
-          awardBudgetYearly: row.awardBudgetYearly ?? null,
-          status: "invited",
-        })
-        .returning();
+      // Per-row transaction: the employee and their optional starting-balance
+      // credit land together or not at all — a retry after failure can then
+      // safely re-invite the row instead of skipping an employee that silently
+      // missed their credit.
+      const employee = await db.transaction(async (trx) => {
+        const [emp] = await trx
+          .insert(employeesTable)
+          .values({
+            firstName: row.firstName,
+            lastName: row.lastName,
+            email,
+            role: row.role,
+            departmentId: row.departmentId ?? null,
+            locationId: row.locationId ?? null,
+            managerId: row.managerId ?? null,
+            awardBudgetYearly: row.awardBudgetYearly ?? null,
+            status: "invited",
+          })
+          .returning();
+
+        // Optional starting balance credit, same as the single invite.
+        if (row.startingBalance != null) {
+          await trx.insert(transactionsTable).values({
+            type: "adjustment",
+            amount: row.startingBalance,
+            toEmployeeId: emp.id,
+            fromEmployeeId: null,
+            note: "Starting balance – turned in physical bucks",
+            createdById: user.id,
+          });
+        }
+        return emp;
+      });
 
       existingEmails.add(email);
       employeesById.set(employee.id, employee);

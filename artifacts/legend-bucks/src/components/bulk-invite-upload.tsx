@@ -33,6 +33,7 @@ const TEMPLATE_HEADERS = [
   "Location",
   "Manager Email",
   "Yearly Award Budget",
+  "Starting Balance",
 ];
 
 const TEMPLATE_EXAMPLE = [
@@ -43,6 +44,7 @@ const TEMPLATE_EXAMPLE = [
   "Sales",
   "Head Office",
   "manager@legendboats.com",
+  "",
   "",
 ];
 
@@ -77,6 +79,7 @@ type ParsedRow = {
   managerEmail: string;
   managerId: number | null;
   awardBudgetYearly: number | null;
+  startingBalance: number | null;
   errors: string[];
 };
 
@@ -95,6 +98,7 @@ const COLUMN_KEYS = {
   location: ["location", "office"],
   managerEmail: ["manageremail", "manager"],
   awardBudgetYearly: ["yearlyawardbudget", "awardbudget", "awardbudgetyearly", "budget"],
+  startingBalance: ["startingbalance", "startingbucks", "initialbalance", "openingbalance"],
 } as const;
 for (const [key, aliases] of Object.entries(COLUMN_KEYS)) {
   for (const a of aliases) HEADER_MAP[a] = key as keyof typeof COLUMN_KEYS;
@@ -178,6 +182,7 @@ export default function BulkInviteUpload() {
         const locationName = getCell(r, "location");
         const managerEmail = getCell(r, "managerEmail").toLowerCase();
         const budgetRaw = getCell(r, "awardBudgetYearly");
+        const startingBalanceRaw = getCell(r, "startingBalance");
 
         const errors: string[] = [];
         if (firstName.length < 2) errors.push("First name required (min 2 characters)");
@@ -218,6 +223,13 @@ export default function BulkInviteUpload() {
           else awardBudgetYearly = n;
         }
 
+        let startingBalance: number | null = null;
+        if (startingBalanceRaw !== "") {
+          const n = Number(startingBalanceRaw);
+          if (!Number.isInteger(n) || n < 1) errors.push(`Invalid starting balance "${startingBalanceRaw}" — use a whole number of 1 or more, or leave the cell empty`);
+          else startingBalance = n;
+        }
+
         return {
           rowNumber: i + 2, // +1 header, +1 one-based
           firstName,
@@ -232,6 +244,7 @@ export default function BulkInviteUpload() {
           managerEmail,
           managerId,
           awardBudgetYearly,
+          startingBalance,
           errors,
         };
       });
@@ -259,6 +272,7 @@ export default function BulkInviteUpload() {
             locationId: r.locationId,
             managerId: r.managerId,
             awardBudgetYearly: r.awardBudgetYearly,
+            startingBalance: r.startingBalance,
           })),
         },
       },

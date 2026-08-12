@@ -24,6 +24,7 @@ const inviteSchema = z.object({
   locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
   awardBudgetYearly: z.number().min(1).optional().nullable(),
+  startingBalance: z.number().int().min(1).optional().nullable(),
 });
 
 export default function InviteEmployee() {
@@ -48,6 +49,7 @@ export default function InviteEmployee() {
       locationId: null,
       managerId: null,
       awardBudgetYearly: null,
+      startingBalance: null,
     },
   });
 
@@ -291,6 +293,33 @@ export default function InviteEmployee() {
                   )}
                 />
               </div>
+
+              {user?.role === "admin" && (
+                <FormField
+                  control={form.control}
+                  name="startingBalance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Starting Balance (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="0"
+                          value={field.value ?? ""}
+                          onChange={(e) =>
+                            field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Legend Bucks to credit right away — for example, physical bucks they turned in. Recorded in the ledger as "Starting balance – turned in physical bucks". Leave empty for none.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {canAward && (
                 <FormField

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
-import { db, employeesTable } from "@workspace/db";
+import { db, employeesTable, transactionsTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 
 import app from "../app";
@@ -30,6 +30,11 @@ describe("POST /api/auth/bulk-invite", () => {
 
   afterAll(async () => {
     if (createdEmails.length > 0) {
+      const created = await db.select().from(employeesTable).where(inArray(employeesTable.email, createdEmails));
+      const ids = created.map((e) => e.id);
+      if (ids.length > 0) {
+        await db.delete(transactionsTable).where(inArray(transactionsTable.toEmployeeId, ids));
+      }
       await db.delete(employeesTable).where(inArray(employeesTable.email, createdEmails));
     }
     await fx.cleanup();
@@ -108,6 +113,62 @@ describe("POST /api/auth/bulk-invite", () => {
     expect(byIndex[1].status).toBe("skipped");
     expect(byIndex[1].error).toMatch(/manager or admin/i);
     expect(byIndex[2].status).toBe("invited");
+  });
+
+  it("single invite with a starting balance credits the ledger; without one it doesn't", async () => {
+    const withBalance = row({ startingBalance: 250 });
+    const res = await request(app).post("/api/auth/invite").set(bearer(adminToken)).send(withBalance);
+    expect(res.status).toBe(201);
+
+    const balRes = await request(app).get(`/api/employees/${res.body.id}/balance`).set(bearer(adminToken));
+    expect(balRes.status).toBe(200);
+    expect(balRes.body.balance).toBe(250);
+
+    const [tx] = await db.select().from(transactionsTable).where(eq(transactionsTable.toEmployeeId, res.body.id));
+    expect(tx.type).toBe("adjustment");
+    expect(tx.note).toMatch(/starting balance/i);
+
+    const plain = row();
+    const res2 = await request(app).post("/api/auth/invite").set(bearer(adminToken)).send(plain);
+    expect(res2.status).toBe(201);
+    const bal2 = await request(app).get(`/api/employees/${res2.body.id}/balance`).set(bearer(adminToken));
+    expect(bal2.body.balance).toBe(0);
+  });
+
+  it("single invite rejects a non-positive or fractional starting balance", async () => {
+    const res = await request(app).post("/api/auth/invite").set(bearer(adminToken)).send(row({ startingBalance: -5 }));
+    expect(res.status).toBe(400);
+
+    const frac = await request(app).post("/api/auth/invite").set(bearer(adminToken)).send(row({ startingBalance: 10.5 }));
+    expect(frac.status).toBe(400);
+  });
+
+  it("bulk invite skips a row with a fractional starting balance", async () => {
+    const res = await request(app)
+      .post("/api/auth/bulk-invite")
+      .set(bearer(adminToken))
+      .send({ invites: [row({ startingBalance: 2.5 })] });
+    expect(res.status).toBe(200);
+    expect(res.body.invitedCount).toBe(0);
+    expect(res.body.results[0].status).toBe("skipped");
+    expect(res.body.results[0].error).toMatch(/whole number/i);
+  });
+
+  it("bulk invite rows honor starting balance", async () => {
+    const withBalance = row({ startingBalance: 100 });
+    const without = row();
+    const res = await request(app)
+      .post("/api/auth/bulk-invite")
+      .set(bearer(adminToken))
+      .send({ invites: [withBalance, without] });
+    expect(res.status).toBe(200);
+    expect(res.body.invitedCount).toBe(2);
+
+    const idOf = (i: number) => res.body.results.find((r: any) => r.index === i).id;
+    const bal1 = await request(app).get(`/api/employees/${idOf(0)}/balance`).set(bearer(adminToken));
+    expect(bal1.body.balance).toBe(100);
+    const bal2 = await request(app).get(`/api/employees/${idOf(1)}/balance`).set(bearer(adminToken));
+    expect(bal2.body.balance).toBe(0);
   });
 
   it("retrying the same batch does not double-invite", async () => {

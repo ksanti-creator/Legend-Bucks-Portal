@@ -101,6 +101,7 @@ export const LogoutResponse = zod.void()
 
 
 
+
 export const InviteEmployeeBody = zod.object({
   "email": zod.string().email(),
   "firstName": zod.string(),
@@ -109,7 +110,8 @@ export const InviteEmployeeBody = zod.object({
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.')
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.'),
+  "startingBalance": zod.number().min(1).nullish().describe('Optional starting Legend Bucks balance (e.g. turned-in physical bucks). Creates an adjustment credit at invite time attributed to the inviting admin. Omit or null for no starting balance.')
 })
 
 export const InviteEmployeeResponse = zod.object({
@@ -135,6 +137,7 @@ export const InviteEmployeeResponse = zod.object({
  * @summary Admin invites many employees at once (spreadsheet upload)
  */
 
+
 export const bulkInviteEmployeesBodyInvitesMax = 300;
 
 
@@ -148,7 +151,8 @@ export const BulkInviteEmployeesBody = zod.object({
   "departmentId": zod.number().nullish(),
   "locationId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
-  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.')
+  "awardBudgetYearly": zod.number().min(1).nullish().describe('Optional yearly award budget (in bucks) this user may draw down when awarding bucks. Omit to leave unset; null means no budget (cannot award). Admin-only.'),
+  "startingBalance": zod.number().min(1).nullish().describe('Optional starting Legend Bucks balance (e.g. turned-in physical bucks). Creates an adjustment credit at invite time attributed to the inviting admin. Omit or null for no starting balance.')
 })).min(1).max(bulkInviteEmployeesBodyInvitesMax)
 })
 
