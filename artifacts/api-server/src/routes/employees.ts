@@ -16,11 +16,14 @@ import {
   GetEmployeeBalanceResponse,
   GetEmployeeAwardBudgetParams,
   GetEmployeeAwardBudgetResponse,
+  GetEmployeeStartingBalanceParams,
+  GetEmployeeStartingBalanceResponse,
 } from "@workspace/api-zod";
 import { requireAuth, getCurrentUser, getEmployeeBalance } from "../lib/auth";
 import { getAwardedThisYear } from "../lib/awardBudget";
 import { getSubtreeIds } from "../lib/orgChain";
 import { resolveOrgNames, validateOrgIds } from "../lib/org";
+import { getStartingBalanceInfo } from "../lib/startingBalance";
 
 const router: IRouter = Router();
 
@@ -272,6 +275,36 @@ router.get("/employees/:id/balance", requireAuth, async (req, res): Promise<void
       totalSpent: debits,
     }),
   );
+});
+
+// Admin-only: the recorded starting balance (invite-time credit) plus any
+// corrections already applied. Powers the "correct starting balance" shortcut.
+router.get("/employees/:id/starting-balance", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (user.role !== "admin") {
+    res.status(403).json({ error: "Only admins can view starting balances" });
+    return;
+  }
+
+  const params = GetEmployeeStartingBalanceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [emp] = await db
+    .select()
+    .from(employeesTable)
+    .where(eq(employeesTable.id, params.data.id))
+    .limit(1);
+
+  if (!emp) {
+    res.status(404).json({ error: "Employee not found" });
+    return;
+  }
+
+  const info = await getStartingBalanceInfo(emp.id);
+  res.json(GetEmployeeStartingBalanceResponse.parse({ employeeId: emp.id, ...info }));
 });
 
 export default router;

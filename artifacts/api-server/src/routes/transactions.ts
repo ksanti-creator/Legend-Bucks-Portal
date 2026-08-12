@@ -11,6 +11,8 @@ import {
   GetTransactionResponse,
   AdjustBalanceBody,
   AdjustBalanceResponse,
+  CorrectStartingBalanceBody,
+  CorrectStartingBalanceResponse,
   ExportTransactionsQueryParams,
   GetTransactionSummaryQueryParams,
   GetTransactionSummaryResponse,
@@ -19,6 +21,7 @@ import { requireAuth, getCurrentUser, canViewAccounting, canAwardBucks } from ".
 import { getAwardedThisYear } from "../lib/awardBudget";
 import { getMaxSingleAward } from "../lib/settings";
 import { sendBucksReceivedEmail } from "../lib/email";
+import { getStartingBalanceInfo, STARTING_BALANCE_CORRECTION_PREFIX } from "../lib/startingBalance";
 
 const router: IRouter = Router();
 
@@ -302,6 +305,75 @@ router.post("/transactions/adjustments", requireAuth, async (req, res): Promise<
   }
 
   res.status(201).json(AdjustBalanceResponse.parse(await enrichTransaction(tx, true)));
+});
+
+// Admin-only one-step correction of a mistyped invite-time starting balance.
+// The server looks up the recorded starting balance (netting out earlier
+// corrections) and writes the offsetting adjustment itself, so the admin only
+// has to type what the balance should have been. Like manual adjustments,
+// this deliberately skips award-budget and max-single-award checks.
+router.post("/transactions/starting-balance-corrections", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  // Positive allow-list: only full admins may correct starting balances.
+  if (user.role !== "admin") {
+    res.status(403).json({ error: "Only admins can correct starting balances" });
+    return;
+  }
+
+  const body = CorrectStartingBalanceBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+
+  const { employeeId, correctedAmount } = body.data;
+  if (!Number.isInteger(correctedAmount)) {
+    res.status(400).json({ error: "Corrected starting balance must be a whole number of bucks" });
+    return;
+  }
+
+  const [employee] = await db
+    .select()
+    .from(employeesTable)
+    .where(eq(employeesTable.id, employeeId))
+    .limit(1);
+
+  if (!employee) {
+    res.status(404).json({ error: "Employee not found" });
+    return;
+  }
+
+  const info = await getStartingBalanceInfo(employeeId);
+  if (!info.hasStartingBalance || info.effectiveAmount == null) {
+    res.status(400).json({
+      error: "No starting balance is recorded for this employee. Use a regular balance adjustment instead.",
+    });
+    return;
+  }
+
+  const delta = correctedAmount - info.effectiveAmount;
+  if (delta === 0) {
+    res.status(400).json({ error: `The starting balance is already ${correctedAmount} bucks — nothing to correct.` });
+    return;
+  }
+
+  // Matches the balance SQL: credit via to_employee_id, debit via
+  // from_employee_id. The note records the before/after so the ledger reads
+  // as a correction, and its prefix lets later corrections net it out.
+  const note = `${STARTING_BALANCE_CORRECTION_PREFIX} ${info.effectiveAmount} → ${correctedAmount} bucks`;
+  const [tx] = await db
+    .insert(transactionsTable)
+    .values({
+      type: "adjustment",
+      amount: Math.abs(delta),
+      toEmployeeId: delta > 0 ? employeeId : null,
+      fromEmployeeId: delta < 0 ? employeeId : null,
+      note,
+      createdById: user.id,
+    })
+    .returning();
+
+  res.status(201).json(CorrectStartingBalanceResponse.parse(await enrichTransaction(tx, true)));
 });
 
 router.get("/transactions/export", requireAuth, async (req, res): Promise<void> => {

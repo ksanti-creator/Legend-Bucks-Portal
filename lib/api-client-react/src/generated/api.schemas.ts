@@ -435,6 +435,33 @@ export interface AdjustBalanceInput {
   note: string;
 }
 
+export interface StartingBalanceInfo {
+  employeeId: number;
+  /** Whether an invite-time starting balance was recorded. */
+  hasStartingBalance: boolean;
+  /**
+     * The starting balance as originally entered on the invite form.
+     * @nullable
+     */
+  originalAmount: number | null;
+  /**
+     * The starting balance after any corrections already applied (original plus correction credits minus correction debits).
+     * @nullable
+     */
+  effectiveAmount: number | null;
+  /** How many corrections have already been applied. */
+  correctionCount: number;
+}
+
+export interface CorrectStartingBalanceInput {
+  employeeId: number;
+  /**
+     * What the starting balance should have been. The server computes and records the offsetting adjustment automatically.
+     * @minimum 0
+     */
+  correctedAmount: number;
+}
+
 export interface TransactionSummary {
   totalSent: number;
   totalReceived: number;

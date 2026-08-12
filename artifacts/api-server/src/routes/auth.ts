@@ -26,6 +26,7 @@ import {
   extractSessionToken,
 } from "../lib/auth";
 import { sendMagicLinkEmail, sendInviteEmail } from "../lib/email";
+import { STARTING_BALANCE_NOTE } from "../lib/startingBalance";
 import { resolveOrgNames, validateOrgIds } from "../lib/org";
 
 const router: IRouter = Router();
@@ -263,7 +264,7 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
         amount: parsed.data.startingBalance,
         toEmployeeId: emp.id,
         fromEmployeeId: null,
-        note: "Starting balance – turned in physical bucks",
+        note: STARTING_BALANCE_NOTE,
         createdById: user.id,
       });
     }
@@ -416,7 +417,7 @@ router.post("/auth/bulk-invite", requireAuth, async (req, res): Promise<void> =>
             amount: row.startingBalance,
             toEmployeeId: emp.id,
             fromEmployeeId: null,
-            note: "Starting balance – turned in physical bucks",
+            note: STARTING_BALANCE_NOTE,
             createdById: user.id,
           });
         }

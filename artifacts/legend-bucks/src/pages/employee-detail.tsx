@@ -12,6 +12,9 @@ import {
   useGetMe,
   useGetEmployeeAwardBudget,
   useAdjustBalance,
+  useGetEmployeeStartingBalance,
+  useCorrectStartingBalance,
+  getGetEmployeeStartingBalanceQueryKey,
   getGetEmployeeQueryKey,
   getGetEmployeeBalanceQueryKey,
   getGetEmployeeAwardBudgetQueryKey,
@@ -103,6 +106,42 @@ export default function EmployeeDetail() {
         },
         onError: (err: any) =>
           toast({ title: "Failed to adjust balance", description: err?.message, variant: "destructive" }),
+      },
+    );
+  };
+
+  const isAdminUser = currentUser?.role === "admin";
+  const { data: startingBalance } = useGetEmployeeStartingBalance(id, {
+    query: { queryKey: getGetEmployeeStartingBalanceQueryKey(id), enabled: !!id && isAdminUser, retry: false },
+  });
+
+  const correctMut = useCorrectStartingBalance();
+  const [correctOpen, setCorrectOpen] = useState(false);
+  const [correctedAmount, setCorrectedAmount] = useState("");
+
+  const handleCorrectStartingBalance = () => {
+    const amount = parseInt(correctedAmount, 10);
+    if (!Number.isFinite(amount) || amount < 0 || String(amount) !== correctedAmount.trim()) {
+      toast({ title: "Enter a valid amount", description: "The corrected starting balance must be a whole number of 0 or more.", variant: "destructive" });
+      return;
+    }
+    if (startingBalance?.effectiveAmount != null && amount === startingBalance.effectiveAmount) {
+      toast({ title: "Nothing to correct", description: `The starting balance is already ${amount} Legend Bucks.` });
+      return;
+    }
+    correctMut.mutate(
+      { data: { employeeId: id, correctedAmount: amount } },
+      {
+        onSuccess: () => {
+          toast({ title: "Starting balance corrected", description: `Recorded the offsetting entry — starting balance is now ${amount} Legend Bucks.` });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeBalanceQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getGetEmployeeStartingBalanceQueryKey(id) });
+          queryClient.invalidateQueries({ queryKey: getListTransactionsQueryKey({ employeeId: id }) });
+          setCorrectOpen(false);
+          setCorrectedAmount("");
+        },
+        onError: (err: any) =>
+          toast({ title: "Failed to correct starting balance", description: err?.message, variant: "destructive" }),
       },
     );
   };
@@ -308,6 +347,62 @@ export default function EmployeeDetail() {
                         : adjustDirection === "credit"
                           ? "Credit Bucks"
                           : "Debit Bucks"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {isAdmin && startingBalance?.hasStartingBalance && (
+              <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full mt-3">
+                    <Coins className="h-4 w-4 mr-2" />
+                    Correct Starting Balance
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Correct Starting Balance</DialogTitle>
+                    <DialogDescription>
+                      {employee.firstName}'s starting balance is currently recorded as{" "}
+                      {startingBalance.effectiveAmount?.toLocaleString()} Legend Bucks
+                      {startingBalance.correctionCount > 0
+                        ? ` (originally ${startingBalance.originalAmount?.toLocaleString()}, after ${startingBalance.correctionCount} correction${startingBalance.correctionCount === 1 ? "" : "s"})`
+                        : ""}
+                      . Enter what it should have been and the offsetting entry is recorded automatically.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label>Correct starting balance</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder={`e.g. ${startingBalance.effectiveAmount ?? 250}`}
+                        value={correctedAmount}
+                        onChange={(e) => setCorrectedAmount(e.target.value)}
+                      />
+                      {(() => {
+                        const amount = parseInt(correctedAmount, 10);
+                        if (!Number.isFinite(amount) || amount < 0 || startingBalance.effectiveAmount == null) return null;
+                        const delta = amount - startingBalance.effectiveAmount;
+                        if (delta === 0) {
+                          return <p className="text-xs text-muted-foreground">No change — this matches the recorded starting balance.</p>;
+                        }
+                        return (
+                          <p className="text-xs text-muted-foreground">
+                            This will {delta > 0 ? "credit" : "debit"} {Math.abs(delta).toLocaleString()} Legend Bucks
+                            {" "}and appear in the ledger with your name.
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCorrectOpen(false)}>Cancel</Button>
+                    <Button onClick={handleCorrectStartingBalance} disabled={correctMut.isPending} className="bg-primary hover:bg-primary/90">
+                      {correctMut.isPending ? "Saving..." : "Record Correction"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

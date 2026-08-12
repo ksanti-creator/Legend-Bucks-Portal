@@ -27,6 +27,7 @@ import type {
   BalanceSummary,
   BulkInviteInput,
   BulkInviteResponse,
+  CorrectStartingBalanceInput,
   CurrentUser,
   DashboardSummary,
   Department,
@@ -67,6 +68,7 @@ import type {
   SendBucksInput,
   Settings,
   SettingsUpdate,
+  StartingBalanceInfo,
   Transaction,
   TransactionPage,
   TransactionSummary,
@@ -984,6 +986,83 @@ export function useGetEmployeeBalance<TData = Awaited<ReturnType<typeof getEmplo
 
 
 
+export const getGetEmployeeStartingBalanceUrl = (id: number,) => {
+
+
+
+
+  return `/api/employees/${id}/starting-balance`
+}
+
+/**
+ * @summary Get an employee's recorded starting balance (the invite-time adjustment credit) plus any corrections already applied. Admin-only; used by the "correct starting balance" shortcut.
+ */
+export const getEmployeeStartingBalance = async (id: number, options?: RequestInit): Promise<StartingBalanceInfo> => {
+
+  return customFetch<StartingBalanceInfo>(getGetEmployeeStartingBalanceUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeStartingBalanceQueryKey = (id: number,) => {
+    return [
+    `/api/employees/${id}/starting-balance`
+    ] as const;
+    }
+
+
+export const getGetEmployeeStartingBalanceQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeStartingBalance>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeStartingBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeStartingBalanceQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeStartingBalance>>> = ({ signal }) => getEmployeeStartingBalance(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeStartingBalance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEmployeeStartingBalanceQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeStartingBalance>>>
+export type GetEmployeeStartingBalanceQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get an employee's recorded starting balance (the invite-time adjustment credit) plus any corrections already applied. Admin-only; used by the "correct starting balance" shortcut.
+ */
+
+export function useGetEmployeeStartingBalance<TData = Awaited<ReturnType<typeof getEmployeeStartingBalance>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEmployeeStartingBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEmployeeStartingBalanceQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getDeactivateEmployeeUrl = (id: number,) => {
 
 
@@ -1353,6 +1432,76 @@ export const useAdjustBalance = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAdjustBalanceMutationOptions(options));
+    }
+
+export const getCorrectStartingBalanceUrl = () => {
+
+
+
+
+  return `/api/transactions/starting-balance-corrections`
+}
+
+/**
+ * @summary Correct a mistyped invite-time starting balance in one step. Computes the offsetting adjustment (credit or debit) automatically from the currently recorded starting balance. Admin-only.
+ */
+export const correctStartingBalance = async (correctStartingBalanceInput: CorrectStartingBalanceInput, options?: RequestInit): Promise<Transaction> => {
+
+  return customFetch<Transaction>(getCorrectStartingBalanceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(correctStartingBalanceInput)
+  }
+);}
+
+
+
+
+export const getCorrectStartingBalanceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctStartingBalance>>, TError,{data: BodyType<CorrectStartingBalanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctStartingBalance>>, TError,{data: BodyType<CorrectStartingBalanceInput>}, TContext> => {
+
+const mutationKey = ['correctStartingBalance'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctStartingBalance>>, {data: BodyType<CorrectStartingBalanceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  correctStartingBalance(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectStartingBalanceMutationResult = NonNullable<Awaited<ReturnType<typeof correctStartingBalance>>>
+    export type CorrectStartingBalanceMutationBody = BodyType<CorrectStartingBalanceInput>
+    export type CorrectStartingBalanceMutationError = ErrorType<void>
+
+    /**
+ * @summary Correct a mistyped invite-time starting balance in one step. Computes the offsetting adjustment (credit or debit) automatically from the currently recorded starting balance. Admin-only.
+ */
+export const useCorrectStartingBalance = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctStartingBalance>>, TError,{data: BodyType<CorrectStartingBalanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof correctStartingBalance>>,
+        TError,
+        {data: BodyType<CorrectStartingBalanceInput>},
+        TContext
+      > => {
+      return useMutation(getCorrectStartingBalanceMutationOptions(options));
     }
 
 export const getGetTransactionUrl = (id: number,) => {

@@ -283,6 +283,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/BalanceSummary"
 
+  /employees/{id}/starting-balance:
+    get:
+      operationId: getEmployeeStartingBalance
+      tags: [employees]
+      summary: >-
+        Get an employee's recorded starting balance (the invite-time adjustment
+        credit) plus any corrections already applied. Admin-only; used by the
+        "correct starting balance" shortcut.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Starting balance info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartingBalanceInfo"
+        "403":
+          description: Forbidden (admins only)
+        "404":
+          description: Not found
+
   /employees/{id}/deactivate:
     patch:
       operationId: deactivateEmployee
@@ -414,6 +440,34 @@ paths:
           description: Bad request
         "403":
           description: Forbidden (admins only)
+
+  /transactions/starting-balance-corrections:
+    post:
+      operationId: correctStartingBalance
+      tags: [transactions]
+      summary: >-
+        Correct a mistyped invite-time starting balance in one step. Computes
+        the offsetting adjustment (credit or debit) automatically from the
+        currently recorded starting balance. Admin-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectStartingBalanceInput"
+      responses:
+        "201":
+          description: Offsetting adjustment transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: No starting balance recorded, or no change needed
+        "403":
+          description: Forbidden (admins only)
+        "404":
+          description: Employee not found
 
   /transactions/{id}:
     get:
@@ -1809,6 +1863,40 @@ components:
           type: string
           minLength: 1
           description: Required reason, e.g. "Starting balance – turned in physical bucks".
+
+    StartingBalanceInfo:
+      type: object
+      required: [employeeId, hasStartingBalance, originalAmount, effectiveAmount, correctionCount]
+      properties:
+        employeeId:
+          type: integer
+        hasStartingBalance:
+          type: boolean
+          description: Whether an invite-time starting balance was recorded.
+        originalAmount:
+          type: ["integer", "null"]
+          description: The starting balance as originally entered on the invite form.
+        effectiveAmount:
+          type: ["integer", "null"]
+          description: >-
+            The starting balance after any corrections already applied
+            (original plus correction credits minus correction debits).
+        correctionCount:
+          type: integer
+          description: How many corrections have already been applied.
+
+    CorrectStartingBalanceInput:
+      type: object
+      required: [employeeId, correctedAmount]
+      properties:
+        employeeId:
+          type: integer
+        correctedAmount:
+          type: integer
+          minimum: 0
+          description: >-
+            What the starting balance should have been. The server computes and
+            records the offsetting adjustment automatically.
 
     TransactionSummary:
       type: object

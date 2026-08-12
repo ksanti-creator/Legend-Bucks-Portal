@@ -282,6 +282,22 @@ export const GetEmployeeBalanceResponse = zod.object({
 
 
 /**
+ * @summary Get an employee's recorded starting balance (the invite-time adjustment credit) plus any corrections already applied. Admin-only; used by the "correct starting balance" shortcut.
+ */
+export const GetEmployeeStartingBalanceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEmployeeStartingBalanceResponse = zod.object({
+  "employeeId": zod.number(),
+  "hasStartingBalance": zod.boolean().describe('Whether an invite-time starting balance was recorded.'),
+  "originalAmount": zod.number().nullable().describe('The starting balance as originally entered on the invite form.'),
+  "effectiveAmount": zod.number().nullable().describe('The starting balance after any corrections already applied (original plus correction credits minus correction debits).'),
+  "correctionCount": zod.number().describe('How many corrections have already been applied.')
+})
+
+
+/**
  * @summary Deactivate an employee
  */
 export const DeactivateEmployeeParams = zod.object({
@@ -405,6 +421,36 @@ export const AdjustBalanceBody = zod.object({
 })
 
 export const AdjustBalanceResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment']),
+  "amount": zod.number(),
+  "fromEmployeeId": zod.number().nullish(),
+  "fromEmployeeName": zod.string().nullish(),
+  "toEmployeeId": zod.number().nullish(),
+  "toEmployeeName": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "redemptionId": zod.number().nullish(),
+  "cadValueCents": zod.number().nullish().describe('For redemption rows, the reward\'s CAD value in cents. Only populated for admins (accounting).'),
+  "goalId": zod.number().nullish(),
+  "createdById": zod.number().nullish().describe('Who recorded this entry (set for admin balance adjustments).'),
+  "createdByName": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Correct a mistyped invite-time starting balance in one step. Computes the offsetting adjustment (credit or debit) automatically from the currently recorded starting balance. Admin-only.
+ */
+export const correctStartingBalanceBodyCorrectedAmountMin = 0;
+
+
+
+export const CorrectStartingBalanceBody = zod.object({
+  "employeeId": zod.number(),
+  "correctedAmount": zod.number().min(correctStartingBalanceBodyCorrectedAmountMin).describe('What the starting balance should have been. The server computes and records the offsetting adjustment automatically.')
+})
+
+export const CorrectStartingBalanceResponse = zod.object({
   "id": zod.number(),
   "type": zod.enum(['award', 'redemption_debit', 'refund', 'contribution', 'adjustment']),
   "amount": zod.number(),
