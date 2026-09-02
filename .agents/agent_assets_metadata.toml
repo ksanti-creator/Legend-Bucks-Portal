@@ -14,3 +14,17 @@ mtime_ms = 1788379961177
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/f9569440-ebdc-42e3-90e5-2481b3b9060e/4bafd101-bb52-4bf3-abfa-6259a1510356"
 storage_version_token = "1788379965851713"
 content_type = "text/html"
+
+[[outputs]]
+id = "9YPAZ52Z_LcOO-WjSgFhb"
+uri = "file://attached_assets/gift-card-recipient-email-rendered.jpg"
+type = "image"
+title = "Rendered Gift Card Email"
+description = "The actual visual appearance of the recipient email, rendered with safe sample values."
+logical_id = "c2f39ef1-99c6-46bb-a9e5-481987263d81"
+content_hash = "sha256:6d97bd97c68bc10c1a43ea9b3bc8bc67c38eb342ee8969fb501a1d3fff13ec40"
+size = 47749
+mtime_ms = 1788380053129
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/c2f39ef1-99c6-46bb-a9e5-481987263d81/7653899f-209d-49fb-a8e9-a02b32ab7715"
+storage_version_token = "1788380056815128"
+content_type = "image/jpeg"
