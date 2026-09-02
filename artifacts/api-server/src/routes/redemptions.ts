@@ -867,7 +867,7 @@ async function createIssue(redemptionId: number, adminId: number, isReissue: boo
     if (isReissue && current) {
       await trx.update(giftCardIssuesTable).set({ replacementIssueId: issue.id }).where(eq(giftCardIssuesTable.id, current.id));
     }
-    return { issue, message: redemption.giftCardMessage };
+    return { issue, catalogImageUrl: reward.imageUrls[0] ?? reward.imageUrl ?? null };
   });
   try {
     await emailGiftCard({
@@ -875,7 +875,7 @@ async function createIssue(redemptionId: number, adminId: number, isReissue: boo
       recipientName: created.issue.recipientName,
       code,
       cadValueCents: created.issue.cadValueCents,
-      message: created.message,
+      catalogImageUrl: created.catalogImageUrl,
     });
     const [emailed] = await db.transaction(async (trx) => {
       const rows = await trx.update(giftCardIssuesTable).set({ status: "emailed", emailedAt: new Date() })

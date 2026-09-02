@@ -4,15 +4,13 @@ export default function GiftCardEmail() {
       <div style={{ width: 560, maxWidth: "100%", margin: "0 auto" }}>
         <p style={{ margin: "0 0 12px", color: "#777", fontSize: 12 }}>Purchaser email preview · Sample values only</p>
         <section style={{ background: "#fff", borderRadius: 8, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-          <header style={{ background: "linear-gradient(135deg,#00afed 0%,#0090cc 100%)", padding: "36px 40px 28px" }}>
-            <p style={{ margin: 0, color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: 3, opacity: .8 }}>LEGEND BOATS</p>
-            <h1 style={{ margin: "8px 0 0", color: "#fff", fontSize: 28, letterSpacing: "-.5px" }}>Legend Bucks</h1>
+          <header style={{ background: "linear-gradient(135deg,#00afed 0%,#0090cc 100%)", padding: "28px 40px", textAlign: "center" }}>
+            <img src="/logos/legend-bucks-rewards-white.png" width="300" alt="Legend Bucks Rewards Program" style={{ display: "block", width: 300, maxWidth: "100%", height: "auto", margin: "0 auto" }} />
           </header>
           <div style={{ padding: "40px 40px 32px", color: "#4f4f51" }}>
             <p style={{ margin: "0 0 16px", fontSize: 16 }}>Hi Taylor,</p>
             <p style={{ margin: "0 0 24px", fontSize: 16 }}>Your purchase of a <strong>$50.00 CAD</strong> Legend Boats Gift Card is complete. Your card is ready to use.</p>
-            <p style={{ margin: "0 0 8px", color: "#888", fontSize: 13 }}>A personal message:</p>
-            <p style={{ margin: "0 0 24px", padding: "14px 18px", background: "#f5f5f5", borderLeft: "4px solid #00afed", borderRadius: 6, fontStyle: "italic" }}>“Thank you for everything you do. Enjoy!”</p>
+            <img src="/@fs/home/runner/workspace/attached_assets/generated_images/gift-card.png" alt="Legend Boats Gift Card" style={{ display: "block", width: "100%", maxWidth: 480, maxHeight: 300, objectFit: "cover", margin: "0 auto 24px", borderRadius: 8 }} />
             <div style={{ padding: 22, background: "#f5f5f5", borderRadius: 8, textAlign: "center", marginBottom: 24 }}>
               <p style={{ margin: "0 0 12px", font: "700 20px monospace", letterSpacing: 2, color: "#222" }}>LBGC-7KMR-W2NH-9PXT-C4JF-H8QZ-M3VD-R6YA</p>
               <svg width="240" height="240" viewBox="0 0 120 120" aria-label="Sample gift card QR code" style={{ display: "block", margin: "auto", background: "#fff" }}>

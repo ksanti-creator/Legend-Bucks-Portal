@@ -56,7 +56,7 @@ export async function emailGiftCard(input: {
   recipientName: string;
   code: string;
   cadValueCents: number;
-  message: string | null;
+  catalogImageUrl: string | null;
 }): Promise<void> {
   const qrDataUrl = await QRCode.toDataURL(input.code, { errorCorrectionLevel: "M", margin: 1, width: 240 });
   await sendGiftCardRecipientEmail(
@@ -65,6 +65,6 @@ export async function emailGiftCard(input: {
     input.code,
     input.cadValueCents,
     qrDataUrl,
-    input.message,
+    input.catalogImageUrl,
   );
 }

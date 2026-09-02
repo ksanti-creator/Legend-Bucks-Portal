@@ -268,9 +268,8 @@ function emailShell(title: string, bodyHtml: string): string {
         <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
           <!-- Header -->
           <tr>
-            <td style="background:linear-gradient(135deg,#00afed 0%,#0090cc 100%);padding:36px 40px 28px;">
-              <p style="margin:0;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">LEGEND BOATS</p>
-              <h1 style="margin:8px 0 0;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">Legend Bucks</h1>
+            <td style="background:linear-gradient(135deg,#00afed 0%,#0090cc 100%);padding:28px 40px;text-align:center;">
+              <img src="${APP_URL}/logos/legend-bucks-rewards-white.png" width="300" alt="Legend Bucks Rewards Program" style="display:block;width:300px;max-width:100%;height:auto;margin:0 auto;" />
             </td>
           </tr>
           <!-- Body -->
@@ -603,18 +602,20 @@ export async function sendGiftCardRecipientEmail(
   code: string,
   cadValueCents: number,
   qrDataUrl: string,
-  personalMessage: string | null,
+  catalogImageUrl: string | null,
 ): Promise<void> {
-  const messageBlock = personalMessage
-    ? `<p style="margin:0 0 8px;color:#888;font-size:13px;">A personal message:</p>
-       <p style="margin:0 0 24px;padding:14px 18px;background:#f5f5f5;border-left:4px solid #00afed;border-radius:6px;color:#4f4f51;font-style:italic;">“${escapeHtml(personalMessage)}”</p>`
+  const absoluteImageUrl = catalogImageUrl
+    ? new URL(catalogImageUrl, `${APP_URL}/`).toString()
+    : null;
+  const imageBlock = absoluteImageUrl
+    ? `<img src="${escapeHtml(absoluteImageUrl)}" width="480" alt="Legend Boats Gift Card" style="display:block;width:100%;max-width:480px;height:auto;max-height:300px;object-fit:cover;margin:0 auto 24px;border-radius:8px;" />`
     : "";
   const last4 = code.slice(-4);
   const html = emailShell(
     "Your Legend Boats Gift Card is ready",
     `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;">Hi ${escapeHtml(recipientName)},</p>
      <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;">Your purchase of a <strong>$${(cadValueCents / 100).toFixed(2)} CAD</strong> Legend Boats Gift Card is complete. Your card is ready to use.</p>
-     ${messageBlock}
+     ${imageBlock}
      <div style="padding:22px;background:#f5f5f5;border-radius:8px;text-align:center;margin-bottom:24px;">
        <p style="margin:0 0 12px;font:700 20px monospace;letter-spacing:2px;color:#222;">${escapeHtml(code)}</p>
        <img src="${qrDataUrl}" width="240" height="240" alt="Gift card QR code" style="display:block;margin:auto;" />

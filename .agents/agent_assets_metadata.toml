@@ -42,3 +42,17 @@ mtime_ms = 1788380164000
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/93bee9b6-8c97-4a17-87a4-f8b8ae18d957/4a145578-284f-44fe-83ee-d9e06e57a3b8"
 storage_version_token = "1788380169203355"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "pxiMlhxnWwf-nauhdI4fd"
+uri = "file://attached_assets/gift-card-purchase-email-with-logo-and-photo.jpg"
+type = "image"
+title = "Updated Gift Card Purchase Email"
+description = "Rendered email with the Legend Bucks Shop logo, catalog gift-card photo, and no personal-message section."
+logical_id = "5f07dadb-63c7-4880-b299-2baa17914dd0"
+content_hash = "sha256:2bf5d66919b3c2bd72553a814ccc2bafdef8edabe3f17781cfc6a2b093f5eacb"
+size = 79167
+mtime_ms = 1788380509344
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/5f07dadb-63c7-4880-b299-2baa17914dd0/adbde5cb-646b-4fa2-a698-f31193ec270f"
+storage_version_token = "1788380520583976"
+content_type = "image/jpeg"

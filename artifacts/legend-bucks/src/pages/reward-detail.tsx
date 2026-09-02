@@ -51,7 +51,6 @@ export default function RewardDetail() {
   const [giftCardAmount, setGiftCardAmount] = useState(100);
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
-  const [personalMessage, setPersonalMessage] = useState("");
 
   if (isLoading || !reward || !user) {
     return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -84,7 +83,6 @@ export default function RewardDetail() {
           giftCardLbAmount: giftCardAmount,
           giftCardRecipientName: recipientName.trim(),
           giftCardRecipientEmail: recipientEmail.trim(),
-          giftCardMessage: personalMessage.trim() || undefined,
         } : {}),
       } },
       {
@@ -293,7 +291,6 @@ export default function RewardDetail() {
                       <div><label className="block text-sm font-medium mb-2">Recipient name</label><Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} /></div>
                       <div><label className="block text-sm font-medium mb-2">Recipient email</label><Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} /></div>
                     </div>
-                    <div><label className="block text-sm font-medium mb-2">Personal message (Optional)</label><Textarea value={personalMessage} onChange={(e) => setPersonalMessage(e.target.value)} /></div>
                     <p className="text-xs text-muted-foreground">Gift cards are issued after approval and cannot be exchanged for cash.</p>
                   </div>
                 )}
