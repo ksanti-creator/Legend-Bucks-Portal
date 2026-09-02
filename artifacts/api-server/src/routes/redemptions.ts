@@ -867,7 +867,13 @@ async function createIssue(redemptionId: number, adminId: number, isReissue: boo
     if (isReissue && current) {
       await trx.update(giftCardIssuesTable).set({ replacementIssueId: issue.id }).where(eq(giftCardIssuesTable.id, current.id));
     }
-    return { issue, catalogImageUrl: reward.imageUrls[0] ?? reward.imageUrl ?? null };
+    return {
+      issue,
+      catalogImageUrl:
+        reward.imageUrls[0] ??
+        reward.imageUrl ??
+        "/images/legend-bucks-gift-card.png",
+    };
   });
   try {
     await emailGiftCard({

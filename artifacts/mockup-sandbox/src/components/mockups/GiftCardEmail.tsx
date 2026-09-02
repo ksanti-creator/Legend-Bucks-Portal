@@ -10,7 +10,7 @@ export default function GiftCardEmail() {
           <div style={{ padding: "40px 40px 32px", color: "#4f4f51" }}>
             <p style={{ margin: "0 0 16px", fontSize: 16 }}>Hi Taylor,</p>
             <p style={{ margin: "0 0 24px", fontSize: 16 }}>Your purchase of a <strong>$50.00 CAD</strong> Legend Boats Gift Card is complete. Your card is ready to use.</p>
-            <img src="/@fs/home/runner/workspace/attached_assets/generated_images/gift-card.png" alt="Legend Boats Gift Card" style={{ display: "block", width: "100%", maxWidth: 480, maxHeight: 300, objectFit: "cover", margin: "0 auto 24px", borderRadius: 8 }} />
+            <img src="/@fs/home/runner/workspace/attached_assets/Untitled_design_(70)_1788380591097.png" alt="Legend Boats Gift Card" style={{ display: "block", width: "100%", maxWidth: 480, maxHeight: 300, objectFit: "contain", margin: "0 auto 24px", borderRadius: 8 }} />
             <div style={{ padding: 22, background: "#f5f5f5", borderRadius: 8, textAlign: "center", marginBottom: 24 }}>
               <p style={{ margin: "0 0 12px", font: "700 20px monospace", letterSpacing: 2, color: "#222" }}>LBGC-7KMR-W2NH-9PXT-C4JF-H8QZ-M3VD-R6YA</p>
               <svg width="240" height="240" viewBox="0 0 120 120" aria-label="Sample gift card QR code" style={{ display: "block", margin: "auto", background: "#fff" }}>

@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Gift, Coins, Settings } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import giftCardImg from "@assets/generated_images/gift-card.png";
+import giftCardImg from "@assets/Untitled_design_(70)_1788380591097.png";
 import ptoImg from "@assets/generated_images/pto.png";
 import brandedGearImg from "@assets/generated_images/branded-gear.png";
 import experienceImg from "@assets/generated_images/experience.png";

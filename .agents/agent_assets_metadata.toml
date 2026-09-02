@@ -56,3 +56,17 @@ mtime_ms = 1788380509344
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/5f07dadb-63c7-4880-b299-2baa17914dd0/adbde5cb-646b-4fa2-a698-f31193ec270f"
 storage_version_token = "1788380520583976"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "xSJS8JMLQBjVEamWIqUMB"
+uri = "file://attached_assets/gift-card-purchase-email-correct-image.jpg"
+type = "image"
+title = "Gift Card Email — Correct Image"
+description = "Rendered purchaser email using the exact gift-card artwork you supplied."
+logical_id = "54a0d365-01fe-43ff-b5ee-79c263c2ef2e"
+content_hash = "sha256:13d645fb987a929cb4ffb74bbdd9adb2725e93d28b441350f04627fc1c86fd80"
+size = 61248
+mtime_ms = 1788380663420
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/54a0d365-01fe-43ff-b5ee-79c263c2ef2e/b70a74e9-b7b4-4c20-a839-010699503794"
+storage_version_token = "1788380671159501"
+content_type = "image/jpeg"
