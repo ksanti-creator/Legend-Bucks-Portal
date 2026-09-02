@@ -1,0 +1,77 @@
+GIFT-CARD ISSUANCE AND EMAIL
+
+When an authorized admin fulfills an approved "Custom Legend Bucks Gift Card"
+redemption:
+
+1. Generate a unique secure gift-card code.
+   - Use Node crypto.randomBytes, not Math.random.
+   - Use at least 128 bits of entropy.
+   - Format the customer-facing code as:
+     LBGC-XXXX-XXXX-XXXX-XXXX
+   - Store only:
+     - SHA-256 hash of the full code
+     - last four characters
+     - redemption ID
+     - recipient name/email
+     - LB amount
+     - CAD value in cents
+     - issued timestamp
+     - email timestamp/status
+   - Never store, log, expose through admin APIs, or place in audit records the
+     complete plaintext code after the initial email is sent.
+
+2. Add a gift_card_issues table:
+   - id
+   - redemption_id, unique
+   - code_hash
+   - code_last4
+   - recipient_name
+   - recipient_email
+   - lb_amount
+   - cad_value_cents
+   - status: pending_issue, emailed, email_failed, voided, reissued
+   - issued_by_employee_id
+   - issued_at
+   - emailed_at
+   - voided_at nullable
+   - replacement_issue_id nullable
+   - created_at / updated_at
+
+3. Add an admin-only "Issue & Email Gift Card" fulfillment action.
+   - Available only for approved custom Gift Card redemptions.
+   - Generate the code in memory.
+   - Create the issue record with hash + last four only.
+   - Send the branded email to the recipient email using the existing Gmail
+     connector.
+   - Mark the issue `emailed` only after Gmail returns success.
+   - If Gmail fails, mark `email_failed`; do not claim it was delivered.
+
+4. Add a branded recipient email:
+   Subject: "You received a Legend Bucks Gift Card"
+   Include:
+   - recipient name
+   - card value, e.g. $100.00 CAD
+   - the unique gift-card code
+   - QR code containing the gift-card code
+   - optional personal message from the employee
+   - instruction:
+     "Present this code at a Legend Boats store to apply it toward your purchase."
+   - card reference using only the masked code / last four
+   - "This card cannot be exchanged for cash."
+
+5. Add admin actions:
+   - Resend Email: resend the original card email only if the secure code can be
+     safely re-created from an approved encrypted secret. If the code is not
+     recoverable, do NOT fake a resend.
+   - Reissue Card: void the old issue, generate a new code, and email the new
+     card. The old code must be marked voided.
+   - Void Card: mark the issue voided with a required reason.
+   - Show only masked code, for example: LBGC-••••-••••-••••-1VLW.
+
+6. Add tests:
+   - generated codes are unique;
+   - only the hash and last four are persisted;
+   - full code is present in the sent email payload but absent from all database
+     records, API responses, logs, and audit events;
+   - email failure produces email_failed status;
+   - reissue produces a new code and voids the original.

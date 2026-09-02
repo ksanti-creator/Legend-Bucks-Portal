@@ -696,6 +696,10 @@ export const ListRewardsResponseItem = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "isCustomGiftCard": zod.boolean().optional(),
+  "giftCardIncrementLb": zod.number().nullish(),
+  "giftCardMinimumLb": zod.number().nullish(),
+  "giftCardMaximumLb": zod.number().nullish(),
   "sizes": zod.array(zod.object({
   "label": zod.string(),
   "quantity": zod.number().nullable().describe('null means unlimited for this size')
@@ -710,6 +714,9 @@ export const ListRewardsResponse = zod.array(ListRewardsResponseItem)
  */
 
 export const createRewardBodyImageUrlsMax = 8;
+
+
+
 
 export const createRewardBodySizesItemLabelMax = 40;
 
@@ -733,6 +740,10 @@ export const CreateRewardBody = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean().optional(),
   "approvalRequired": zod.boolean().optional(),
+  "isCustomGiftCard": zod.boolean().optional(),
+  "giftCardIncrementLb": zod.number().min(1).nullish(),
+  "giftCardMinimumLb": zod.number().min(1).nullish(),
+  "giftCardMaximumLb": zod.number().min(1).nullish(),
   "sizes": zod.array(zod.object({
   "label": zod.string().min(1).max(createRewardBodySizesItemLabelMax),
   "quantity": zod.number().min(createRewardBodySizesItemQuantityMin).nullish().describe('null (or omitted) means unlimited for this size')
@@ -754,6 +765,10 @@ export const CreateRewardResponse = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "isCustomGiftCard": zod.boolean().optional(),
+  "giftCardIncrementLb": zod.number().nullish(),
+  "giftCardMinimumLb": zod.number().nullish(),
+  "giftCardMaximumLb": zod.number().nullish(),
   "sizes": zod.array(zod.object({
   "label": zod.string(),
   "quantity": zod.number().nullable().describe('null means unlimited for this size')
@@ -784,6 +799,10 @@ export const GetRewardResponse = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "isCustomGiftCard": zod.boolean().optional(),
+  "giftCardIncrementLb": zod.number().nullish(),
+  "giftCardMinimumLb": zod.number().nullish(),
+  "giftCardMaximumLb": zod.number().nullish(),
   "sizes": zod.array(zod.object({
   "label": zod.string(),
   "quantity": zod.number().nullable().describe('null means unlimited for this size')
@@ -801,6 +820,9 @@ export const UpdateRewardParams = zod.object({
 
 
 export const updateRewardBodyImageUrlsMax = 8;
+
+
+
 
 export const updateRewardBodySizesItemLabelMax = 40;
 
@@ -824,6 +846,10 @@ export const UpdateRewardBody = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean().optional(),
   "approvalRequired": zod.boolean().optional(),
+  "isCustomGiftCard": zod.boolean().optional(),
+  "giftCardIncrementLb": zod.number().min(1).nullish(),
+  "giftCardMinimumLb": zod.number().min(1).nullish(),
+  "giftCardMaximumLb": zod.number().min(1).nullish(),
   "sizes": zod.array(zod.object({
   "label": zod.string().min(1).max(updateRewardBodySizesItemLabelMax),
   "quantity": zod.number().min(updateRewardBodySizesItemQuantityMin).nullish().describe('null (or omitted) means unlimited for this size')
@@ -845,6 +871,10 @@ export const UpdateRewardResponse = zod.object({
   "locationRestriction": zod.string().nullish(),
   "active": zod.boolean(),
   "approvalRequired": zod.boolean(),
+  "isCustomGiftCard": zod.boolean().optional(),
+  "giftCardIncrementLb": zod.number().nullish(),
+  "giftCardMinimumLb": zod.number().nullish(),
+  "giftCardMaximumLb": zod.number().nullish(),
   "sizes": zod.array(zod.object({
   "label": zod.string(),
   "quantity": zod.number().nullable().describe('null means unlimited for this size')
@@ -884,6 +914,20 @@ export const ListRedemptionsResponseItem = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -893,10 +937,18 @@ export const ListRedemptionsResponse = zod.array(ListRedemptionsResponseItem)
 /**
  * @summary Redeem a reward
  */
+export const createRedemptionBodyGiftCardMessageMax = 1000;
+
+
+
 export const CreateRedemptionBody = zod.object({
   "rewardId": zod.number(),
   "sizeLabel": zod.string().optional().describe('Required when the reward is sized; must match one of the reward\'s sizes.'),
-  "note": zod.string().optional()
+  "note": zod.string().optional(),
+  "giftCardLbAmount": zod.number().optional(),
+  "giftCardRecipientName": zod.string().optional(),
+  "giftCardRecipientEmail": zod.string().email().optional(),
+  "giftCardMessage": zod.string().max(createRedemptionBodyGiftCardMessageMax).optional()
 })
 
 export const CreateRedemptionResponse = zod.object({
@@ -911,6 +963,20 @@ export const CreateRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -935,6 +1001,20 @@ export const GetRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -959,6 +1039,20 @@ export const ApproveRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -987,6 +1081,20 @@ export const RejectRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -1011,6 +1119,20 @@ export const PayrollApproveRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -1039,6 +1161,20 @@ export const PayrollRejectRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -1063,6 +1199,20 @@ export const CancelRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -1087,8 +1237,84 @@ export const FulfillRedemptionResponse = zod.object({
   "sizeLabel": zod.string().nullish().describe('Chosen size for sized rewards; null for non-sized rewards.'),
   "note": zod.string().nullish(),
   "adminNote": zod.string().nullish(),
+  "giftCardLbAmount": zod.number().nullish(),
+  "giftCardCadValueCents": zod.number().nullish(),
+  "giftCardRecipientName": zod.string().nullish(),
+  "giftCardRecipientEmail": zod.string().nullish(),
+  "giftCardMessage": zod.string().nullish(),
+  "giftCardIssue": zod.union([zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+}),zod.null()]).optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Securely issue and email an approved custom gift card (admin only)
+ */
+export const IssueGiftCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IssueGiftCardResponse = zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Void the old code and issue and email a replacement (admin only)
+ */
+export const ReissueGiftCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReissueGiftCardResponse = zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Void the current issued card (admin only)
+ */
+export const VoidGiftCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const voidGiftCardBodyReasonMax = 500;
+
+
+
+export const VoidGiftCardBody = zod.object({
+  "reason": zod.string().min(1).max(voidGiftCardBodyReasonMax)
+})
+
+export const VoidGiftCardResponse = zod.object({
+  "id": zod.number(),
+  "redemptionId": zod.number(),
+  "maskedCode": zod.string(),
+  "status": zod.enum(['pending_issue', 'emailed', 'email_failed', 'voided', 'reissued']),
+  "issuedAt": zod.string(),
+  "emailedAt": zod.string().nullish(),
+  "voidedAt": zod.string().nullish()
 })
 
 

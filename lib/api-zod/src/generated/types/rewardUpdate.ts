@@ -31,6 +31,22 @@ export interface RewardUpdate {
   locationRestriction?: string | null;
   active?: boolean;
   approvalRequired?: boolean;
+  isCustomGiftCard?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardIncrementLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMinimumLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMaximumLb?: number | null;
   /**
      * When present, replaces the reward's full set of size variants (in display order). Empty array makes the reward non-sized.
      * @maxItems 20

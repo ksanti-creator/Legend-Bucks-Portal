@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Gift, Coins, AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -47,6 +48,10 @@ export default function RewardDetail() {
   const [open, setOpen] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [giftCardAmount, setGiftCardAmount] = useState(100);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [personalMessage, setPersonalMessage] = useState("");
 
   if (isLoading || !reward || !user) {
     return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -54,18 +59,34 @@ export default function RewardDetail() {
 
   const sizes = reward.sizes ?? [];
   const isSized = sizes.length > 0;
-  const canAfford = (user.balance || 0) >= reward.buckCost;
+  const chosenCost = reward.isCustomGiftCard ? giftCardAmount : reward.buckCost;
+  const increment = reward.giftCardIncrementLb ?? 100;
+  const minimum = reward.giftCardMinimumLb ?? 100;
+  const customAmountValid = Number.isInteger(giftCardAmount) && giftCardAmount > 0 &&
+    giftCardAmount >= minimum && giftCardAmount % increment === 0 &&
+    (reward.giftCardMaximumLb == null || giftCardAmount <= reward.giftCardMaximumLb);
+  const canAfford = (user.balance || 0) >= chosenCost;
   const isAvailable =
     reward.active &&
     (isSized
       ? sizes.some((s) => s.quantity === null || s.quantity > 0)
       : reward.quantity == null || reward.quantity > 0);
-  const canRedeem = canAfford && isAvailable;
+  const canRedeem = isAvailable && (reward.isCustomGiftCard || canAfford);
   const needsSize = isSized && !selectedSize;
 
   const handleRedeem = () => {
     redeemMut.mutate(
-      { data: { rewardId: id, note: note || undefined, ...(isSized && selectedSize ? { sizeLabel: selectedSize } : {}) } },
+      { data: {
+        rewardId: id,
+        note: note || undefined,
+        ...(isSized && selectedSize ? { sizeLabel: selectedSize } : {}),
+        ...(reward.isCustomGiftCard ? {
+          giftCardLbAmount: giftCardAmount,
+          giftCardRecipientName: recipientName.trim(),
+          giftCardRecipientEmail: recipientEmail.trim(),
+          giftCardMessage: personalMessage.trim() || undefined,
+        } : {}),
+      } },
       {
         onSuccess: () => {
           setOpen(false);
@@ -169,16 +190,17 @@ export default function RewardDetail() {
           {/* Details Side */}
           <div className="p-8 md:p-10 flex flex-col justify-center">
             {reward.category && (
-              <Badge variant="outline" className="w-fit mb-4 text-xs tracking-wider uppercase">
-                {reward.category}
-              </Badge>
+              <div className="flex gap-2 mb-4">
+                <Badge variant="outline" className="w-fit text-xs tracking-wider uppercase">{reward.category}</Badge>
+                {reward.isCustomGiftCard && <Badge className="text-xs uppercase">Custom Value</Badge>}
+              </div>
             )}
             
             <h1 className="text-3xl font-display font-bold mb-4">{reward.name}</h1>
             
             <div className="flex items-center text-primary font-bold text-2xl mb-6">
               <Coins className="h-6 w-6 mr-2" />
-              {reward.buckCost.toLocaleString()} LB
+              {reward.isCustomGiftCard ? "Custom amount · 100 LB = $10" : `${reward.buckCost.toLocaleString()} LB`}
             </div>
 
             <div className="prose prose-sm dark:prose-invert text-muted-foreground mb-8">
@@ -240,7 +262,7 @@ export default function RewardDetail() {
                   disabled={!canRedeem}
                 >
                   {!isAvailable ? "Out of Stock" : 
-                   !canAfford ? `Need ${(reward.buckCost - (user.balance || 0)).toLocaleString()} more LB` : 
+                   !reward.isCustomGiftCard && !canAfford ? `Need ${(reward.buckCost - (user.balance || 0)).toLocaleString()} more LB` :
                    "Redeem Now"}
                 </Button>
               </DialogTrigger>
@@ -248,10 +270,33 @@ export default function RewardDetail() {
                 <DialogHeader>
                   <DialogTitle>Confirm Redemption</DialogTitle>
                   <DialogDescription>
-                    You are about to spend {reward.buckCost} LB on "{reward.name}".
-                    Your new balance will be {((user.balance || 0) - reward.buckCost).toLocaleString()} LB.
+                    {reward.isCustomGiftCard
+                      ? `Choose how many Legend Bucks to convert. Available balance: ${(user.balance || 0).toLocaleString()} LB.`
+                      : <>You are about to spend {reward.buckCost} LB on "{reward.name}".
+                        Your new balance will be {((user.balance || 0) - reward.buckCost).toLocaleString()} LB.</>}
                   </DialogDescription>
                 </DialogHeader>
+
+                {reward.isCustomGiftCard && (
+                  <div className="space-y-4 my-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Legend Bucks to convert</label>
+                      <Input type="number" min={minimum} step={increment} value={giftCardAmount}
+                        onChange={(e) => setGiftCardAmount(Number(e.target.value))} />
+                      <p className="mt-2 text-sm font-medium text-primary">
+                        {Number.isFinite(giftCardAmount) ? `${giftCardAmount.toLocaleString()} LB = $${(giftCardAmount / 10).toFixed(2)} CAD` : "Enter an amount"}
+                      </p>
+                      {!customAmountValid && <p className="text-xs text-destructive">Use a whole multiple of {increment} LB, at least {minimum} LB{reward.giftCardMaximumLb ? ` and no more than ${reward.giftCardMaximumLb} LB` : ""}.</p>}
+                      {customAmountValid && !canAfford && <p className="text-xs text-destructive">Amount exceeds your available balance.</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div><label className="block text-sm font-medium mb-2">Recipient name</label><Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} /></div>
+                      <div><label className="block text-sm font-medium mb-2">Recipient email</label><Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} /></div>
+                    </div>
+                    <div><label className="block text-sm font-medium mb-2">Personal message (Optional)</label><Textarea value={personalMessage} onChange={(e) => setPersonalMessage(e.target.value)} /></div>
+                    <p className="text-xs text-muted-foreground">Gift cards are issued after approval and cannot be exchanged for cash.</p>
+                  </div>
+                )}
                 
                 {isSized && (
                   <div className="my-4">
@@ -288,7 +333,7 @@ export default function RewardDetail() {
                   </div>
                 )}
 
-                <div className="my-4">
+                {!reward.isCustomGiftCard && <div className="my-4">
                   <label className="block text-sm font-medium mb-2">Note (Optional)</label>
                   <Textarea 
                     placeholder="E.g. Size Large, prefer black color" 
@@ -298,11 +343,11 @@ export default function RewardDetail() {
                   <p className="text-xs text-muted-foreground mt-2">
                     Add any details needed for fulfillment (sizes, dates, etc.)
                   </p>
-                </div>
+                </div>}
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                  <Button onClick={handleRedeem} disabled={redeemMut.isPending || needsSize} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button onClick={handleRedeem} disabled={redeemMut.isPending || needsSize || (reward.isCustomGiftCard && (!customAmountValid || !canAfford || !recipientName.trim() || !recipientEmail.trim()))} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     {redeemMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Confirm Purchase
                   </Button>

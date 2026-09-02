@@ -80,6 +80,10 @@ function rewardToResponse(r: any, isAdmin: boolean, sizes: { label: string; quan
     locationRestriction: r.locationRestriction,
     active: r.active,
     approvalRequired: r.approvalRequired,
+    isCustomGiftCard: r.isCustomGiftCard,
+    giftCardIncrementLb: r.giftCardIncrementLb,
+    giftCardMinimumLb: r.giftCardMinimumLb,
+    giftCardMaximumLb: r.giftCardMaximumLb,
     sizes,
     createdAt: r.createdAt.toISOString(),
   };
@@ -121,6 +125,28 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: body.error.message });
     return;
   }
+  if (body.data.isCustomGiftCard && body.data.category !== "Gift Card") {
+    res.status(400).json({ error: "Custom denomination is only available for Gift Card rewards" });
+    return;
+  }
+  if (body.data.isCustomGiftCard && body.data.giftCardIncrementLb != null && body.data.giftCardIncrementLb !== 100) {
+    res.status(400).json({ error: "Custom Legend Bucks Gift Cards use a fixed 100 LB increment" });
+    return;
+  }
+  const increment = body.data.isCustomGiftCard ? 100 : null;
+  const minimum = body.data.isCustomGiftCard ? (body.data.giftCardMinimumLb ?? 100) : null;
+  const maximum = body.data.isCustomGiftCard ? (body.data.giftCardMaximumLb ?? null) : null;
+  if (
+    increment !== null &&
+    minimum !== null &&
+    (!Number.isSafeInteger(minimum) ||
+      (maximum !== null && !Number.isSafeInteger(maximum)) ||
+      minimum % increment !== 0 ||
+      (maximum !== null && (maximum < minimum || maximum % increment !== 0)))
+  ) {
+    res.status(400).json({ error: "Gift card minimum and maximum must be valid multiples of the increment" });
+    return;
+  }
 
   const [reward] = await db
     .insert(rewardsTable)
@@ -139,10 +165,14 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
           body.data.imageUrls ?? (body.data.imageUrl ? [body.data.imageUrl] : []);
         return { imageUrls, imageUrl: imageUrls[0] ?? null };
       })(),
-      quantity: body.data.quantity ?? null,
+      quantity: body.data.isCustomGiftCard ? null : (body.data.quantity ?? null),
       locationRestriction: body.data.locationRestriction ?? null,
       active: body.data.active ?? true,
-      approvalRequired: body.data.approvalRequired ?? false,
+      approvalRequired: body.data.approvalRequired ?? (body.data.isCustomGiftCard ? true : false),
+      isCustomGiftCard: body.data.isCustomGiftCard ?? false,
+      giftCardIncrementLb: increment,
+      giftCardMinimumLb: minimum,
+      giftCardMaximumLb: maximum,
     })
     .returning();
 
@@ -197,6 +227,38 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: body.error.message });
     return;
   }
+  const [existing] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, params.data.id)).limit(1);
+  if (!existing) {
+    res.status(404).json({ error: "Reward not found" });
+    return;
+  }
+  const custom = body.data.isCustomGiftCard ?? existing.isCustomGiftCard;
+  const category = "category" in body.data ? body.data.category : existing.category;
+  if (custom && body.data.giftCardIncrementLb != null && body.data.giftCardIncrementLb !== 100) {
+    res.status(400).json({ error: "Custom Legend Bucks Gift Cards use a fixed 100 LB increment" });
+    return;
+  }
+  const increment = custom ? 100 : null;
+  const minimum = custom ? (body.data.giftCardMinimumLb ?? existing.giftCardMinimumLb ?? 100) : null;
+  const maximum = custom
+    ? ("giftCardMaximumLb" in body.data ? body.data.giftCardMaximumLb : existing.giftCardMaximumLb)
+    : null;
+  const normalizedMaximum = maximum ?? null;
+  if (custom && category !== "Gift Card") {
+    res.status(400).json({ error: "Custom denomination is only available for Gift Card rewards" });
+    return;
+  }
+  if (
+    increment !== null &&
+    minimum !== null &&
+    (!Number.isSafeInteger(minimum) ||
+      (normalizedMaximum !== null && !Number.isSafeInteger(normalizedMaximum)) ||
+      minimum % increment !== 0 ||
+      (normalizedMaximum !== null && (normalizedMaximum < minimum || normalizedMaximum % increment !== 0)))
+  ) {
+    res.status(400).json({ error: "Gift card minimum and maximum must be valid multiples of the increment" });
+    return;
+  }
 
   if (body.data.sizes !== undefined) {
     const sizeError = validateSizes(body.data.sizes);
@@ -225,6 +287,11 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
   if ("locationRestriction" in body.data) updates.locationRestriction = body.data.locationRestriction;
   if (body.data.active !== undefined) updates.active = body.data.active;
   if (body.data.approvalRequired !== undefined) updates.approvalRequired = body.data.approvalRequired;
+  if (body.data.isCustomGiftCard !== undefined) updates.isCustomGiftCard = body.data.isCustomGiftCard;
+  if ("giftCardIncrementLb" in body.data || body.data.isCustomGiftCard !== undefined) updates.giftCardIncrementLb = increment;
+  if ("giftCardMinimumLb" in body.data || body.data.isCustomGiftCard !== undefined) updates.giftCardMinimumLb = minimum;
+  if ("giftCardMaximumLb" in body.data || body.data.isCustomGiftCard !== undefined) updates.giftCardMaximumLb = normalizedMaximum;
+  if (custom) updates.quantity = null;
 
   let updated;
   if (Object.keys(updates).length > 0) {

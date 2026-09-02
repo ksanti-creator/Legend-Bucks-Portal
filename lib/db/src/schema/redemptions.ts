@@ -24,6 +24,11 @@ export const redemptionsTable = pgTable("redemptions", {
   sizeLabel: text("size_label"), // chosen size for sized rewards; null for non-sized
   note: text("note"),
   adminNote: text("admin_note"),
+  giftCardLbAmount: integer("gift_card_lb_amount"),
+  giftCardCadValueCents: integer("gift_card_cad_value_cents"),
+  giftCardRecipientName: text("gift_card_recipient_name"),
+  giftCardRecipientEmail: text("gift_card_recipient_email"),
+  giftCardMessage: text("gift_card_message"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

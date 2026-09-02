@@ -28,6 +28,22 @@ export interface RewardInput {
   locationRestriction?: string | null;
   active?: boolean;
   approvalRequired?: boolean;
+  isCustomGiftCard?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardIncrementLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMinimumLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMaximumLb?: number | null;
   /**
      * Full set of size variants in display order; empty/omitted means not sized.
      * @maxItems 20

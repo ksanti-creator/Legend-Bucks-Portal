@@ -5,6 +5,7 @@
  * Legend Bucks rewards platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { GiftCardIssue } from './giftCardIssue';
 import type { RedemptionStatus } from './redemptionStatus';
 
 export interface Redemption {
@@ -26,6 +27,17 @@ export interface Redemption {
   note?: string | null;
   /** @nullable */
   adminNote?: string | null;
+  /** @nullable */
+  giftCardLbAmount?: number | null;
+  /** @nullable */
+  giftCardCadValueCents?: number | null;
+  /** @nullable */
+  giftCardRecipientName?: string | null;
+  /** @nullable */
+  giftCardRecipientEmail?: string | null;
+  /** @nullable */
+  giftCardMessage?: string | null;
+  giftCardIssue?: GiftCardIssue | null;
   createdAt: string;
   updatedAt?: string;
 }

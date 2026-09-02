@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, usePayrollApproveRedemption, usePayrollRejectRedemption, useGetMe, getListRedemptionsQueryKey } from "@workspace/api-client-react";
+import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, usePayrollApproveRedemption, usePayrollRejectRedemption, useIssueGiftCard, useReissueGiftCard, useVoidGiftCard, useGetMe, getListRedemptionsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ export default function Redemptions() {
 
   // Privileged roles see all, users see their own
   const { data: redemptions, isLoading } = useListRedemptions({ 
-    status: statusTab !== "all" ? statusTab : undefined,
+    status: canViewQueue && statusTab !== "all" ? statusTab : undefined,
     employeeId: !canViewQueue ? user?.id : undefined
   });
 
@@ -39,6 +39,31 @@ export default function Redemptions() {
   const fulfillMut = useFulfillRedemption();
   const payrollApproveMut = usePayrollApproveRedemption();
   const payrollRejectMut = usePayrollRejectRedemption();
+  const issueGiftCardMut = useIssueGiftCard();
+  const reissueGiftCardMut = useReissueGiftCard();
+  const voidGiftCardMut = useVoidGiftCard();
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: getListRedemptionsQueryKey() });
+  const handleGiftCard = (item: NonNullable<typeof redemptions>[number], action: "issue" | "reissue" | "void") => {
+    const callbacks = {
+      onSuccess: (issue: any) => {
+        toast({
+          title: issue.status === "email_failed" ? "Gift card created, but email failed" : action === "void" ? "Gift card voided" : "Gift card emailed",
+          description: issue.status === "email_failed" ? "Delivery failed. Use Reissue Card to generate and email a replacement." : issue.maskedCode,
+          variant: issue.status === "email_failed" ? "destructive" as const : "default" as const,
+        });
+        refresh();
+      },
+      onError: (err: any) => toast({ title: `Failed to ${action} gift card`, description: err?.response?.data?.error, variant: "destructive" as const }),
+    };
+    if (action === "issue") issueGiftCardMut.mutate({ id: item.id }, callbacks);
+    else if (action === "reissue") {
+      if (confirm("Reissue this card? The old code will be permanently voided.")) reissueGiftCardMut.mutate({ id: item.id }, callbacks);
+    } else {
+      const reason = prompt("Reason for voiding this card:");
+      if (reason?.trim()) voidGiftCardMut.mutate({ id: item.id, data: { reason: reason.trim() } }, callbacks);
+    }
+  };
 
   const handleAction = (id: number, action: 'approve' | 'reject' | 'fulfill' | 'payroll-approve' | 'payroll-reject') => {
     const callbacks = {
@@ -64,8 +89,15 @@ export default function Redemptions() {
         <h1 className="text-3xl font-display font-bold">My Redemptions</h1>
         <Card>
           <CardContent className="p-0">
-             {/* Simple list implementation for users - skipping full impl to save space, but keeping it functional */}
-             <div className="p-6 text-muted-foreground">List of your redemptions.</div>
+             {isLoading ? <div className="p-6 text-muted-foreground">Loading...</div> :
+               redemptions?.length ? <div className="divide-y">
+                 {redemptions.map((item) => (
+                   <div key={item.id} className="p-5 flex items-center justify-between gap-4">
+                     <div><div className="font-semibold">{item.rewardName}</div><div className="text-sm text-muted-foreground">{formatDate(item.createdAt)} · {item.status}</div></div>
+                     <div className="font-bold text-primary">{(item.giftCardLbAmount ?? item.buckCost).toLocaleString()} LB</div>
+                   </div>
+                 ))}
+               </div> : <div className="p-6 text-muted-foreground">You have no redemptions yet.</div>}
           </CardContent>
         </Card>
       </div>
@@ -131,6 +163,14 @@ export default function Redemptions() {
                       {item.note && (
                         <div className="mt-4 p-3 bg-muted/50 rounded-md text-sm italic text-muted-foreground">
                           "{item.note}"
+                        </div>
+                      )}
+                      {item.giftCardLbAmount != null && (
+                        <div className="mt-4 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                          <div className="font-semibold">Gift Card to issue: ${((item.giftCardCadValueCents ?? 0) / 100).toFixed(2)} / {item.giftCardLbAmount.toLocaleString()} LB</div>
+                          <div className="text-muted-foreground">{item.giftCardRecipientName} · {item.giftCardRecipientEmail}</div>
+                          {item.giftCardMessage && <div className="mt-1 italic">“{item.giftCardMessage}”</div>}
+                          {item.giftCardIssue && <div className="mt-2">Card {item.giftCardIssue.maskedCode} · <Badge variant={item.giftCardIssue.status === "emailed" ? "success" : item.giftCardIssue.status === "email_failed" ? "destructive" : "secondary"}>{item.giftCardIssue.status.replace("_", " ")}</Badge></div>}
                         </div>
                       )}
                     </div>
@@ -207,7 +247,7 @@ export default function Redemptions() {
                       </span>
                     )}
 
-                    {isAdmin && item.status === 'approved' && (
+                     {isAdmin && item.status === 'approved' && item.giftCardLbAmount == null && (
                       <Button 
                         className="w-full bg-primary hover:bg-primary/90"
                         onClick={() => handleAction(item.id, 'fulfill')}
@@ -217,6 +257,17 @@ export default function Redemptions() {
                         Mark Fulfilled
                       </Button>
                     )}
+                     {isAdmin && item.status === "approved" && item.giftCardLbAmount != null && !item.giftCardIssue && (
+                       <Button className="w-full" onClick={() => handleGiftCard(item, "issue")} disabled={issueGiftCardMut.isPending}>
+                         <Box className="h-4 w-4 mr-2" />Issue &amp; Email
+                       </Button>
+                     )}
+                     {isAdmin && item.giftCardIssue && !["voided", "reissued"].includes(item.giftCardIssue.status) && (
+                       <div className="w-full space-y-2">
+                         <Button className="w-full" variant="outline" onClick={() => handleGiftCard(item, "reissue")} disabled={reissueGiftCardMut.isPending}>Reissue Card</Button>
+                         <Button className="w-full" variant="destructive" onClick={() => handleGiftCard(item, "void")} disabled={voidGiftCardMut.isPending}>Void Card</Button>
+                       </div>
+                     )}
 
                     {canDecide(item) && item.status !== 'requested' && item.status !== 'approved' && item.status !== 'pending_payroll' && (
                       <span className="text-sm text-muted-foreground font-medium flex items-center">

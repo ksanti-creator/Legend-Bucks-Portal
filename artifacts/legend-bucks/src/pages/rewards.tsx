@@ -161,6 +161,7 @@ export default function Rewards() {
                     <h3 className="font-display font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
                       {reward.name}
                     </h3>
+                    {reward.isCustomGiftCard && <Badge>Custom Value</Badge>}
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
                     {reward.description}
@@ -169,7 +170,9 @@ export default function Rewards() {
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-border/50">
                     <div className="flex items-center text-primary font-bold font-display">
                       <Coins className="h-4 w-4 mr-1.5" />
-                      {reward.buckCost.toLocaleString()} LB
+                       {reward.isCustomGiftCard
+                         ? `Custom amount · ${reward.giftCardIncrementLb ?? 100} LB = $${((reward.giftCardIncrementLb ?? 100) / 10).toFixed(0)}`
+                         : `${reward.buckCost.toLocaleString()} LB`}
                     </div>
                   </div>
                 </CardContent>

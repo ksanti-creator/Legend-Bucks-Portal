@@ -1,0 +1,112 @@
+Update the existing Legend Bucks Portal catalog so admins can add a “Legend Bucks Gift Card” reward with a custom redemption amount.
+
+Keep this narrow:
+- Do not add Salesforce integration.
+- Do not add a separate gift-card ledger, customer redemption portal, or store redemption screen.
+- Reuse the existing rewards catalog, existing redemption approval workflow, employee LB balance calculation, and Gmail email sender.
+
+CURRENT APP FACTS
+- Rewards already support category = “Gift Card”.
+- Rewards currently have one fixed buckCost.
+- Employees redeem catalog items through the existing redemption workflow.
+- Existing admin catalog management page is:
+  artifacts/legend-bucks/src/pages/manage-rewards.tsx
+- Existing employee reward detail/redemption page is:
+  artifacts/legend-bucks/src/pages/reward-detail.tsx
+
+FEATURE
+Add a reward configuration called “Custom Legend Bucks Gift Card.”
+
+Admin configuration:
+- Reward name, default: “Legend Bucks Gift Card”
+- Category: Gift Card
+- Toggle: “Custom denomination”
+- LB increment, default and fixed for this reward type: 100 LB
+- Conversion display: 100 LB = $10 CAD
+- Optional minimum amount, default 100 LB
+- Optional maximum amount, blank means employee’s available LB balance is the limit
+- Approval Required should default to ON
+- Inventory should remain unlimited
+- Use the existing Gift Card catalog image fallback unless an admin uploads a custom image
+
+Employee experience:
+- When an employee opens a reward with Custom denomination enabled, replace the normal fixed-cost redemption confirmation with:
+  - number input: “Legend Bucks to convert”
+  - input must be a whole positive multiple of 100 LB
+  - show live conversion:
+    - 100 LB = $10.00 CAD
+    - 500 LB = $50.00 CAD
+    - 1,250 LB = $125.00 CAD
+  - show their available LB balance
+  - require recipient name and recipient email
+  - optional personal message
+  - show: “Gift cards are issued after approval and cannot be exchanged for cash.”
+- Do not allow the employee to enter an amount greater than their available balance.
+- Do not show the employee any accounting-only CAD fields outside this controlled conversion preview.
+
+Data model:
+- Extend the reward schema with:
+  - isCustomGiftCard boolean, default false
+  - giftCardIncrementLb integer nullable
+  - giftCardMinimumLb integer nullable
+  - giftCardMaximumLb integer nullable
+- Extend the redemption schema with:
+  - giftCardLbAmount integer nullable
+  - giftCardCadValueCents integer nullable
+  - giftCardRecipientName text nullable
+  - giftCardRecipientEmail text nullable
+  - giftCardMessage text nullable
+- Snapshot the chosen LB amount and CAD value onto the redemption record. Do not calculate historic values from current reward settings later.
+
+Server rules:
+- Enforce all custom-denomination validation server-side.
+- For Custom Legend Bucks Gift Card redemptions:
+  - use the employee-selected amount instead of reward.buckCost;
+  - enforce amount >= minimum;
+  - enforce amount % increment === 0;
+  - enforce amount <= configured maximum when one exists;
+  - enforce sufficient employee LB balance;
+  - calculate cadValueCents = LB amount * 10.
+- Reuse the existing immutable redemption debit transaction flow.
+- Do not permit an employee to choose a custom amount for normal fixed-price rewards.
+- Preserve existing approval, refund, cancellation, and authorization behavior.
+
+Email and fulfillment:
+- Update the redemption confirmation email for this reward type to include:
+  - chosen LB amount
+  - CAD value
+  - recipient name
+  - recipient email
+  - personal message, if supplied
+- Do not claim the actual gift card has been emailed to the recipient yet unless there is already a working gift-card delivery mechanism.[1:44 PM]- In the admin fulfillment queue, clearly show:
+  “Gift Card to issue: $X.XX / X LB”
+  plus recipient name and email so the authorized team member can issue it using the current store process.
+- Keep the existing fulfillment status flow.
+
+UI:
+- Show a “Custom Value” badge on this catalog reward.
+- On catalog cards, show:
+  “Custom amount · 100 LB = $10”
+  instead of a fixed LB cost.
+- On the employee’s redemption history, show the actual selected amount, not the reward’s default cost.
+- On the admin redemption page/export, show both:
+  - LB amount
+  - CAD equivalent
+  - recipient name/email
+
+Tests:
+- 100 LB converts to $10.00 / 1,000 cents.
+- 1,250 LB converts to $125.00 / 12,500 cents.
+- Reject 99 LB, 125 LB, negative values, and values above available balance.
+- Reject custom denomination input for ordinary fixed-price rewards.
+- Confirm manager/admin approval behaviour remains unchanged.
+- Confirm refunds restore the exact LB amount originally redeemed.
+- Follow the shared development database test rules: unique fixture values and cleanup only by IDs created in the test.
+
+Run and report:
+- pnpm typecheck
+- pnpm --filter @workspace/api-server test
+- pnpm build
+```
+
+This gives employees a flexible gift-card item in the catalog while leaving store redemption as the current manual process.

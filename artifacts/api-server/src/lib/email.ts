@@ -365,6 +365,7 @@ export async function sendRedemptionReceiptEmail(
   buckCost: number,
   date: Date,
   status: string,
+  giftCard?: { cadValueCents: number; recipientName: string; recipientEmail: string; message: string | null },
 ): Promise<void> {
   const dateLabel = date.toLocaleDateString("en-US", {
     month: "long",
@@ -372,6 +373,11 @@ export async function sendRedemptionReceiptEmail(
     year: "numeric",
   });
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const giftCardRows = giftCard
+    ? `<tr><td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Gift card value</td><td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;text-align:right;font-weight:700;">$${(giftCard.cadValueCents / 100).toFixed(2)} CAD</td></tr>
+       <tr><td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Recipient</td><td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;text-align:right;font-weight:700;">${escapeHtml(giftCard.recipientName)} &lt;${escapeHtml(giftCard.recipientEmail)}&gt;</td></tr>
+       ${giftCard.message ? `<tr><td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Message</td><td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;text-align:right;">${escapeHtml(giftCard.message)}</td></tr>` : ""}`
+    : "";
 
   const html = emailShell(
     "Your Legend Bucks redemption receipt",
@@ -386,6 +392,7 @@ export async function sendRedemptionReceiptEmail(
          <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Reward</td>
          <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${escapeHtml(rewardName)}</td>
        </tr>
+        ${giftCardRows}
        <tr>
          <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#888;font-size:13px;">Cost</td>
          <td style="padding:16px 20px;border-bottom:1px solid #e0e0e0;color:#4f4f51;font-size:15px;font-weight:700;text-align:right;">${formatBucks(buckCost)}</td>
@@ -400,7 +407,7 @@ export async function sendRedemptionReceiptEmail(
        </tr>
      </table>
      <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
-       Sign in to Legend Bucks to track the status of your redemption.
+        ${giftCard ? "Gift cards are issued after approval and cannot be exchanged for cash." : "Sign in to Legend Bucks to track the status of your redemption."}
      </p>`,
   );
 
@@ -587,4 +594,34 @@ export async function sendRedemptionFulfilledEmail(
   );
 
   await sendBrandedEmail(to, `On its way: ${rewardName}`, html, "Failed to send redemption fulfilled email");
+}
+
+/** The plaintext code is accepted only for immediate rendering/sending. */
+export async function sendGiftCardRecipientEmail(
+  to: string,
+  recipientName: string,
+  code: string,
+  cadValueCents: number,
+  qrDataUrl: string,
+  personalMessage: string | null,
+): Promise<void> {
+  const messageBlock = personalMessage
+    ? `<p style="margin:0 0 8px;color:#888;font-size:13px;">A personal message:</p>
+       <p style="margin:0 0 24px;padding:14px 18px;background:#f5f5f5;border-left:4px solid #00afed;border-radius:6px;color:#4f4f51;font-style:italic;">“${escapeHtml(personalMessage)}”</p>`
+    : "";
+  const last4 = code.slice(-4);
+  const html = emailShell(
+    "You received a Legend Bucks Gift Card",
+    `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;">Hi ${escapeHtml(recipientName)},</p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;">You received a <strong>$${(cadValueCents / 100).toFixed(2)} CAD</strong> Legend Bucks Gift Card.</p>
+     ${messageBlock}
+     <div style="padding:22px;background:#f5f5f5;border-radius:8px;text-align:center;margin-bottom:24px;">
+       <p style="margin:0 0 12px;font:700 20px monospace;letter-spacing:2px;color:#222;">${escapeHtml(code)}</p>
+       <img src="${qrDataUrl}" width="240" height="240" alt="Gift card QR code" style="display:block;margin:auto;" />
+       <p style="margin:12px 0 0;color:#888;font-size:12px;">Card reference: LBGC-••••-••••-••••-••••-••••-••••-${escapeHtml(last4)}</p>
+     </div>
+     <p style="margin:0 0 12px;color:#4f4f51;font-size:15px;"><strong>Present this code at a Legend Boats store to apply it toward your purchase.</strong></p>
+     <p style="margin:0;color:#888;font-size:13px;">This card cannot be exchanged for cash.</p>`,
+  );
+  await sendBrandedEmail(to, "You received a Legend Bucks Gift Card", html, "Failed to send gift-card email");
 }

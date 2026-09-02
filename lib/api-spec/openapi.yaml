@@ -1078,6 +1078,60 @@ paths:
               schema:
                 $ref: "#/components/schemas/Redemption"
 
+  /redemptions/{id}/gift-card/issue:
+    post:
+      operationId: issueGiftCard
+      tags: [redemptions]
+      summary: Securely issue and email an approved custom gift card (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Masked issuance status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GiftCardIssue" }
+  /redemptions/{id}/gift-card/reissue:
+    post:
+      operationId: reissueGiftCard
+      tags: [redemptions]
+      summary: Void the old code and issue and email a replacement (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Masked replacement status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GiftCardIssue" }
+  /redemptions/{id}/gift-card/void:
+    post:
+      operationId: voidGiftCard
+      tags: [redemptions]
+      summary: Void the current issued card (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GiftCardVoidInput" }
+      responses:
+        "200":
+          description: Masked voided issuance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GiftCardIssue" }
+
   # Team Goals
   /goals:
     get:
@@ -1951,6 +2005,14 @@ components:
           type: boolean
         approvalRequired:
           type: boolean
+        isCustomGiftCard:
+          type: boolean
+        giftCardIncrementLb:
+          type: ["integer", "null"]
+        giftCardMinimumLb:
+          type: ["integer", "null"]
+        giftCardMaximumLb:
+          type: ["integer", "null"]
         sizes:
           type: array
           items:
@@ -2018,6 +2080,17 @@ components:
           type: boolean
         approvalRequired:
           type: boolean
+        isCustomGiftCard:
+          type: boolean
+        giftCardIncrementLb:
+          type: ["integer", "null"]
+          minimum: 1
+        giftCardMinimumLb:
+          type: ["integer", "null"]
+          minimum: 1
+        giftCardMaximumLb:
+          type: ["integer", "null"]
+          minimum: 1
         sizes:
           type: array
           items:
@@ -2058,6 +2131,17 @@ components:
           type: boolean
         approvalRequired:
           type: boolean
+        isCustomGiftCard:
+          type: boolean
+        giftCardIncrementLb:
+          type: ["integer", "null"]
+          minimum: 1
+        giftCardMinimumLb:
+          type: ["integer", "null"]
+          minimum: 1
+        giftCardMaximumLb:
+          type: ["integer", "null"]
+          minimum: 1
         sizes:
           type: array
           items:
@@ -2095,6 +2179,20 @@ components:
           type: ["string", "null"]
         adminNote:
           type: ["string", "null"]
+        giftCardLbAmount:
+          type: ["integer", "null"]
+        giftCardCadValueCents:
+          type: ["integer", "null"]
+        giftCardRecipientName:
+          type: ["string", "null"]
+        giftCardRecipientEmail:
+          type: ["string", "null"]
+        giftCardMessage:
+          type: ["string", "null"]
+        giftCardIssue:
+          oneOf:
+            - $ref: "#/components/schemas/GiftCardIssue"
+            - type: "null"
         createdAt:
           type: string
         updatedAt:
@@ -2111,6 +2209,36 @@ components:
           description: Required when the reward is sized; must match one of the reward's sizes.
         note:
           type: string
+        giftCardLbAmount:
+          type: integer
+        giftCardRecipientName:
+          type: string
+        giftCardRecipientEmail:
+          type: string
+          format: email
+        giftCardMessage:
+          type: string
+          maxLength: 1000
+
+    GiftCardIssue:
+      type: object
+      required: [id, redemptionId, maskedCode, status, issuedAt]
+      properties:
+        id: { type: integer }
+        redemptionId: { type: integer }
+        maskedCode: { type: string }
+        status:
+          type: string
+          enum: [pending_issue, emailed, email_failed, voided, reissued]
+        issuedAt: { type: string }
+        emailedAt: { type: ["string", "null"] }
+        voidedAt: { type: ["string", "null"] }
+
+    GiftCardVoidInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
 
     RedemptionDecision:
       type: object

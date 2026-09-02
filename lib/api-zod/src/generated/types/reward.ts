@@ -46,6 +46,13 @@ export interface Reward {
   locationRestriction?: string | null;
   active: boolean;
   approvalRequired: boolean;
+  isCustomGiftCard?: boolean;
+  /** @nullable */
+  giftCardIncrementLb?: number | null;
+  /** @nullable */
+  giftCardMinimumLb?: number | null;
+  /** @nullable */
+  giftCardMaximumLb?: number | null;
   /** Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size. */
   sizes?: RewardSize[];
   createdAt: string;

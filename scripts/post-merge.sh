@@ -50,6 +50,47 @@ COMMIT;
 SQL
 fi
 
+# Custom-denomination Legend Bucks gift cards and secure issuance records.
+# Plaintext card codes are deliberately absent: only SHA-256 and last four exist.
+if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS is_custom_gift_card boolean NOT NULL DEFAULT false;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS gift_card_increment_lb integer;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS gift_card_minimum_lb integer;
+ALTER TABLE rewards ADD COLUMN IF NOT EXISTS gift_card_maximum_lb integer;
+ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS gift_card_lb_amount integer;
+ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS gift_card_cad_value_cents integer;
+ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS gift_card_recipient_name text;
+ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS gift_card_recipient_email text;
+ALTER TABLE redemptions ADD COLUMN IF NOT EXISTS gift_card_message text;
+DO $$ BEGIN
+  CREATE TYPE gift_card_issue_status AS ENUM ('pending_issue','emailed','email_failed','voided','reissued');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+CREATE TABLE IF NOT EXISTS gift_card_issues (
+  id serial PRIMARY KEY,
+  redemption_id integer NOT NULL REFERENCES redemptions(id),
+  code_hash text NOT NULL UNIQUE,
+  code_last4 text NOT NULL,
+  recipient_name text NOT NULL,
+  recipient_email text NOT NULL,
+  lb_amount integer NOT NULL,
+  cad_value_cents integer NOT NULL,
+  status gift_card_issue_status NOT NULL DEFAULT 'pending_issue',
+  issued_by_employee_id integer NOT NULL REFERENCES employees(id),
+  issued_at timestamptz NOT NULL DEFAULT now(),
+  emailed_at timestamptz,
+  voided_at timestamptz,
+  void_reason text,
+  replacement_issue_id integer,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS gift_card_issues_one_current_per_redemption
+  ON gift_card_issues(redemption_id) WHERE status NOT IN ('voided','reissued');
+SQL
+fi
+
 # Multi-photo rewards: add ordered photo list and backfill from the legacy
 # single image column. Idempotent — safe to re-run.
 if [ -n "$DATABASE_URL" ] && command -v psql >/dev/null 2>&1; then

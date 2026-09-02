@@ -8,3 +8,4 @@ export * from "./rewardSizes";
 export * from "./redemptions";
 export * from "./goals";
 export * from "./settings";
+export * from "./giftCardIssues";

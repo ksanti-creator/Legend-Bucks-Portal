@@ -11,4 +11,9 @@ export interface RedemptionInput {
   /** Required when the reward is sized; must match one of the reward's sizes. */
   sizeLabel?: string;
   note?: string;
+  giftCardLbAmount?: number;
+  giftCardRecipientName?: string;
+  giftCardRecipientEmail?: string;
+  /** @maxLength 1000 */
+  giftCardMessage?: string;
 }

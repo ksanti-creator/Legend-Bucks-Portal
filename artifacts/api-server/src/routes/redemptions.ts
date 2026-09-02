@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, redemptionsTable, rewardsTable, rewardSizesTable, employeesTable, transactionsTable } from "@workspace/db";
-import { eq, and, or, isNull, gt, sql } from "drizzle-orm";
+import { db, redemptionsTable, rewardsTable, rewardSizesTable, employeesTable, transactionsTable, giftCardIssuesTable } from "@workspace/db";
+import { eq, and, or, isNull, gt, sql, desc, notInArray } from "drizzle-orm";
 import {
   ListRedemptionsQueryParams,
   ListRedemptionsResponse,
@@ -18,8 +18,15 @@ import {
   CancelRedemptionResponse,
   FulfillRedemptionParams,
   FulfillRedemptionResponse,
+  IssueGiftCardParams,
+  IssueGiftCardResponse,
+  ReissueGiftCardParams,
+  ReissueGiftCardResponse,
+  VoidGiftCardParams,
+  VoidGiftCardBody,
+  VoidGiftCardResponse,
 } from "@workspace/api-zod";
-import { requireAuth, getCurrentUser, getEmployeeBalance, canViewAccounting, canSpendBucks, canDecideRedemptionFor, canPayrollApprove } from "../lib/auth";
+import { requireAuth, getCurrentUser, canViewAccounting, canSpendBucks, canDecideRedemptionFor, canPayrollApprove } from "../lib/auth";
 import { getSubtreeIds, getManagerChain } from "../lib/orgChain";
 import {
   sendRedemptionReceiptEmail,
@@ -29,6 +36,7 @@ import {
   sendRedemptionFulfilledEmail,
   sendPayrollApprovalNeededEmail,
 } from "../lib/email";
+import { emailGiftCard, generateGiftCardCode, hashGiftCardCode, lbToCadCents, maskGiftCardCode } from "../lib/giftCards";
 
 const router: IRouter = Router();
 
@@ -90,6 +98,9 @@ async function notifyPayrollApprovers(
 async function enrichRedemption(r: any, isAdmin: boolean) {
   const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, r.employeeId)).limit(1);
   const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, r.rewardId)).limit(1);
+  const [issue] = await db.select().from(giftCardIssuesTable)
+    .where(eq(giftCardIssuesTable.redemptionId, r.id))
+    .orderBy(desc(giftCardIssuesTable.id)).limit(1);
   return {
     id: r.id,
     employeeId: r.employeeId,
@@ -103,8 +114,26 @@ async function enrichRedemption(r: any, isAdmin: boolean) {
     sizeLabel: r.sizeLabel ?? null,
     note: r.note,
     adminNote: r.adminNote,
+    giftCardLbAmount: r.giftCardLbAmount ?? null,
+    giftCardCadValueCents: isAdmin ? (r.giftCardCadValueCents ?? null) : null,
+    giftCardRecipientName: r.giftCardRecipientName ?? null,
+    giftCardRecipientEmail: r.giftCardRecipientEmail ?? null,
+    giftCardMessage: r.giftCardMessage ?? null,
+    giftCardIssue: issue ? issueToResponse(issue) : null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
+  };
+}
+
+function issueToResponse(issue: typeof giftCardIssuesTable.$inferSelect) {
+  return {
+    id: issue.id,
+    redemptionId: issue.redemptionId,
+    maskedCode: maskGiftCardCode(issue.codeLast4),
+    status: issue.status,
+    issuedAt: issue.issuedAt.toISOString(),
+    emailedAt: issue.emailedAt?.toISOString() ?? null,
+    voidedAt: issue.voidedAt?.toISOString() ?? null,
   };
 }
 
@@ -186,75 +215,101 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const balance = await getEmployeeBalance(user.id);
-  if (balance < reward.buckCost) {
-    res.status(400).json({ error: `Insufficient balance. You have ${balance} bucks, reward costs ${reward.buckCost}` });
+  const requestedGiftCardAmount = body.data.giftCardLbAmount;
+  if (!reward.isCustomGiftCard && requestedGiftCardAmount !== undefined) {
+    res.status(400).json({ error: "Custom denomination is not allowed for this reward" });
     return;
   }
-
-  // Atomically decrement the chosen size's stock (no-op condition-wise for
-  // unlimited sizes). If no row comes back, the size just sold out — reject
-  // before any bucks move.
-  if (isSized && chosenSize) {
-    const decremented = await db
-      .update(rewardSizesTable)
-      .set({ quantity: sql`CASE WHEN quantity IS NULL THEN NULL ELSE quantity - 1 END` })
-      .where(
-        and(
-          eq(rewardSizesTable.rewardId, reward.id),
-          eq(rewardSizesTable.label, chosenSize),
-          or(isNull(rewardSizesTable.quantity), gt(rewardSizesTable.quantity, 0)),
-        ),
-      )
-      .returning();
-    if (decremented.length === 0) {
-      res.status(400).json({ error: `Size ${chosenSize} is out of stock` });
+  let redemptionCost = reward.buckCost;
+  if (reward.isCustomGiftCard) {
+    const increment = reward.giftCardIncrementLb ?? 100;
+    const minimum = reward.giftCardMinimumLb ?? 100;
+    if (
+      !Number.isSafeInteger(requestedGiftCardAmount) ||
+      requestedGiftCardAmount! <= 0 ||
+      requestedGiftCardAmount! < minimum ||
+      requestedGiftCardAmount! % increment !== 0 ||
+      (reward.giftCardMaximumLb !== null && requestedGiftCardAmount! > reward.giftCardMaximumLb)
+    ) {
+      res.status(400).json({ error: `Gift card amount must be at least ${minimum} LB and a multiple of ${increment} LB` });
       return;
     }
+    if (!body.data.giftCardRecipientName?.trim() || !body.data.giftCardRecipientEmail?.trim()) {
+      res.status(400).json({ error: "Recipient name and email are required" });
+      return;
+    }
+    redemptionCost = requestedGiftCardAmount!;
+  } else if (
+    body.data.giftCardRecipientName !== undefined ||
+    body.data.giftCardRecipientEmail !== undefined ||
+    body.data.giftCardMessage !== undefined
+  ) {
+    res.status(400).json({ error: "Gift card recipient details are not allowed for this reward" });
+    return;
   }
-
-  // Deduct bucks immediately via ledger
-  await db.insert(transactionsTable).values({
-    type: "redemption_debit",
-    amount: reward.buckCost,
-    fromEmployeeId: user.id,
-    toEmployeeId: null,
-    note: `Redemption: ${reward.name}${isSized && chosenSize ? ` (Size ${chosenSize})` : ""}`,
-  });
-
-  // Decrement pooled quantity if limited (non-sized rewards only; sized
-  // rewards track stock per size instead).
-  if (!isSized && reward.quantity !== null) {
-    await db.update(rewardsTable).set({ quantity: reward.quantity - 1 }).where(eq(rewardsTable.id, reward.id));
-  }
-
   // Time Off rewards can never skip payroll sign-off: even when the first
   // approval is not required, they stop at pending_payroll instead of approved.
   const needsPayroll = requiresPayrollApproval(reward);
   const initialStatus = reward.approvalRequired ? "requested" : needsPayroll ? "pending_payroll" : "approved";
-  const [redemption] = await db
-    .insert(redemptionsTable)
-    .values({
+  let redemption: typeof redemptionsTable.$inferSelect;
+  try {
+    redemption = await db.transaction(async (trx) => {
+      // Serialize all spends for one employee so two concurrent redemptions
+      // cannot both pass a stale balance check.
+      await trx.execute(sql`SELECT pg_advisory_xact_lock(${user.id})`);
+      const balanceResult = await trx.execute<{ balance: string }>(sql`
+        SELECT COALESCE(SUM(CASE
+          WHEN type IN ('award','refund') AND to_employee_id = ${user.id} THEN amount
+          WHEN type = 'adjustment' AND to_employee_id = ${user.id} THEN amount
+          WHEN type IN ('redemption_debit','contribution') AND from_employee_id = ${user.id} THEN -amount
+          WHEN type = 'adjustment' AND from_employee_id = ${user.id} THEN -amount
+          ELSE 0 END), 0) AS balance FROM transactions`);
+      const balance = Number(balanceResult.rows[0]?.balance ?? 0);
+      if (balance < redemptionCost) throw new Error(`Insufficient balance. You have ${balance} bucks, reward costs ${redemptionCost}`);
+
+      if (isSized && chosenSize) {
+        const decremented = await trx.update(rewardSizesTable)
+          .set({ quantity: sql`CASE WHEN quantity IS NULL THEN NULL ELSE quantity - 1 END` })
+          .where(and(
+            eq(rewardSizesTable.rewardId, reward.id),
+            eq(rewardSizesTable.label, chosenSize),
+            or(isNull(rewardSizesTable.quantity), gt(rewardSizesTable.quantity, 0)),
+          )).returning();
+        if (!decremented.length) throw new Error(`Size ${chosenSize} is out of stock`);
+      } else if (reward.quantity !== null) {
+        const decremented = await trx.update(rewardsTable).set({ quantity: sql`${rewardsTable.quantity} - 1` })
+          .where(and(eq(rewardsTable.id, reward.id), gt(rewardsTable.quantity, 0))).returning();
+        if (!decremented.length) throw new Error("Reward is out of stock");
+      }
+
+      const [created] = await trx.insert(redemptionsTable).values({
       employeeId: user.id,
       rewardId: reward.id,
       status: initialStatus,
-      buckCost: reward.buckCost,
-      cadValueCents: reward.cadValueCents ?? null,
+      buckCost: redemptionCost,
+      cadValueCents: reward.isCustomGiftCard ? lbToCadCents(redemptionCost) : (reward.cadValueCents ?? null),
       sizeLabel: isSized ? chosenSize : null,
       note: body.data.note ?? null,
-    })
-    .returning();
-
-  // Update transaction with redemption id
-  // Postgres doesn't allow ORDER BY/LIMIT directly on UPDATE — target the
-  // single newest unlinked debit via a subquery instead.
-  await db.execute(sql`
-    UPDATE transactions SET redemption_id = ${redemption.id}
-    WHERE id = (
-      SELECT id FROM transactions
-      WHERE type = 'redemption_debit' AND from_employee_id = ${user.id} AND redemption_id IS NULL
-      ORDER BY created_at DESC LIMIT 1
-    )`);
+      giftCardLbAmount: reward.isCustomGiftCard ? redemptionCost : null,
+      giftCardCadValueCents: reward.isCustomGiftCard ? lbToCadCents(redemptionCost) : null,
+      giftCardRecipientName: reward.isCustomGiftCard ? body.data.giftCardRecipientName!.trim() : null,
+      giftCardRecipientEmail: reward.isCustomGiftCard ? body.data.giftCardRecipientEmail!.trim().toLowerCase() : null,
+      giftCardMessage: reward.isCustomGiftCard ? (body.data.giftCardMessage?.trim() || null) : null,
+      }).returning();
+      await trx.insert(transactionsTable).values({
+        type: "redemption_debit",
+        amount: redemptionCost,
+        fromEmployeeId: user.id,
+        toEmployeeId: null,
+        note: `Redemption: ${reward.name}${isSized && chosenSize ? ` (Size ${chosenSize})` : ""}`,
+        redemptionId: created.id,
+      });
+      return created;
+    });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Unable to redeem reward" });
+    return;
+  }
 
   // Email the employee a redemption receipt — best-effort, never blocks.
   if (user.email && user.notifyRedemptionUpdates) {
@@ -266,6 +321,14 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
         redemption.buckCost,
         redemption.createdAt,
         redemption.status,
+        reward.isCustomGiftCard && redemption.giftCardRecipientName && redemption.giftCardRecipientEmail
+          ? {
+              cadValueCents: redemption.giftCardCadValueCents!,
+              recipientName: redemption.giftCardRecipientName,
+              recipientEmail: redemption.giftCardRecipientEmail,
+              message: redemption.giftCardMessage,
+            }
+          : undefined,
       );
       req.log.info({ redemptionId: redemption.id }, "Redemption receipt email sent");
     } catch (err) {
@@ -487,8 +550,12 @@ router.patch("/redemptions/:id/payroll-reject", requireAuth, async (req, res): P
   const [updated] = await db
     .update(redemptionsTable)
     .set({ status: "rejected", adminNote: body.data.adminNote ?? null })
-    .where(eq(redemptionsTable.id, params.data.id))
+    .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, "pending_payroll")))
     .returning();
+  if (!updated) {
+    res.status(400).json({ error: "Redemption is no longer awaiting payroll sign-off" });
+    return;
+  }
 
   // Refund bucks
   await db.insert(transactionsTable).values({
@@ -545,21 +612,48 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
     return;
   }
 
-  const [updated] = await db
-    .update(redemptionsTable)
-    .set({ status: "rejected", adminNote: body.data.adminNote ?? null })
-    .where(eq(redemptionsTable.id, params.data.id))
-    .returning();
+  let updated: typeof redemptionsTable.$inferSelect;
+  try {
+    updated = await db.transaction(async (trx) => {
+      // Serialize against Issue & Email/Reissue. An email failure is
+      // delivery-ambiguous, so any current card must be explicitly voided
+      // before the underlying redemption can be refunded.
+      await trx.execute(sql`SELECT pg_advisory_xact_lock(${redemption.id})`);
+      const [activeIssue] = await trx
+        .select({ id: giftCardIssuesTable.id })
+        .from(giftCardIssuesTable)
+        .where(
+          and(
+            eq(giftCardIssuesTable.redemptionId, redemption.id),
+            notInArray(giftCardIssuesTable.status, ["voided", "reissued"]),
+          ),
+        )
+        .limit(1);
+      if (activeIssue) {
+        throw new Error("Void the issued gift card before rejecting and refunding this redemption");
+      }
 
-  // Refund bucks
-  await db.insert(transactionsTable).values({
-    type: "refund",
-    amount: redemption.buckCost,
-    fromEmployeeId: null,
-    toEmployeeId: redemption.employeeId,
-    note: `Refund for rejected redemption #${redemption.id}`,
-    redemptionId: redemption.id,
-  });
+      const [resolved] = await trx
+        .update(redemptionsTable)
+        .set({ status: "rejected", adminNote: body.data.adminNote ?? null })
+        .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, redemption.status)))
+        .returning();
+      if (!resolved) throw new Error("Redemption has already been resolved");
+
+      await trx.insert(transactionsTable).values({
+        type: "refund",
+        amount: redemption.buckCost,
+        fromEmployeeId: null,
+        toEmployeeId: redemption.employeeId,
+        note: `Refund for rejected redemption #${redemption.id}`,
+        redemptionId: redemption.id,
+      });
+      return resolved;
+    });
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Unable to reject redemption" });
+    return;
+  }
 
   // Restore stock (per-size for sized redemptions, pooled otherwise)
   await restoreStock(redemption);
@@ -612,8 +706,12 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
   const [updated] = await db
     .update(redemptionsTable)
     .set({ status: "cancelled" })
-    .where(eq(redemptionsTable.id, params.data.id))
+    .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, "requested")))
     .returning();
+  if (!updated) {
+    res.status(400).json({ error: "Redemption has already been resolved" });
+    return;
+  }
 
   // Refund bucks
   await db.insert(transactionsTable).values({
@@ -649,6 +747,11 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
     res.status(400).json({ error: "Only approved redemptions can be fulfilled" });
     return;
   }
+  const [fulfillReward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+  if (fulfillReward?.isCustomGiftCard || redemption.giftCardLbAmount !== null) {
+    res.status(400).json({ error: "Use Issue & Email Gift Card for custom gift cards" });
+    return;
+  }
 
   const [updated] = await db
     .update(redemptionsTable)
@@ -669,6 +772,117 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
   }
 
   res.json(FulfillRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
+});
+
+async function createIssue(redemptionId: number, adminId: number, isReissue: boolean) {
+  const code = generateGiftCardCode();
+  const created = await db.transaction(async (trx) => {
+    await trx.execute(sql`SELECT pg_advisory_xact_lock(${redemptionId})`);
+    const [redemption] = await trx.select().from(redemptionsTable).where(eq(redemptionsTable.id, redemptionId)).limit(1);
+    if (!redemption) throw new Error("Redemption not found");
+    const [reward] = await trx.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+    const hasCustomGiftCardSnapshot = !!redemption.giftCardLbAmount && !!redemption.giftCardCadValueCents &&
+      !!redemption.giftCardRecipientName && !!redemption.giftCardRecipientEmail;
+    if (!reward || !hasCustomGiftCardSnapshot || (redemption.status !== "approved" && !(isReissue && redemption.status === "fulfilled"))) {
+      throw new Error("Gift cards can only be issued for approved custom gift card redemptions");
+    }
+    const [current] = await trx.select().from(giftCardIssuesTable)
+      .where(eq(giftCardIssuesTable.redemptionId, redemptionId)).orderBy(desc(giftCardIssuesTable.id)).limit(1);
+    if (!isReissue && current) throw new Error("A card has already been issued; use Reissue Card");
+    if (isReissue && (!current || current.status === "voided" || current.status === "reissued")) {
+      throw new Error("There is no active card to reissue");
+    }
+    if (isReissue && current) {
+      await trx.update(giftCardIssuesTable).set({
+        status: "reissued", voidedAt: new Date(), voidReason: "Reissued by administrator",
+      }).where(eq(giftCardIssuesTable.id, current.id));
+    }
+    if (!redemption.giftCardRecipientName || !redemption.giftCardRecipientEmail || !redemption.giftCardLbAmount || !redemption.giftCardCadValueCents) {
+      throw new Error("Gift card redemption snapshot is incomplete");
+    }
+    const [issue] = await trx.insert(giftCardIssuesTable).values({
+      redemptionId,
+      codeHash: hashGiftCardCode(code),
+      codeLast4: code.slice(-4),
+      recipientName: redemption.giftCardRecipientName,
+      recipientEmail: redemption.giftCardRecipientEmail,
+      lbAmount: redemption.giftCardLbAmount,
+      cadValueCents: redemption.giftCardCadValueCents,
+      issuedByEmployeeId: adminId,
+    }).returning();
+    if (isReissue && current) {
+      await trx.update(giftCardIssuesTable).set({ replacementIssueId: issue.id }).where(eq(giftCardIssuesTable.id, current.id));
+    }
+    return { issue, message: redemption.giftCardMessage };
+  });
+  try {
+    await emailGiftCard({
+      recipientEmail: created.issue.recipientEmail,
+      recipientName: created.issue.recipientName,
+      code,
+      cadValueCents: created.issue.cadValueCents,
+      message: created.message,
+    });
+    const [emailed] = await db.transaction(async (trx) => {
+      const rows = await trx.update(giftCardIssuesTable).set({ status: "emailed", emailedAt: new Date() })
+        .where(and(eq(giftCardIssuesTable.id, created.issue.id), eq(giftCardIssuesTable.status, "pending_issue"))).returning();
+      if (rows.length) {
+        await trx.update(redemptionsTable).set({ status: "fulfilled" })
+          .where(and(eq(redemptionsTable.id, redemptionId), eq(redemptionsTable.status, "approved")));
+      }
+      return rows;
+    });
+    return emailed ?? created.issue;
+  } catch {
+    const [failed] = await db.update(giftCardIssuesTable).set({ status: "email_failed" })
+      .where(and(eq(giftCardIssuesTable.id, created.issue.id), eq(giftCardIssuesTable.status, "pending_issue"))).returning();
+    return failed ?? created.issue;
+  }
+}
+
+router.post("/redemptions/:id/gift-card/issue", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const params = IssueGiftCardParams.safeParse(req.params);
+  if (user.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  try {
+    const issue = await createIssue(params.data.id, user.id, false);
+    res.json(IssueGiftCardResponse.parse(issueToResponse(issue)));
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Unable to issue gift card" });
+  }
+});
+
+router.post("/redemptions/:id/gift-card/reissue", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const params = ReissueGiftCardParams.safeParse(req.params);
+  if (user.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  try {
+    const issue = await createIssue(params.data.id, user.id, true);
+    res.json(ReissueGiftCardResponse.parse(issueToResponse(issue)));
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : "Unable to reissue gift card" });
+  }
+});
+
+router.post("/redemptions/:id/gift-card/void", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const params = VoidGiftCardParams.safeParse(req.params);
+  const body = VoidGiftCardBody.safeParse(req.body);
+  if (user.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!params.success || !body.success) { res.status(400).json({ error: "A void reason is required" }); return; }
+  const [issue] = await db.transaction(async (trx) => {
+    await trx.execute(sql`SELECT pg_advisory_xact_lock(${params.data.id})`);
+    const [current] = await trx.select().from(giftCardIssuesTable)
+      .where(eq(giftCardIssuesTable.redemptionId, params.data.id)).orderBy(desc(giftCardIssuesTable.id)).limit(1);
+    if (!current || current.status === "voided" || current.status === "reissued") return [];
+    return trx.update(giftCardIssuesTable).set({
+      status: "voided", voidedAt: new Date(), voidReason: body.data.reason.trim(),
+    }).where(eq(giftCardIssuesTable.id, current.id)).returning();
+  });
+  if (!issue) { res.status(400).json({ error: "There is no active card to void" }); return; }
+  res.json(VoidGiftCardResponse.parse(issueToResponse(issue)));
 });
 
 export default router;

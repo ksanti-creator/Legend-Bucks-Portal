@@ -19,6 +19,10 @@ export const rewardsTable = pgTable("rewards", {
   locationRestriction: text("location_restriction"),
   active: boolean("active").notNull().default(true),
   approvalRequired: boolean("approval_required").notNull().default(false),
+  isCustomGiftCard: boolean("is_custom_gift_card").notNull().default(false),
+  giftCardIncrementLb: integer("gift_card_increment_lb"),
+  giftCardMinimumLb: integer("gift_card_minimum_lb"),
+  giftCardMaximumLb: integer("gift_card_maximum_lb"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

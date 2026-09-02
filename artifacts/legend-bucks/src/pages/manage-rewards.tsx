@@ -73,6 +73,13 @@ const rewardSchema = z.object({
   locationRestriction: z.string().optional().nullable(),
   active: z.boolean().default(true),
   approvalRequired: z.boolean().default(false),
+  isCustomGiftCard: z.boolean().default(false),
+  giftCardIncrementLb: z.literal(100).nullable().default(100),
+  giftCardMinimumLb: z.coerce.number().int().positive().nullable().default(100),
+  giftCardMaximumLb: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : v),
+    z.coerce.number().int().positive().nullable(),
+  ),
 });
 
 // Explicit blank form values. react-hook-form's reset(values) replaces the
@@ -92,6 +99,10 @@ const emptyRewardValues: z.infer<typeof rewardSchema> = {
   locationRestriction: "",
   active: true,
   approvalRequired: false,
+  isCustomGiftCard: false,
+  giftCardIncrementLb: 100,
+  giftCardMinimumLb: 100,
+  giftCardMaximumLb: null,
 };
 
 export default function ManageRewards() {
@@ -113,6 +124,7 @@ export default function ManageRewards() {
     resolver: zodResolver(rewardSchema),
     defaultValues: emptyRewardValues,
   });
+  const isCustomGiftCard = form.watch("isCustomGiftCard");
 
   if (!isAdmin && user) {
     return <div className="p-8 text-center text-destructive">Unauthorized. Admins only.</div>;
@@ -124,13 +136,15 @@ export default function ManageRewards() {
     const { cadValue, ...rest } = data;
     const payload = {
       ...rest,
+      category: data.isCustomGiftCard ? "Gift Card" : data.category,
+      buckCost: data.isCustomGiftCard ? 100 : data.buckCost,
       sizes: (data.sizes ?? []).map((s) => ({ label: s.label.trim(), quantity: s.quantity })),
-      quantity: data.quantity === 0 || isNaN(data.quantity as any) ? null : data.quantity,
+      quantity: data.isCustomGiftCard || data.quantity === 0 || isNaN(data.quantity as any) ? null : data.quantity,
       locationRestriction: data.locationRestriction === "" ? null : data.locationRestriction,
       productCode: data.productCode?.trim() ? data.productCode.trim() : null,
       serialNumber: data.serialNumber?.trim() ? data.serialNumber.trim() : null,
       cadValueCents:
-        cadValue === null || cadValue === undefined || isNaN(cadValue as any)
+        data.isCustomGiftCard || cadValue === null || cadValue === undefined || isNaN(cadValue as any)
           ? null
           : Math.round(cadValue * 100),
     };
@@ -180,6 +194,10 @@ export default function ManageRewards() {
       locationRestriction: reward.locationRestriction || "",
       active: reward.active,
       approvalRequired: reward.approvalRequired,
+      isCustomGiftCard: reward.isCustomGiftCard ?? false,
+      giftCardIncrementLb: 100,
+      giftCardMinimumLb: reward.giftCardMinimumLb ?? 100,
+      giftCardMaximumLb: reward.giftCardMaximumLb ?? null,
     });
     setEditingId(reward.id);
     setOpenCreate(true);
@@ -249,7 +267,7 @@ export default function ManageRewards() {
                     )}
                   />
                   
-                  <FormField
+                  {!isCustomGiftCard && <FormField
                     control={form.control}
                     name="buckCost"
                     render={({ field }) => (
@@ -261,10 +279,10 @@ export default function ManageRewards() {
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  />}
                 </div>
 
-                <FormField
+                {!isCustomGiftCard && <FormField
                   control={form.control}
                   name="cadValue"
                   render={({ field }) => (
@@ -286,7 +304,47 @@ export default function ManageRewards() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                />}
+
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="isCustomGiftCard"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between space-y-0">
+                        <div>
+                          <FormLabel>Custom denomination</FormLabel>
+                          <FormDescription>Legend Bucks Gift Card · 100 LB = $10 CAD</FormDescription>
+                        </div>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) {
+                              if (!form.getValues("name").trim()) form.setValue("name", "Legend Bucks Gift Card");
+                              form.setValue("category", "Gift Card");
+                              form.setValue("approvalRequired", true);
+                              form.setValue("quantity", null);
+                            }
+                          }}
+                        />
+                      </FormItem>
+                    )}
+                  />
+                  {isCustomGiftCard && (
+                    <div className="grid grid-cols-3 gap-3">
+                       <FormField control={form.control} name="giftCardIncrementLb" render={({ field }) => (
+                         <FormItem><FormLabel>LB increment</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? 100} disabled /></FormControl><FormDescription>Fixed for Legend Bucks gift cards</FormDescription><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="giftCardMinimumLb" render={({ field }) => (
+                        <FormItem><FormLabel>Minimum LB</FormLabel><FormControl><Input type="number" min="1" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="giftCardMaximumLb" render={({ field }) => (
+                        <FormItem><FormLabel>Maximum LB</FormLabel><FormControl><Input type="number" min="1" placeholder="Balance limit" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                  )}
+                </div>
 
                 <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
                   <div>
@@ -347,7 +405,7 @@ export default function ManageRewards() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isCustomGiftCard}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -385,7 +443,7 @@ export default function ManageRewards() {
                   )}
                 />
 
-                <FormField
+                {!isCustomGiftCard && <FormField
                   control={form.control}
                   name="sizes"
                   render={({ field }) => {
@@ -453,10 +511,10 @@ export default function ManageRewards() {
                       </FormItem>
                     );
                   }}
-                />
+                />}
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField
+                  {!isCustomGiftCard && <FormField
                     control={form.control}
                     name="quantity"
                     render={({ field }) => (
@@ -468,7 +526,7 @@ export default function ManageRewards() {
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  />}
                   
                   <FormField
                     control={form.control}
@@ -571,12 +629,15 @@ export default function ManageRewards() {
                         )}
                         <div>
                           {reward.name}
-                          {reward.approvalRequired && <Badge variant="outline" className="ml-2 text-[10px] uppercase">Approval Req</Badge>}
+                           {reward.approvalRequired && <Badge variant="outline" className="ml-2 text-[10px] uppercase">Approval Req</Badge>}
+                           {reward.isCustomGiftCard && <Badge className="ml-2 text-[10px] uppercase">Custom Value</Badge>}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>{reward.category}</TableCell>
-                    <TableCell className="font-bold text-primary">{reward.buckCost} LB</TableCell>
+                     <TableCell className="font-bold text-primary">
+                       {reward.isCustomGiftCard ? `Custom · ${reward.giftCardIncrementLb ?? 100} LB increments` : `${reward.buckCost} LB`}
+                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {reward.cadValueCents != null ? `${(reward.cadValueCents / 100).toFixed(2)}` : '—'}
                     </TableCell>

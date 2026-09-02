@@ -38,6 +38,8 @@ import type {
   GetLeaderboardParams,
   GetRecentActivityParams,
   GetTransactionSummaryParams,
+  GiftCardIssue,
+  GiftCardVoidInput,
   Goal,
   GoalContribution,
   GoalContributionRecord,
@@ -3492,6 +3494,217 @@ export const useFulfillRedemption = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getFulfillRedemptionMutationOptions(options));
+    }
+
+export const getIssueGiftCardUrl = (id: number,) => {
+
+
+
+
+  return `/api/redemptions/${id}/gift-card/issue`
+}
+
+/**
+ * @summary Securely issue and email an approved custom gift card (admin only)
+ */
+export const issueGiftCard = async (id: number, options?: RequestInit): Promise<GiftCardIssue> => {
+
+  return customFetch<GiftCardIssue>(getIssueGiftCardUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getIssueGiftCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof issueGiftCard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof issueGiftCard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['issueGiftCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof issueGiftCard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  issueGiftCard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IssueGiftCardMutationResult = NonNullable<Awaited<ReturnType<typeof issueGiftCard>>>
+
+    export type IssueGiftCardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Securely issue and email an approved custom gift card (admin only)
+ */
+export const useIssueGiftCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof issueGiftCard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof issueGiftCard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getIssueGiftCardMutationOptions(options));
+    }
+
+export const getReissueGiftCardUrl = (id: number,) => {
+
+
+
+
+  return `/api/redemptions/${id}/gift-card/reissue`
+}
+
+/**
+ * @summary Void the old code and issue and email a replacement (admin only)
+ */
+export const reissueGiftCard = async (id: number, options?: RequestInit): Promise<GiftCardIssue> => {
+
+  return customFetch<GiftCardIssue>(getReissueGiftCardUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getReissueGiftCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reissueGiftCard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reissueGiftCard>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['reissueGiftCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reissueGiftCard>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  reissueGiftCard(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReissueGiftCardMutationResult = NonNullable<Awaited<ReturnType<typeof reissueGiftCard>>>
+
+    export type ReissueGiftCardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Void the old code and issue and email a replacement (admin only)
+ */
+export const useReissueGiftCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reissueGiftCard>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reissueGiftCard>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReissueGiftCardMutationOptions(options));
+    }
+
+export const getVoidGiftCardUrl = (id: number,) => {
+
+
+
+
+  return `/api/redemptions/${id}/gift-card/void`
+}
+
+/**
+ * @summary Void the current issued card (admin only)
+ */
+export const voidGiftCard = async (id: number,
+    giftCardVoidInput: GiftCardVoidInput, options?: RequestInit): Promise<GiftCardIssue> => {
+
+  return customFetch<GiftCardIssue>(getVoidGiftCardUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(giftCardVoidInput)
+  }
+);}
+
+
+
+
+export const getVoidGiftCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voidGiftCard>>, TError,{id: number;data: BodyType<GiftCardVoidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voidGiftCard>>, TError,{id: number;data: BodyType<GiftCardVoidInput>}, TContext> => {
+
+const mutationKey = ['voidGiftCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voidGiftCard>>, {id: number;data: BodyType<GiftCardVoidInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  voidGiftCard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoidGiftCardMutationResult = NonNullable<Awaited<ReturnType<typeof voidGiftCard>>>
+    export type VoidGiftCardMutationBody = BodyType<GiftCardVoidInput>
+    export type VoidGiftCardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Void the current issued card (admin only)
+ */
+export const useVoidGiftCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voidGiftCard>>, TError,{id: number;data: BodyType<GiftCardVoidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voidGiftCard>>,
+        TError,
+        {id: number;data: BodyType<GiftCardVoidInput>},
+        TContext
+      > => {
+      return useMutation(getVoidGiftCardMutationOptions(options));
     }
 
 export const getListGoalsUrl = (params?: ListGoalsParams,) => {

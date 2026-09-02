@@ -517,6 +517,13 @@ export interface Reward {
   locationRestriction?: string | null;
   active: boolean;
   approvalRequired: boolean;
+  isCustomGiftCard?: boolean;
+  /** @nullable */
+  giftCardIncrementLb?: number | null;
+  /** @nullable */
+  giftCardMinimumLb?: number | null;
+  /** @nullable */
+  giftCardMaximumLb?: number | null;
   /** Size variants in display order. Non-empty means the reward is sized: redemptions must pick a size and stock is tracked per size. */
   sizes?: RewardSize[];
   createdAt: string;
@@ -557,6 +564,22 @@ export interface RewardInput {
   locationRestriction?: string | null;
   active?: boolean;
   approvalRequired?: boolean;
+  isCustomGiftCard?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardIncrementLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMinimumLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMaximumLb?: number | null;
   /**
      * Full set of size variants in display order; empty/omitted means not sized.
      * @maxItems 20
@@ -588,6 +611,22 @@ export interface RewardUpdate {
   locationRestriction?: string | null;
   active?: boolean;
   approvalRequired?: boolean;
+  isCustomGiftCard?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardIncrementLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMinimumLb?: number | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  giftCardMaximumLb?: number | null;
   /**
      * When present, replaces the reward's full set of size variants (in display order). Empty array makes the reward non-sized.
      * @maxItems 20
@@ -606,6 +645,29 @@ export const RedemptionStatus = {
   fulfilled: 'fulfilled',
   cancelled: 'cancelled',
 } as const;
+
+export type GiftCardIssueStatus = typeof GiftCardIssueStatus[keyof typeof GiftCardIssueStatus];
+
+
+export const GiftCardIssueStatus = {
+  pending_issue: 'pending_issue',
+  emailed: 'emailed',
+  email_failed: 'email_failed',
+  voided: 'voided',
+  reissued: 'reissued',
+} as const;
+
+export interface GiftCardIssue {
+  id: number;
+  redemptionId: number;
+  maskedCode: string;
+  status: GiftCardIssueStatus;
+  issuedAt: string;
+  /** @nullable */
+  emailedAt?: string | null;
+  /** @nullable */
+  voidedAt?: string | null;
+}
 
 export interface Redemption {
   id: number;
@@ -626,6 +688,17 @@ export interface Redemption {
   note?: string | null;
   /** @nullable */
   adminNote?: string | null;
+  /** @nullable */
+  giftCardLbAmount?: number | null;
+  /** @nullable */
+  giftCardCadValueCents?: number | null;
+  /** @nullable */
+  giftCardRecipientName?: string | null;
+  /** @nullable */
+  giftCardRecipientEmail?: string | null;
+  /** @nullable */
+  giftCardMessage?: string | null;
+  giftCardIssue?: GiftCardIssue | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -635,6 +708,19 @@ export interface RedemptionInput {
   /** Required when the reward is sized; must match one of the reward's sizes. */
   sizeLabel?: string;
   note?: string;
+  giftCardLbAmount?: number;
+  giftCardRecipientName?: string;
+  giftCardRecipientEmail?: string;
+  /** @maxLength 1000 */
+  giftCardMessage?: string;
+}
+
+export interface GiftCardVoidInput {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
 }
 
 export interface RedemptionDecision {
