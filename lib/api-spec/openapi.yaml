@@ -927,6 +927,21 @@ paths:
         "400":
           description: Insufficient balance or out of stock
 
+  /redemptions/export:
+    get:
+      operationId: exportRedemptions
+      tags: [redemptions]
+      summary: Export redemptions as CSV (admin only)
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+        "403":
+          description: Forbidden
+
   /redemptions/{id}:
     get:
       operationId: getRedemption

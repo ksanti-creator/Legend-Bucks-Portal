@@ -2997,6 +2997,83 @@ export const useCreateRedemption = <TError = ErrorType<void>,
       return useMutation(getCreateRedemptionMutationOptions(options));
     }
 
+export const getExportRedemptionsUrl = () => {
+
+
+
+
+  return `/api/redemptions/export`
+}
+
+/**
+ * @summary Export redemptions as CSV (admin only)
+ */
+export const exportRedemptions = async ( options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getExportRedemptionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportRedemptionsQueryKey = () => {
+    return [
+    `/api/redemptions/export`
+    ] as const;
+    }
+
+
+export const getExportRedemptionsQueryOptions = <TData = Awaited<ReturnType<typeof exportRedemptions>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportRedemptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportRedemptionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportRedemptions>>> = ({ signal }) => exportRedemptions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportRedemptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportRedemptionsQueryResult = NonNullable<Awaited<ReturnType<typeof exportRedemptions>>>
+export type ExportRedemptionsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Export redemptions as CSV (admin only)
+ */
+
+export function useExportRedemptions<TData = Awaited<ReturnType<typeof exportRedemptions>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportRedemptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportRedemptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetRedemptionUrl = (id: number,) => {
 
 

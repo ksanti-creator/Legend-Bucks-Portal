@@ -983,6 +983,12 @@ export const CreateRedemptionResponse = zod.object({
 
 
 /**
+ * @summary Export redemptions as CSV (admin only)
+ */
+export const ExportRedemptionsResponse = zod.unknown()
+
+
+/**
  * @summary Get a redemption by ID
  */
 export const GetRedemptionParams = zod.object({

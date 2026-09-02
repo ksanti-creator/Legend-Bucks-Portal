@@ -383,6 +383,60 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(CreateRedemptionResponse.parse(await enrichRedemption(redemption, user.role === "admin")));
 });
 
+// This is intentionally admin-only, rather than the broader accounting read
+// capability: it contains recipient PII alongside the redemption export.
+router.get("/redemptions/export", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  if (user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const all = await db.select().from(redemptionsTable).orderBy(desc(redemptionsTable.createdAt));
+  const enriched = await Promise.all(all.map((redemption) => enrichRedemption(redemption, true)));
+  const escapeCsv = (value: string | number | null | undefined): string =>
+    `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const header = [
+    "id", "employeeId", "employeeName", "rewardId", "rewardName", "status",
+    "buckCost", "cadValueCents", "cadValueCad", "sizeLabel", "note", "adminNote",
+    "giftCardLbAmount", "giftCardCadValueCents", "giftCardCadValueCad",
+    "giftCardRecipientName", "giftCardRecipientEmail", "giftCardMessage",
+    "giftCardMaskedCode", "giftCardIssueStatus", "giftCardIssuedAt",
+    "giftCardEmailedAt", "giftCardVoidedAt", "createdAt", "updatedAt",
+  ].join(",");
+  const rows = enriched.map((redemption) => [
+    redemption.id,
+    redemption.employeeId,
+    redemption.employeeName,
+    redemption.rewardId,
+    redemption.rewardName,
+    redemption.status,
+    redemption.buckCost,
+    redemption.cadValueCents,
+    redemption.cadValueCents === null ? null : (redemption.cadValueCents / 100).toFixed(2),
+    redemption.sizeLabel,
+    redemption.note,
+    redemption.adminNote,
+    redemption.giftCardLbAmount,
+    redemption.giftCardCadValueCents,
+    redemption.giftCardCadValueCents === null ? null : (redemption.giftCardCadValueCents / 100).toFixed(2),
+    redemption.giftCardRecipientName,
+    redemption.giftCardRecipientEmail,
+    redemption.giftCardMessage,
+    redemption.giftCardIssue?.maskedCode,
+    redemption.giftCardIssue?.status,
+    redemption.giftCardIssue?.issuedAt,
+    redemption.giftCardIssue?.emailedAt,
+    redemption.giftCardIssue?.voidedAt,
+    redemption.createdAt,
+    redemption.updatedAt,
+  ].map(escapeCsv).join(","));
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=redemptions.csv");
+  res.send(`${header}\n${rows.join("\n")}`);
+});
+
 router.get("/redemptions/:id", requireAuth, async (req, res): Promise<void> => {
   const params = GetRedemptionParams.safeParse(req.params);
   if (!params.success) {

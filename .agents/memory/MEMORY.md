@@ -14,3 +14,4 @@
 - [Design tokens & sidebar trap](legend-bucks-design-tokens.md) — theme is CSS-token driven (cascades from index.css + Card); flipping a shared token's brightness (dark→light sidebar) silently breaks login (white-on-white); app is desktop-only fixed sidebar.
 - [Prod DB, admin bootstrap & reset](legend-bucks-prod-reset.md) — dev(heliumdb)/prod(neondb) are separate DBs, prod is read-only via tools; no public signup; reset/seed-admin needs a temp secret-guarded endpoint + republish twice.
 - [Object storage image serving](legend-bucks-object-storage.md) — image serve endpoint is public (img tags can't send Bearer) but MUST stay confined to the uploads/ namespace or it leaks the whole private dir.
+- [Gift card code format](gift-card-code-format.md) — use seven base-32 groups (140-bit entropy); the user chose security over the shorter four-group format.

@@ -1,4 +1,4 @@
-import { pgTable, serial, timestamp, integer, text, pgEnum, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, timestamp, integer, text, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { redemptionsTable } from "./redemptions";
 import { employeesTable } from "./employees";
@@ -30,7 +30,7 @@ export const giftCardIssuesTable = pgTable("gift_card_issues", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
-  index("gift_card_issues_one_current_per_redemption")
+  uniqueIndex("gift_card_issues_one_current_per_redemption")
     .on(table.redemptionId)
     .where(sql`${table.status} NOT IN ('voided', 'reissued')`),
 ]);

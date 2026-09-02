@@ -31,6 +31,7 @@ const redemptionIds: number[] = [];
 const transactionIds: number[] = [];
 let adminToken: string;
 let employeeToken: string;
+let managerToken: string;
 let employeeId: number;
 let customRewardId: number;
 
@@ -38,8 +39,10 @@ describe("custom gift card API", () => {
   beforeAll(async () => {
     const admin = await fx.createAuthedEmployee("admin");
     const employee = await fx.createAuthedEmployee("team_member");
+    const manager = await fx.createAuthedEmployee("manager");
     adminToken = admin.token;
     employeeToken = employee.token;
+    managerToken = manager.token;
     employeeId = employee.emp.id;
     const [credit] = await db.insert(transactionsTable).values({
       type: "award", amount: 5_000, fromEmployeeId: admin.emp.id, toEmployeeId: employeeId, note: uniq("credit"),
@@ -148,6 +151,28 @@ describe("custom gift card API", () => {
     expect(replacementCode).not.toBe(firstCode);
     const rows = await db.select().from(giftCardIssuesTable).where(eq(giftCardIssuesTable.redemptionId, response.body.id));
     expect(rows.some((row) => row.status === "reissued" && row.voidedAt !== null)).toBe(true);
+  });
+
+  it("exports gift-card redemption details for admins without code secrets", async () => {
+    const response = await redeem(600);
+    redemptionIds.push(response.body.id);
+    await request(app).patch(`/api/redemptions/${response.body.id}/approve`).set(bearer(adminToken));
+    await request(app).post(`/api/redemptions/${response.body.id}/gift-card/issue`).set(bearer(adminToken));
+
+    const exported = await request(app).get("/api/redemptions/export").set(bearer(adminToken));
+    expect(exported.status).toBe(200);
+    expect(exported.headers["content-type"]).toContain("text/csv");
+    expect(exported.text).toContain("giftCardLbAmount,giftCardCadValueCents");
+    expect(exported.text).toContain("Gift Recipient");
+    expect(exported.text).toContain("600");
+    expect(exported.text).toContain("LBGC-••••");
+    expect(exported.text).not.toContain("codeHash");
+    expect(exported.text).not.toContain(vi.mocked(sendGiftCardRecipientEmail).mock.calls.at(-1)![2]);
+  });
+
+  it("rejects redemption CSV exports for non-admin roles", async () => {
+    expect((await request(app).get("/api/redemptions/export").set(bearer(employeeToken))).status).toBe(403);
+    expect((await request(app).get("/api/redemptions/export").set(bearer(managerToken))).status).toBe(403);
   });
 
   it("leaves delivery failed and does not claim fulfillment when Gmail fails", async () => {

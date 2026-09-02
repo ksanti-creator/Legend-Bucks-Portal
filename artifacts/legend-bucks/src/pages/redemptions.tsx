@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, usePayrollApproveRedemption, usePayrollRejectRedemption, useIssueGiftCard, useReissueGiftCard, useVoidGiftCard, useGetMe, getListRedemptionsQueryKey } from "@workspace/api-client-react";
+import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, usePayrollApproveRedemption, usePayrollRejectRedemption, useIssueGiftCard, useReissueGiftCard, useVoidGiftCard, useGetMe, getListRedemptionsQueryKey, exportRedemptions } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate } from "@/lib/utils";
-import { Ship, Check, X, Box, Loader2 } from "lucide-react";
+import { Ship, Check, X, Box, Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Redemptions() {
@@ -27,6 +27,7 @@ export default function Redemptions() {
   const queryClient = useQueryClient();
 
   const [statusTab, setStatusTab] = useState("requested");
+  const [exporting, setExporting] = useState(false);
 
   // Privileged roles see all, users see their own
   const { data: redemptions, isLoading } = useListRedemptions({ 
@@ -44,6 +45,24 @@ export default function Redemptions() {
   const voidGiftCardMut = useVoidGiftCard();
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: getListRedemptionsQueryKey() });
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const csv = await exportRedemptions();
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "redemptions.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Export failed", description: "Could not download redemptions. Try again.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
   const handleGiftCard = (item: NonNullable<typeof redemptions>[number], action: "issue" | "reissue" | "void") => {
     const callbacks = {
       onSuccess: (issue: any) => {
@@ -106,9 +125,17 @@ export default function Redemptions() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Fulfillment Center</h1>
-        <p className="text-muted-foreground mt-1">Manage reward requests and fulfillments.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold tracking-tight">Fulfillment Center</h1>
+          <p className="text-muted-foreground mt-1">Manage reward requests and fulfillments.</p>
+        </div>
+        {isAdmin && (
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Export CSV
+          </Button>
+        )}
       </div>
 
       <Tabs value={statusTab} onValueChange={setStatusTab}>
