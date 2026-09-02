@@ -2,7 +2,7 @@ export default function GiftCardEmail() {
   return (
     <main style={{ minHeight: "100vh", margin: 0, padding: "40px 16px", background: "#f5f5f5", fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
       <div style={{ width: 560, maxWidth: "100%", margin: "0 auto" }}>
-        <p style={{ margin: "0 0 12px", color: "#777", fontSize: 12 }}>Recipient email preview · Sample values only</p>
+        <p style={{ margin: "0 0 12px", color: "#777", fontSize: 12 }}>Purchaser email preview · Sample values only</p>
         <section style={{ background: "#fff", borderRadius: 8, overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
           <header style={{ background: "linear-gradient(135deg,#00afed 0%,#0090cc 100%)", padding: "36px 40px 28px" }}>
             <p style={{ margin: 0, color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: 3, opacity: .8 }}>LEGEND BOATS</p>
@@ -10,7 +10,7 @@ export default function GiftCardEmail() {
           </header>
           <div style={{ padding: "40px 40px 32px", color: "#4f4f51" }}>
             <p style={{ margin: "0 0 16px", fontSize: 16 }}>Hi Taylor,</p>
-            <p style={{ margin: "0 0 24px", fontSize: 16 }}>You received a <strong>$50.00 CAD</strong> Legend Bucks Gift Card.</p>
+            <p style={{ margin: "0 0 24px", fontSize: 16 }}>Your purchase of a <strong>$50.00 CAD</strong> Legend Boats Gift Card is complete. Your card is ready to use.</p>
             <p style={{ margin: "0 0 8px", color: "#888", fontSize: 13 }}>A personal message:</p>
             <p style={{ margin: "0 0 24px", padding: "14px 18px", background: "#f5f5f5", borderLeft: "4px solid #00afed", borderRadius: 6, fontStyle: "italic" }}>“Thank you for everything you do. Enjoy!”</p>
             <div style={{ padding: 22, background: "#f5f5f5", borderRadius: 8, textAlign: "center", marginBottom: 24 }}>

@@ -611,9 +611,9 @@ export async function sendGiftCardRecipientEmail(
     : "";
   const last4 = code.slice(-4);
   const html = emailShell(
-    "You received a Legend Bucks Gift Card",
+    "Your Legend Boats Gift Card is ready",
     `<p style="margin:0 0 16px;color:#4f4f51;font-size:16px;">Hi ${escapeHtml(recipientName)},</p>
-     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;">You received a <strong>$${(cadValueCents / 100).toFixed(2)} CAD</strong> Legend Bucks Gift Card.</p>
+     <p style="margin:0 0 24px;color:#4f4f51;font-size:16px;">Your purchase of a <strong>$${(cadValueCents / 100).toFixed(2)} CAD</strong> Legend Boats Gift Card is complete. Your card is ready to use.</p>
      ${messageBlock}
      <div style="padding:22px;background:#f5f5f5;border-radius:8px;text-align:center;margin-bottom:24px;">
        <p style="margin:0 0 12px;font:700 20px monospace;letter-spacing:2px;color:#222;">${escapeHtml(code)}</p>
@@ -623,5 +623,5 @@ export async function sendGiftCardRecipientEmail(
      <p style="margin:0 0 12px;color:#4f4f51;font-size:15px;"><strong>Present this code at a Legend Boats store to apply it toward your purchase.</strong></p>
      <p style="margin:0;color:#888;font-size:13px;">This card cannot be exchanged for cash.</p>`,
   );
-  await sendBrandedEmail(to, "You received a Legend Bucks Gift Card", html, "Failed to send gift-card email");
+  await sendBrandedEmail(to, "Your Legend Boats Gift Card is ready", html, "Failed to send gift-card email");
 }

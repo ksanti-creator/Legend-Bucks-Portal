@@ -28,3 +28,17 @@ mtime_ms = 1788380053129
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/c2f39ef1-99c6-46bb-a9e5-481987263d81/7653899f-209d-49fb-a8e9-a02b32ab7715"
 storage_version_token = "1788380056815128"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "WKemrkR_S6pRQryePcybb"
+uri = "file://attached_assets/gift-card-purchase-email-rendered.jpg"
+type = "image"
+title = "Corrected Gift Card Purchase Email"
+description = "Rendered purchaser-facing email with safe sample values."
+logical_id = "93bee9b6-8c97-4a17-87a4-f8b8ae18d957"
+content_hash = "sha256:0cc8eb6e85ccf87d98e6ed5936918bfd109ef236a8beba59dff4ce02f19b1f18"
+size = 50897
+mtime_ms = 1788380164000
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/93bee9b6-8c97-4a17-87a4-f8b8ae18d957/4a145578-284f-44fe-83ee-d9e06e57a3b8"
+storage_version_token = "1788380169203355"
+content_type = "image/jpeg"
