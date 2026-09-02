@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "08v0dO5FISYu0Kz6BNExL"
+uri = "file://attached_assets/gift-card-recipient-email-preview.html"
+type = "text"
+title = "Gift Card Recipient Email Preview"
+description = "A browser-rendered preview of the email sent to a gift-card recipient, using safe sample values."
+logical_id = "f9569440-ebdc-42e3-90e5-2481b3b9060e"
+content_hash = "sha256:d4986bb63888ee5d6d2a08e8eaa18fcb8ea14cc11a366d601a51d8450f9f11dd"
+size = 3703
+mtime_ms = 1788379961177
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/f9569440-ebdc-42e3-90e5-2481b3b9060e/4bafd101-bb52-4bf3-abfa-6259a1510356"
+storage_version_token = "1788379965851713"
+content_type = "text/html"
