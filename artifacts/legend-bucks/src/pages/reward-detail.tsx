@@ -49,8 +49,6 @@ export default function RewardDetail() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [giftCardAmount, setGiftCardAmount] = useState(100);
-  const [recipientName, setRecipientName] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
 
   if (isLoading || !reward || !user) {
     return <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -81,27 +79,27 @@ export default function RewardDetail() {
         ...(isSized && selectedSize ? { sizeLabel: selectedSize } : {}),
         ...(reward.isCustomGiftCard ? {
           giftCardLbAmount: giftCardAmount,
-          giftCardRecipientName: recipientName.trim(),
-          giftCardRecipientEmail: recipientEmail.trim(),
         } : {}),
       } },
       {
         onSuccess: () => {
           setOpen(false);
           toast({
-            title: "Reward Redeemed!",
+            title: reward.isCustomGiftCard ? "Gift Card Purchase Submitted!" : "Reward Redeemed!",
             description: reward.approvalRequired 
               ? "Your request has been submitted for approval." 
-              : "Your reward has been redeemed successfully.",
+              : reward.isCustomGiftCard
+                ? "Your gift card purchase was successful."
+                : "Your reward has been redeemed successfully.",
           });
           queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); // Update balance
           setLocation("/dashboard");
         },
         onError: (err: any) => {
           toast({
-            title: "Redemption failed",
+            title: reward.isCustomGiftCard ? "Purchase failed" : "Redemption failed",
             description:
-              err?.response?.data?.error || "There was an error processing your redemption.",
+              err?.response?.data?.error || `There was an error processing your ${reward.isCustomGiftCard ? "purchase" : "redemption"}.`,
             variant: "destructive",
           });
         }
@@ -261,12 +259,12 @@ export default function RewardDetail() {
                 >
                   {!isAvailable ? "Out of Stock" : 
                    !reward.isCustomGiftCard && !canAfford ? `Need ${(reward.buckCost - (user.balance || 0)).toLocaleString()} more LB` :
-                   "Redeem Now"}
+                    reward.isCustomGiftCard ? "Purchase" : "Redeem Now"}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Confirm Redemption</DialogTitle>
+                  <DialogTitle>{reward.isCustomGiftCard ? "Confirm Purchase" : "Confirm Redemption"}</DialogTitle>
                   <DialogDescription>
                     {reward.isCustomGiftCard
                       ? `Choose how many Legend Bucks to convert. Available balance: ${(user.balance || 0).toLocaleString()} LB.`
@@ -287,11 +285,9 @@ export default function RewardDetail() {
                       {!customAmountValid && <p className="text-xs text-destructive">Use a whole multiple of {increment} LB, at least {minimum} LB{reward.giftCardMaximumLb ? ` and no more than ${reward.giftCardMaximumLb} LB` : ""}.</p>}
                       {customAmountValid && !canAfford && <p className="text-xs text-destructive">Amount exceeds your available balance.</p>}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><label className="block text-sm font-medium mb-2">Recipient name</label><Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} /></div>
-                      <div><label className="block text-sm font-medium mb-2">Recipient email</label><Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} /></div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Gift cards are issued after approval and cannot be exchanged for cash.</p>
+                    <p className="text-xs text-muted-foreground">
+                      After approval, the gift card will be sent to your account email: <strong>{user.email}</strong>. Gift cards cannot be exchanged for cash.
+                    </p>
                   </div>
                 )}
                 
@@ -344,7 +340,7 @@ export default function RewardDetail() {
 
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                  <Button onClick={handleRedeem} disabled={redeemMut.isPending || needsSize || (reward.isCustomGiftCard && (!customAmountValid || !canAfford || !recipientName.trim() || !recipientEmail.trim()))} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Button onClick={handleRedeem} disabled={redeemMut.isPending || needsSize || (reward.isCustomGiftCard && (!customAmountValid || !canAfford))} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     {redeemMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Confirm Purchase
                   </Button>

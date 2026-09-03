@@ -234,10 +234,6 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
       res.status(400).json({ error: `Gift card amount must be at least ${minimum} LB and a multiple of ${increment} LB` });
       return;
     }
-    if (!body.data.giftCardRecipientName?.trim() || !body.data.giftCardRecipientEmail?.trim()) {
-      res.status(400).json({ error: "Recipient name and email are required" });
-      return;
-    }
     redemptionCost = requestedGiftCardAmount!;
   } else if (
     body.data.giftCardRecipientName !== undefined ||
@@ -292,9 +288,9 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
       note: body.data.note ?? null,
       giftCardLbAmount: reward.isCustomGiftCard ? redemptionCost : null,
       giftCardCadValueCents: reward.isCustomGiftCard ? lbToCadCents(redemptionCost) : null,
-      giftCardRecipientName: reward.isCustomGiftCard ? body.data.giftCardRecipientName!.trim() : null,
-      giftCardRecipientEmail: reward.isCustomGiftCard ? body.data.giftCardRecipientEmail!.trim().toLowerCase() : null,
-      giftCardMessage: reward.isCustomGiftCard ? (body.data.giftCardMessage?.trim() || null) : null,
+      giftCardRecipientName: reward.isCustomGiftCard ? `${user.firstName} ${user.lastName}`.trim() : null,
+      giftCardRecipientEmail: reward.isCustomGiftCard ? user.email.toLowerCase() : null,
+      giftCardMessage: null,
       }).returning();
       await trx.insert(transactionsTable).values({
         type: "redemption_debit",

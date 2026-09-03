@@ -3,6 +3,7 @@ import request from "supertest";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
+  employeesTable,
   giftCardIssuesTable,
   redemptionsTable,
   rewardsTable,
@@ -83,9 +84,10 @@ describe("custom gift card API", () => {
     request(app).post("/api/redemptions").set(bearer(employeeToken)).send({
       rewardId,
       giftCardLbAmount: amount,
-      giftCardRecipientName: "Gift Recipient",
-      giftCardRecipientEmail: `${uniq("recipient")}@example.test`,
-      giftCardMessage: "Enjoy your gift!",
+      // Legacy/manual destination fields must never override the purchaser's account.
+      giftCardRecipientName: "Different Recipient",
+      giftCardRecipientEmail: `${uniq("different-recipient")}@example.test`,
+      giftCardMessage: "This message must not be saved",
     });
 
   it("rejects invalid increments, negatives, and amounts over the available balance", async () => {
@@ -122,6 +124,10 @@ describe("custom gift card API", () => {
     expect(response.body.giftCardLbAmount).toBe(700);
     const [snapshot] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, response.body.id));
     expect(snapshot.giftCardCadValueCents).toBe(7_000);
+    const [purchaser] = await db.select().from(employeesTable).where(eq(employeesTable.id, employeeId));
+    expect(snapshot.giftCardRecipientName).toBe(`${purchaser.firstName} ${purchaser.lastName}`.trim());
+    expect(snapshot.giftCardRecipientEmail).toBe(purchaser.email);
+    expect(snapshot.giftCardMessage).toBeNull();
 
     expect((await request(app).patch(`/api/redemptions/${response.body.id}/reject`).set(bearer(adminToken)).send({})).status).toBe(200);
     const [refund] = await db.select().from(transactionsTable).where(and(
@@ -163,7 +169,8 @@ describe("custom gift card API", () => {
     expect(exported.status).toBe(200);
     expect(exported.headers["content-type"]).toContain("text/csv");
     expect(exported.text).toContain("giftCardLbAmount,giftCardCadValueCents");
-    expect(exported.text).toContain("Gift Recipient");
+    const [purchaser] = await db.select().from(employeesTable).where(eq(employeesTable.id, employeeId));
+    expect(exported.text).toContain(`${purchaser.firstName} ${purchaser.lastName}`.trim());
     expect(exported.text).toContain("600");
     expect(exported.text).toContain("LBGC-••••");
     expect(exported.text).not.toContain("codeHash");
