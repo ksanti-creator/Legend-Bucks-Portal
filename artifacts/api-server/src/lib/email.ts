@@ -476,6 +476,33 @@ export async function sendNewRedemptionRequestEmail(
  * for their sign-off. Buck cost only — never include accounting-only CAD here
  * either, since this template flows through the same escaping rules.
  */
+export async function sendTimeOffPayrollEmail(
+  employeeName: string,
+  employeeEmail: string,
+  rewardName: string,
+  rewardDescription: string | null,
+  redemptionId: number,
+): Promise<void> {
+  const html = emailShell("Time Off approved — BambooHR action required",
+    `<p style="color:#4f4f51;line-height:1.6;">Hi Payroll,</p>
+     <p style="color:#4f4f51;line-height:1.6;">A Time Off reward has been approved. Please add the time specified by this reward to the team member's <strong>Time Off in Lieu</strong> balance in <strong>BambooHR</strong>.</p>
+     <p>Team member: <strong>${escapeHtml(employeeName)}</strong><br />
+     Account email: ${escapeHtml(employeeEmail)}<br />
+     Reward: <strong>${escapeHtml(rewardName)}</strong><br />
+     Request reference: #${redemptionId}</p>
+     ${rewardDescription ? `<p>${escapeHtml(rewardDescription)}</p>` : ""}
+     <p style="color:#4f4f51;line-height:1.6;">Use the reward's stated time allowance; confirm the duration before making an entry if it is unclear. This email does not update BambooHR automatically. Complete the existing payroll sign-off in Legend Bucks after processing.</p>`);
+  await sendBrandedEmail("payroll@legendboats.com", `Time Off in Lieu: ${employeeName} — request #${redemptionId}`, html, "Failed to send Time Off payroll email");
+}
+
+export async function sendTimeOffApprovedEmail(to: string, firstName: string, rewardName: string): Promise<void> {
+  const html = emailShell("Your Time Off reward was approved",
+    `<p style="color:#4f4f51;line-height:1.6;">Hi ${escapeHtml(firstName)},</p>
+     <p style="color:#4f4f51;line-height:1.6;">Your request for <strong>${escapeHtml(rewardName)}</strong> has been approved. The time will be added to your <strong>Time Off in Lieu</strong> balance in <strong>BambooHR</strong>.</p>
+     <p style="color:#4f4f51;line-height:1.6;">Once the balance has been added, you must go into BambooHR and schedule this time off as you normally would. Approval of this reward does not book any dates or replace the usual time-off request and approval process.</p>`);
+  await sendBrandedEmail(to, `Time Off approved: ${rewardName}`, html, "Failed to send Time Off approval email");
+}
+
 export async function sendPayrollApprovalNeededEmail(
   to: string,
   firstName: string,

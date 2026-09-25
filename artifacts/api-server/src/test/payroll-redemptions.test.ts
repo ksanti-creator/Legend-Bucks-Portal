@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+vi.mock("../lib/email", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../lib/email")>(),
+  sendTimeOffPayrollEmail: vi.fn().mockResolvedValue(undefined),
+  sendTimeOffApprovedEmail: vi.fn().mockResolvedValue(undefined),
+}));
+import { sendTimeOffPayrollEmail, sendTimeOffApprovedEmail } from "../lib/email";
 import request from "supertest";
 import app from "../app";
 import { db, transactionsTable, rewardsTable, rewardSizesTable, redemptionsTable, employeesTable } from "@workspace/db";
@@ -87,10 +93,20 @@ afterAll(async () => {
 
 describe("Payroll approval for Time Off redemptions", () => {
   it("first-line approval of a Time Off redemption moves it to pending_payroll, not approved", async () => {
+    vi.mocked(sendTimeOffPayrollEmail).mockClear();
+    vi.mocked(sendTimeOffApprovedEmail).mockClear();
     const r = await seedRedemption(timeOffRewardId, "requested");
     const res = await request(app).patch(`/api/redemptions/${r.id}/approve`).set(bearer(managerToken));
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("pending_payroll");
+    const [member] = await db.select().from(employeesTable).where(eq(employeesTable.id, memberId));
+    expect(sendTimeOffPayrollEmail).toHaveBeenCalledWith(
+      `${member.firstName} ${member.lastName}`, member.email, expect.any(String), null, r.id,
+    );
+    expect(sendTimeOffApprovedEmail).toHaveBeenCalledWith(member.email, member.firstName, expect.any(String));
+    expect((await request(app).patch(`/api/redemptions/${r.id}/approve`).set(bearer(managerToken))).status).toBe(400);
+    expect(sendTimeOffPayrollEmail).toHaveBeenCalledTimes(1);
+    expect(sendTimeOffApprovedEmail).toHaveBeenCalledTimes(1);
   });
 
   it("a Time Off reward that skips first approval still stops at pending_payroll on redeem", async () => {

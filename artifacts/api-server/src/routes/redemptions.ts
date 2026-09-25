@@ -35,6 +35,8 @@ import {
   sendRedemptionRejectedEmail,
   sendRedemptionFulfilledEmail,
   sendPayrollApprovalNeededEmail,
+  sendTimeOffPayrollEmail,
+  sendTimeOffApprovedEmail,
 } from "../lib/email";
 import { emailGiftCard, generateGiftCardCode, hashGiftCardCode, lbToCadCents, maskGiftCardCode } from "../lib/giftCards";
 
@@ -499,14 +501,31 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
   const [updated] = await db
     .update(redemptionsTable)
     .set({ status: nextStatus })
-    .where(eq(redemptionsTable.id, params.data.id))
+    .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, "requested")))
     .returning();
+
+  if (!updated) {
+    res.status(400).json({ error: "Redemption is no longer awaiting approval" });
+    return;
+  }
 
   const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
 
   if (nextStatus === "pending_payroll") {
     // Accounting admins take it from here.
     if (reward && emp) {
+      try {
+        await sendTimeOffPayrollEmail(`${emp.firstName} ${emp.lastName}`, emp.email, reward.name, reward.description, updated.id);
+      } catch (err) {
+        req.log.error({ err, redemptionId: updated.id }, "Failed to email payroll about approved Time Off");
+      }
+      if (emp.notifyRedemptionUpdates) {
+        try {
+          await sendTimeOffApprovedEmail(emp.email, emp.firstName, reward.name);
+        } catch (err) {
+          req.log.error({ err, redemptionId: updated.id }, "Failed to email team member about approved Time Off");
+        }
+      }
       await notifyPayrollApprovers(req.log, updated, reward, `${emp.firstName} ${emp.lastName}`);
     }
   } else {
