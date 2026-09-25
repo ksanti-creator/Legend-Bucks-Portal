@@ -4,7 +4,7 @@ generated = []
 [[outputs]]
 id = "08v0dO5FISYu0Kz6BNExL"
 uri = "file://attached_assets/gift-card-recipient-email-preview.html"
-type = "text"
+type = "html"
 title = "Gift Card Recipient Email Preview"
 description = "A browser-rendered preview of the email sent to a gift-card recipient, using safe sample values."
 logical_id = "f9569440-ebdc-42e3-90e5-2481b3b9060e"
@@ -69,4 +69,32 @@ size = 61248
 mtime_ms = 1788380663420
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/54a0d365-01fe-43ff-b5ee-79c263c2ef2e/b70a74e9-b7b4-4c20-a839-010699503794"
 storage_version_token = "1788380671159501"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "9t1GJnZyySQlb_BTzQJSE"
+uri = "file://attached_assets/time-off-payroll-email.jpg"
+type = "image"
+title = "Payroll email sample"
+description = "Approval notice asking payroll to add 8 hours to Time Off in Lieu in BambooHR."
+logical_id = "96743ea4-73b8-46a0-938d-d3f2da7dbd1a"
+content_hash = "sha256:b9c3c3ada80157270b6f5a8c50c19a1ae5e1035d3d63b2695a4e3925898d298f"
+size = 64579
+mtime_ms = 1790357492283
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/96743ea4-73b8-46a0-938d-d3f2da7dbd1a/64f1dcda-5d53-4b17-b2f0-06287db58104"
+storage_version_token = "1790357499665905"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "6oFG5jqIBpzwBnGi2d748"
+uri = "file://attached_assets/time-off-team-member-email.jpg"
+type = "image"
+title = "Team member email sample"
+description = "Approval confirmation with instructions to schedule the time off in BambooHR. Fictional sample; not sent."
+logical_id = "647dfcb9-f86a-41d7-bd18-5a01b5373894"
+content_hash = "sha256:3b1b06aab76499392bb191c306554510574e64f1d831d60d28d7efcd13d4f941"
+size = 49656
+mtime_ms = 1790357494059
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/647dfcb9-f86a-41d7-bd18-5a01b5373894/b3023ea6-0f87-4aba-8c25-fb83bbd4fde3"
+storage_version_token = "1790357501086116"
 content_type = "image/jpeg"
