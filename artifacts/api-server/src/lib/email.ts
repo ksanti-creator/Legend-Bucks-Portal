@@ -496,11 +496,12 @@ export async function sendTimeOffPayrollEmail(
 }
 
 export async function sendTimeOffApprovedEmail(to: string, firstName: string, rewardName: string): Promise<void> {
-  const html = emailShell("Your Time Off reward was approved",
+  const html = emailShell("Time Off: manager approved — awaiting payroll",
     `<p style="color:#4f4f51;line-height:1.6;">Hi ${escapeHtml(firstName)},</p>
-     <p style="color:#4f4f51;line-height:1.6;">Your request for <strong>${escapeHtml(rewardName)}</strong> has been approved. The time will be added to your <strong>Time Off in Lieu</strong> balance in <strong>BambooHR</strong>.</p>
+     <p style="color:#4f4f51;line-height:1.6;">Your manager has approved your request for <strong>${escapeHtml(rewardName)}</strong>. Your request is still <strong>Awaiting Payroll</strong>.</p>
+     <p style="color:#4f4f51;line-height:1.6;"><strong>This email does not confirm that your BambooHR balance is ready.</strong> Payroll still needs to process the request and add the time to your <strong>Time Off in Lieu</strong> balance in <strong>BambooHR</strong>. Check that the time has been added, or confirm with payroll, before scheduling it.</p>
      <p style="color:#4f4f51;line-height:1.6;">Once the balance has been added, you must go into BambooHR and schedule this time off as you normally would. Approval of this reward does not book any dates or replace the usual time-off request and approval process.</p>`);
-  await sendBrandedEmail(to, `Time Off approved: ${rewardName}`, html, "Failed to send Time Off approval email");
+  await sendBrandedEmail(to, `Manager approved — awaiting payroll: ${rewardName}`, html, "Failed to send Time Off approval email");
 }
 
 export async function sendPayrollApprovalNeededEmail(
