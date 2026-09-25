@@ -1,3 +1,4 @@
+import { sandboxEnabled } from "@workspace/db";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const APP_URL = process.env.APP_URL ?? "https://legend-bucks-portal.replit.app";
@@ -50,6 +51,11 @@ export function encodeFromHeader(from: string): string {
  * from the authorized Google account.
  */
 async function sendGmail(to: string, subject: string, html: string): Promise<void> {
+  if (sandboxEnabled()) {
+    // Never log email contents, login tokens or connector credentials.
+    console.info("[sandbox] Simulated email delivery; no message was sent.");
+    return;
+  }
   const connectors = new ReplitConnectors();
 
   const headers = [

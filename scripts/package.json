@@ -4,11 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sandbox:seed": "tsx ./src/bootstrap-sandbox.ts",
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*"
   }
 }

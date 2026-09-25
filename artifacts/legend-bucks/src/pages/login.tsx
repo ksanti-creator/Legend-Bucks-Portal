@@ -23,29 +23,29 @@ const tokenSchema = z.object({
 
 const DEV_ACCOUNTS = [
   {
-    email: "sarah.mitchell@legendboats.com",
-    name: "Sarah Mitchell",
+    email: "preview.admin@example.test",
+    name: "Alex Preview",
     role: "Admin",
     icon: ShieldCheck,
     color: "text-[#00afed]",
   },
   {
-    email: "james.kowalski@legendboats.com",
-    name: "James Kowalski",
+    email: "aipulse@legendboats.com",
+    name: "AI Pulse",
     role: "Manager",
     icon: Users,
     color: "text-[#35b729]",
   },
   {
-    email: "mike.henderson@legendboats.com",
-    name: "Mike Henderson",
+    email: "preview.employee@example.test",
+    name: "Sam Preview",
     role: "Team Member",
     icon: User,
     color: "text-sidebar-foreground/60",
   },
   {
-    email: "fiona.chen@legendboats.com",
-    name: "Fiona Chen",
+    email: "preview.payroll@example.test",
+    name: "Pat Preview",
     role: "Accounting Admin",
     icon: Calculator,
     color: "text-amber-400",
@@ -212,12 +212,12 @@ export default function Login() {
 
         <div className="w-full max-w-sm space-y-5">
           {/* ── Dev Quick Login (development only) ───────────────── */}
-          {import.meta.env.DEV && (
+          {import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
             <>
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20">
                   <FlaskConical className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                  <span className="text-amber-600 text-xs font-semibold uppercase tracking-wider">Dev — Quick Login</span>
+                  <span className="text-amber-600 text-xs font-semibold uppercase tracking-wider">Sandbox preview — simulated data, no emails or awards to real employees</span>
                 </div>
                 <div className="p-3 space-y-2">
                   {DEV_ACCOUNTS.map((account) => {

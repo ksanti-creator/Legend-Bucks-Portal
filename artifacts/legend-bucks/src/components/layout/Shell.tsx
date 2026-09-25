@@ -184,6 +184,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 lg:pl-64 flex flex-col min-h-screen">
+        {import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
+          <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold text-amber-950">
+            SANDBOX PREVIEW — Dummy data only. Emails and real storage are disabled.
+          </div>
+        )}
         <header className="h-16 border-b border-border/70 bg-background/70 backdrop-blur-md flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
           <div className="flex items-center gap-2 min-w-0">
             {/* Mobile nav trigger */}
