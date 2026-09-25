@@ -34,3 +34,6 @@ GMAIL_FROM = "Legend Bucks <ksanti@legendboats.com>"
 
 [userenv.production]
 APP_URL = "https://legend-bucks-portal.replit.app"
+LEGEND_BUCKS_SANDBOX = "false"
+STORE_GIFT_CARDS_ENABLED = "false"
+VITE_LEGEND_BUCKS_SANDBOX = "false"
