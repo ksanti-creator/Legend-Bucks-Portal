@@ -115,15 +115,23 @@ try {
     }
   }
   const sam = ids.get("preview.employee@example.test")!;
+  // Repair the original sample in place, without creating another debit or resetting its status.
+  await client.query(
+    `UPDATE redemptions SET note=$1, gift_card_cad_value_cents=3000, cad_value_cents=3000
+     WHERE employee_id=$2 AND reward_id=$3 AND gift_card_lb_amount=300
+       AND note IN ($1,$4)`,
+    ["Sample request: a $30 CAD custom Legend Bucks gift card.", sam, giftCard,
+      "Sample request: a $3 custom Legend Bucks gift card."],
+  );
   for (const [rewardId, cost, note, gift] of [
     [timeOff, 800, "Sample request: 8 hours of paid time off next Friday.", false],
-    [giftCard, 300, "Sample request: a $3 custom Legend Bucks gift card.", true],
+    [giftCard, 300, "Sample request: a $30 CAD custom Legend Bucks gift card.", true],
   ] as const) {
     if ((await client.query("SELECT 1 FROM redemptions WHERE employee_id=$1 AND reward_id=$2 AND note=$3", [sam, rewardId, note])).rowCount) continue;
     const redemption = await client.query<{ id: number }>(
-      `INSERT INTO redemptions (employee_id,reward_id,status,buck_cost,note,gift_card_lb_amount,gift_card_cad_value_cents,gift_card_recipient_name,gift_card_recipient_email)
-       VALUES ($1,$2,'requested',$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [sam, rewardId, cost, note, gift ? 300 : null, gift ? 300 : null, gift ? "Sam Preview" : null,
+      `INSERT INTO redemptions (employee_id,reward_id,status,buck_cost,note,gift_card_lb_amount,gift_card_cad_value_cents,cad_value_cents,gift_card_recipient_name,gift_card_recipient_email)
+       VALUES ($1,$2,'requested',$3,$4,$5,$6,$6,$7,$8) RETURNING id`,
+      [sam, rewardId, cost, note, gift ? cost : null, gift ? cost * 10 : null, gift ? "Sam Preview" : null,
         gift ? "preview.employee@example.test" : null],
     );
     await client.query(
