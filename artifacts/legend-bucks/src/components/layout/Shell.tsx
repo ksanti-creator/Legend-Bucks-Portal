@@ -160,10 +160,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
     if (user.role === "admin" || user.role === "manager") {
       navItems.splice(1, 0, { href: "/send", label: "Send Bucks", icon: Send });
+      navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
     }
 
     if (user.role === "admin") {
-      navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
       navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
     }
   }

@@ -194,7 +194,8 @@ export default function Redemptions() {
                       )}
                       {item.giftCardLbAmount != null && (
                         <div className="mt-4 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
-                          <div className="font-semibold">Gift Card to issue: ${((item.giftCardCadValueCents ?? 0) / 100).toFixed(2)} / {item.giftCardLbAmount.toLocaleString()} LB</div>
+                          {/* Managers cannot read accounting snapshots; the public denomination uses checkout's 10 cents per LB. */}
+                          <div className="font-semibold">Gift Card to issue: ${((item.giftCardCadValueCents ?? item.giftCardLbAmount * 10) / 100).toFixed(2)} CAD / {item.giftCardLbAmount.toLocaleString()} LB</div>
                           <div className="text-muted-foreground">{item.giftCardRecipientName} · {item.giftCardRecipientEmail}</div>
                           {item.giftCardMessage && <div className="mt-1 italic">“{item.giftCardMessage}”</div>}
                           {item.giftCardIssue && <div className="mt-2">Card {item.giftCardIssue.maskedCode} · <Badge variant={item.giftCardIssue.status === "emailed" ? "success" : item.giftCardIssue.status === "email_failed" ? "destructive" : "secondary"}>{item.giftCardIssue.status.replace("_", " ")}</Badge></div>}
