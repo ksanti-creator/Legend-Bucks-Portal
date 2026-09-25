@@ -30,6 +30,155 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /store-gift-cards/status:
+    get:
+      operationId: getStoreGiftCardStatus
+      responses:
+        "200":
+          description: Rollout status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreGiftCardStatus"
+  /stores:
+    get:
+      operationId: listStores
+      responses:
+        "200":
+          description: Stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Store"
+    post:
+      operationId: createStore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreInput"
+      responses:
+        "201":
+          description: Store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Store"
+  /stores/access:
+    get:
+      operationId: listStoreAccess
+      responses:
+        "200":
+          description: Grants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StoreAccess"
+    post:
+      operationId: grantStoreAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreAccess"
+      responses:
+        "201":
+          description: Grant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreAccess"
+  /stores/access/{storeId}/{employeeId}:
+    delete:
+      operationId: revokeStoreAccess
+      parameters:
+        - { name: storeId, in: path, required: true, schema: { type: integer } }
+        - { name: employeeId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204":
+          description: Revoked
+  /store-gift-cards/my-stores:
+    get:
+      operationId: listMyStores
+      responses:
+        "200":
+          description: Accessible stores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Store"
+  /store-gift-cards/transactions:
+    get:
+      operationId: listStoreGiftCardTransactions
+      summary: Admin-only checkout and reversal audit
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200":
+          description: Newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StoreCardTransaction"
+  /store-gift-cards/lookup:
+    post:
+      operationId: lookupStoreGiftCard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreCardLookupInput"
+      responses:
+        "200":
+          description: Masked card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreCardLookup"
+  /store-gift-cards/spend:
+    post:
+      operationId: spendStoreGiftCard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreCardSpendInput"
+      responses:
+        "200":
+          description: Recorded spend
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreCardSpend"
+  /store-gift-cards/reverse:
+    post:
+      operationId: reverseStoreGiftCardSpend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreCardReversalInput"
+      responses:
+        "200":
+          description: Reversed spend
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreCardReversal"
   /healthz:
     get:
       operationId: healthCheck
@@ -1476,6 +1625,103 @@ paths:
 
 components:
   schemas:
+    StoreGiftCardStatus:
+      type: object
+      required: [enabled, sandbox]
+      properties:
+        enabled: { type: boolean }
+        sandbox: { type: boolean }
+    Store:
+      type: object
+      required: [id, name, locationId, active]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        locationId: { type: integer }
+        active: { type: boolean }
+    StoreInput:
+      type: object
+      required: [name, locationId]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        locationId: { type: integer, minimum: 1 }
+    StoreAccess:
+      type: object
+      required: [storeId, employeeId]
+      properties:
+        storeId: { type: integer, minimum: 1 }
+        employeeId: { type: integer, minimum: 1 }
+    StoreCardLookupInput:
+      type: object
+      required: [storeId, code]
+      properties:
+        storeId: { type: integer, minimum: 1 }
+        code: { type: string, minLength: 1, maxLength: 80 }
+    StoreCardLookup:
+      type: object
+      required: [cardId, lookupToken, maskedCode, status, balanceCents]
+      properties:
+        cardId: { type: integer }
+        lookupToken: { type: string, description: "Opaque 30-minute checkout capability scoped to signed-in employee, store and card. Never use as a URL parameter." }
+        maskedCode: { type: string }
+        status: { type: string }
+        balanceCents: { type: integer }
+    StoreCardSpendInput:
+      type: object
+      required: [storeId, cardId, lookupToken, amountCents, receiptRef, idempotencyKey]
+      properties:
+        storeId: { type: integer, minimum: 1 }
+        cardId: { type: integer, minimum: 1 }
+        lookupToken: { type: string, format: uuid }
+        amountCents: { type: integer, minimum: 1 }
+        receiptRef: { type: string, minLength: 1, maxLength: 100 }
+        idempotencyKey: { type: string, format: uuid }
+    StoreCardSpend:
+      type: object
+      required: [transactionRef, cardId, maskedCode, previousBalanceCents, newBalanceCents, amountCents, receiptRef, createdAt]
+      properties:
+        transactionRef: { type: string }
+        cardId: { type: integer }
+        maskedCode: { type: string }
+        previousBalanceCents: { type: integer }
+        newBalanceCents: { type: integer }
+        amountCents: { type: integer }
+        receiptRef: { type: string }
+        createdAt: { type: string }
+    StoreCardReversalInput:
+      type: object
+      required: [transactionRef, reason, idempotencyKey]
+      properties:
+        transactionRef: { type: string, format: uuid }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        idempotencyKey: { type: string, format: uuid }
+    StoreCardReversal:
+      allOf:
+        - $ref: "#/components/schemas/StoreCardSpend"
+        - type: object
+          required: [reversalRef, reversedAt]
+          properties:
+            reversalRef: { type: string }
+            reversedAt: { type: string }
+    StoreCardTransaction:
+      type: object
+      required: [transactionRef, kind, cardId, maskedCode, storeId, storeName, employeeId, employeeName, amountCents, previousBalanceCents, newBalanceCents, createdAt, receiptRef, originalTransactionRef, reason]
+      properties:
+        transactionRef: { type: string }
+        kind: { type: string, enum: [spend, reversal] }
+        cardId: { type: integer }
+        maskedCode: { type: string }
+        storeId: { type: integer }
+        storeName: { type: string }
+        employeeId: { type: integer }
+        employeeName: { type: string }
+        amountCents: { type: integer }
+        previousBalanceCents: { type: integer }
+        newBalanceCents: { type: integer }
+        receiptRef: { type: ["string", "null"] }
+        originalTransactionRef: { type: ["string", "null"] }
+        reason: { type: ["string", "null"] }
+        createdAt: { type: string }
     UploadUrlRequest:
       type: object
       required: [name, size, contentType]

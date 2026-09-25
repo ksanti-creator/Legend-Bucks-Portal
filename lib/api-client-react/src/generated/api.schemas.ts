@@ -5,6 +5,125 @@
  * Legend Bucks rewards platform API
  * OpenAPI spec version: 0.1.0
  */
+export interface StoreGiftCardStatus {
+  enabled: boolean;
+  sandbox: boolean;
+}
+
+export interface Store {
+  id: number;
+  name: string;
+  locationId: number;
+  active: boolean;
+}
+
+export interface StoreInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /** @minimum 1 */
+  locationId: number;
+}
+
+export interface StoreAccess {
+  /** @minimum 1 */
+  storeId: number;
+  /** @minimum 1 */
+  employeeId: number;
+}
+
+export interface StoreCardLookupInput {
+  /** @minimum 1 */
+  storeId: number;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  code: string;
+}
+
+export interface StoreCardLookup {
+  cardId: number;
+  /** Opaque 30-minute checkout capability scoped to signed-in employee, store and card. Never use as a URL parameter. */
+  lookupToken: string;
+  maskedCode: string;
+  status: string;
+  balanceCents: number;
+}
+
+export interface StoreCardSpendInput {
+  /** @minimum 1 */
+  storeId: number;
+  /** @minimum 1 */
+  cardId: number;
+  lookupToken: string;
+  /** @minimum 1 */
+  amountCents: number;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  receiptRef: string;
+  idempotencyKey: string;
+}
+
+export interface StoreCardSpend {
+  transactionRef: string;
+  cardId: number;
+  maskedCode: string;
+  previousBalanceCents: number;
+  newBalanceCents: number;
+  amountCents: number;
+  receiptRef: string;
+  createdAt: string;
+}
+
+export interface StoreCardReversalInput {
+  transactionRef: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+  idempotencyKey: string;
+}
+
+export type StoreCardReversal = StoreCardSpend & {
+  reversalRef: string;
+  reversedAt: string;
+};
+
+export type StoreCardTransactionKind = typeof StoreCardTransactionKind[keyof typeof StoreCardTransactionKind];
+
+
+export const StoreCardTransactionKind = {
+  spend: 'spend',
+  reversal: 'reversal',
+} as const;
+
+export interface StoreCardTransaction {
+  transactionRef: string;
+  kind: StoreCardTransactionKind;
+  cardId: number;
+  maskedCode: string;
+  storeId: number;
+  storeName: string;
+  employeeId: number;
+  employeeName: string;
+  amountCents: number;
+  previousBalanceCents: number;
+  newBalanceCents: number;
+  /** @nullable */
+  receiptRef: string | null;
+  /** @nullable */
+  originalTransactionRef: string | null;
+  /** @nullable */
+  reason: string | null;
+  createdAt: string;
+}
+
 export interface UploadUrlRequest {
   /**
      * Original file name.
@@ -854,6 +973,18 @@ export interface LeaderboardEntry {
   department?: string | null;
   bucksReceived: number;
 }
+
+export type ListStoreGiftCardTransactionsParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * @minimum 0
+ */
+offset?: number;
+};
 
 export type ListEmployeesParams = {
 departmentId?: number;

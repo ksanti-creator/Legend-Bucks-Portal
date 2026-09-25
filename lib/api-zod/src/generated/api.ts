@@ -8,6 +8,194 @@
 import * as zod from 'zod';
 
 
+export const GetStoreGiftCardStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "sandbox": zod.boolean()
+})
+
+
+export const ListStoresResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "locationId": zod.number(),
+  "active": zod.boolean()
+})
+export const ListStoresResponse = zod.array(ListStoresResponseItem)
+
+
+export const createStoreBodyNameMax = 100;
+
+
+
+
+export const CreateStoreBody = zod.object({
+  "name": zod.string().min(1).max(createStoreBodyNameMax),
+  "locationId": zod.number().min(1)
+})
+
+export const CreateStoreResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "locationId": zod.number(),
+  "active": zod.boolean()
+})
+
+
+
+
+
+
+export const ListStoreAccessResponseItem = zod.object({
+  "storeId": zod.number().min(1),
+  "employeeId": zod.number().min(1)
+})
+export const ListStoreAccessResponse = zod.array(ListStoreAccessResponseItem)
+
+
+
+
+
+
+export const GrantStoreAccessBody = zod.object({
+  "storeId": zod.number().min(1),
+  "employeeId": zod.number().min(1)
+})
+
+
+
+
+
+export const GrantStoreAccessResponse = zod.object({
+  "storeId": zod.number().min(1),
+  "employeeId": zod.number().min(1)
+})
+
+
+export const RevokeStoreAccessParams = zod.object({
+  "storeId": zod.coerce.number(),
+  "employeeId": zod.coerce.number()
+})
+
+export const RevokeStoreAccessResponse = zod.void()
+
+
+export const ListMyStoresResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "locationId": zod.number(),
+  "active": zod.boolean()
+})
+export const ListMyStoresResponse = zod.array(ListMyStoresResponseItem)
+
+
+/**
+ * @summary Admin-only checkout and reversal audit
+ */
+export const listStoreGiftCardTransactionsQueryLimitDefault = 50;
+export const listStoreGiftCardTransactionsQueryLimitMax = 100;
+
+export const listStoreGiftCardTransactionsQueryOffsetDefault = 0;
+export const listStoreGiftCardTransactionsQueryOffsetMin = 0;
+
+
+
+export const ListStoreGiftCardTransactionsQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(listStoreGiftCardTransactionsQueryLimitMax).default(listStoreGiftCardTransactionsQueryLimitDefault),
+  "offset": zod.coerce.number().min(listStoreGiftCardTransactionsQueryOffsetMin).default(listStoreGiftCardTransactionsQueryOffsetDefault)
+})
+
+export const ListStoreGiftCardTransactionsResponseItem = zod.object({
+  "transactionRef": zod.string(),
+  "kind": zod.enum(['spend', 'reversal']),
+  "cardId": zod.number(),
+  "maskedCode": zod.string(),
+  "storeId": zod.number(),
+  "storeName": zod.string(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "amountCents": zod.number(),
+  "previousBalanceCents": zod.number(),
+  "newBalanceCents": zod.number(),
+  "receiptRef": zod.string().nullable(),
+  "originalTransactionRef": zod.string().nullable(),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+export const ListStoreGiftCardTransactionsResponse = zod.array(ListStoreGiftCardTransactionsResponseItem)
+
+
+
+export const lookupStoreGiftCardBodyCodeMax = 80;
+
+
+
+export const LookupStoreGiftCardBody = zod.object({
+  "storeId": zod.number().min(1),
+  "code": zod.string().min(1).max(lookupStoreGiftCardBodyCodeMax)
+})
+
+export const LookupStoreGiftCardResponse = zod.object({
+  "cardId": zod.number(),
+  "lookupToken": zod.string().describe('Opaque 30-minute checkout capability scoped to signed-in employee, store and card. Never use as a URL parameter.'),
+  "maskedCode": zod.string(),
+  "status": zod.string(),
+  "balanceCents": zod.number()
+})
+
+
+
+
+
+export const spendStoreGiftCardBodyReceiptRefMax = 100;
+
+
+
+export const SpendStoreGiftCardBody = zod.object({
+  "storeId": zod.number().min(1),
+  "cardId": zod.number().min(1),
+  "lookupToken": zod.string().uuid(),
+  "amountCents": zod.number().min(1),
+  "receiptRef": zod.string().min(1).max(spendStoreGiftCardBodyReceiptRefMax),
+  "idempotencyKey": zod.string().uuid()
+})
+
+export const SpendStoreGiftCardResponse = zod.object({
+  "transactionRef": zod.string(),
+  "cardId": zod.number(),
+  "maskedCode": zod.string(),
+  "previousBalanceCents": zod.number(),
+  "newBalanceCents": zod.number(),
+  "amountCents": zod.number(),
+  "receiptRef": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+export const reverseStoreGiftCardSpendBodyReasonMax = 500;
+
+
+
+export const ReverseStoreGiftCardSpendBody = zod.object({
+  "transactionRef": zod.string().uuid(),
+  "reason": zod.string().min(1).max(reverseStoreGiftCardSpendBodyReasonMax),
+  "idempotencyKey": zod.string().uuid()
+})
+
+export const ReverseStoreGiftCardSpendResponse = zod.object({
+  "transactionRef": zod.string(),
+  "cardId": zod.number(),
+  "maskedCode": zod.string(),
+  "previousBalanceCents": zod.number(),
+  "newBalanceCents": zod.number(),
+  "amountCents": zod.number(),
+  "receiptRef": zod.string(),
+  "createdAt": zod.string()
+}).and(zod.object({
+  "reversalRef": zod.string(),
+  "reversedAt": zod.string()
+}))
+
+
 /**
  * @summary Health check
  */

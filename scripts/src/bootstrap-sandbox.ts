@@ -6,7 +6,7 @@ if (!sandboxEnabled()) throw new Error("Sandbox bootstrap requires LEGEND_BUCKS_
 const tables = [
   "departments", "locations", "employees", "magic_tokens", "sessions",
   "transactions", "rewards", "reward_sizes", "redemptions", "goals",
-  "goal_contributions", "app_settings", "gift_card_issues",
+  "goal_contributions", "app_settings", "gift_card_issues", "stores", "store_access", "store_card_ledger", "store_card_lookup_tokens",
 ] as const;
 const ident = (value: string) => `"${value.replace(/"/g, '""')}"`;
 const client = await pool.connect();
@@ -42,6 +42,16 @@ try {
       await client.query(`ALTER SEQUENCE ${ident(SANDBOX_SCHEMA)}.${ident(sequence)} OWNED BY ${ident(SANDBOX_SCHEMA)}.${ident(table)}.${ident(column_name)}`);
       await client.query(`ALTER TABLE ${ident(SANDBOX_SCHEMA)}.${ident(table)} ALTER COLUMN ${ident(column_name)} SET DEFAULT nextval('${SANDBOX_SCHEMA}.${sequence}'::regclass)`);
     }
+  }
+  // Existing sandbox clones predate the checkout checks; LIKE IF NOT EXISTS
+  // will not merge new constraints into an already cloned table.
+  const checks = [
+    ["store_card_positive_amount", "amount_cents > 0 AND previous_balance_cents >= 0 AND new_balance_cents >= 0"],
+    ["store_card_kind_coherent", "(kind = 'spend' AND new_balance_cents = previous_balance_cents - amount_cents AND receipt_normalized IS NOT NULL AND receipt_ref IS NOT NULL AND original_spend_id IS NULL AND reason IS NULL) OR (kind = 'reversal' AND new_balance_cents = previous_balance_cents + amount_cents AND receipt_ref IS NULL AND receipt_normalized IS NULL AND original_spend_id IS NOT NULL AND reason IS NOT NULL)"],
+  ] as const;
+  for (const [name, expression] of checks) {
+    const present = await client.query("SELECT 1 FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname=$1 AND c.conname=$2", [SANDBOX_SCHEMA, name]);
+    if (!present.rowCount) await client.query(`ALTER TABLE ${ident(SANDBOX_SCHEMA)}.store_card_ledger ADD CONSTRAINT ${ident(name)} CHECK (${expression})`);
   }
   // Refuse a partial pre-existing clone whose defaults still reference public.
   const unsafe = await client.query(

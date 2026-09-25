@@ -1,0 +1,25 @@
+# Store gift card development verification
+
+**Development sandbox only.** On 2026-09-25, the Drizzle schema was pushed to the development database and the isolated sandbox clone seeded/refreshed. The versioned, review-only SQL reference is `lib/db/migrations/20260925_store_gift_cards.sql`; Drizzle schema remains canonical. No production schema migration, deployment, or real-store rollout was performed. Replit's managed Publish flow calculates/applies a schema diff only when an authorized administrator publishes after reviewing checkout and reconciliation. Real checkout is disabled by default (`STORE_GIFT_CARDS_ENABLED` unset).
+
+Passed: `pnpm run typecheck:libs`, `pnpm --filter @workspace/api-server run typecheck`, `pnpm --filter @workspace/scripts run typecheck`; sandbox Vitest suites `store-gift-cards.test.ts`, `custom-gift-card-api.test.ts`, and `manager-redemptions.test.ts` (**3 files, 23 tests passed**; checkout suite: 6 tests). Email is mocked in API integration tests; fixtures use generated dummy codes and isolated sandbox users/stores.
+
+Covered: partial spend to zero, overdraft rejection, invalid/voided/unemailed cards, masked lookup/audit, guessed card ID without scoped lookup proof, cross-store proof rejection, unauthorized manager/admin/no-grant checkout, revoked grants and inactive staff/store, identical retry and changed-body conflict, case-insensitive duplicate receipt and concurrent duplicates across cards, simultaneous spending at two stores, audited reversal/retry/new restored balance without Legend Bucks credit, void/reissue/reject spent-history blocks, admin-only approval even for misconfigured gift-card rewards, and rollout disabled with no flag.
+
+**Still untested in deployed Repl.app:** production schema diff/publish, production identity/session configuration, real POS scan and receipt workflow, connectivity/latency/timeouts at store tills, production email delivery, real concurrency/transaction retry under production load, admin reconciliation/sign-off, and actual enabling of checkout. Do not enable real store use or publish for checkout until the admin reviews the checkout/reconciliation procedure and these checks are deliberately completed.
+
+## Browser fixture setup (sandbox development only)
+
+### Completed browser verification
+
+The sandbox browser pass verified admin store creation, explicit grant and revoke, no implicit manager/admin checkout access, and manager gift-card approval controls removed. A synthetic $30 card was looked up through the protected code field; a confirmed $12.50 spend left $17.50. A second $5 spend had its successful server response deliberately dropped. Reloading and retrying the saved draft produced exactly one $5 ledger debit, leaving $12.50.
+
+Admin reconciliation and reversal restored the first $12.50 spend, leaving $25 CAD. The original Legend Bucks redemption debit remained unchanged with no refund. Revoked staff lookup/spend and ungranted admin spend returned 403. The admin page passed a basic 390px no-page-overflow check. Test access was revoked afterward; dummy store/card/audit records remain for review.
+
+The browser initially lacked a raw dummy code because issuance correctly exposes only a mask. This was resolved by replacing only the test-owned sandbox card's hash/last-four with a synthetic code held in test-process memory; no real card code was recovered or disclosed. Controlled/uncontrolled select warnings observed in the browser were corrected afterward and checked by TypeScript; the browser journey was not rerun for that narrow UI correction.
+
+Camera/hardware scanner testing, exhaustive pagination beyond 50 audit rows, and a browser exercise of expired lookup-token renewal remain untested. API tests cover scoped proof and monetary concurrency. The deployed-environment exclusions above still apply.
+
+1. Confirm `NODE_ENV=development` and `LEGEND_BUCKS_SANDBOX=true`; run the supported sandbox seed if its schema is not current. Never perform this against a production database.
+2. In a **local sandbox-only Node/tsx debugger session**, use the existing `generateGiftCardCode()` and `hashGiftCardCode()` helpers. Generate a dummy code in a private variable, insert its **hash and last four only** into a dummy `gift_card_issues` row linked to a dummy approved/fulfilled gift-card redemption, with `status='emailed'`, `emailed_at` set, `voided_at=NULL`, and a known integer-cent `cad_value_cents`. Do not send actual email; use a `.test` address. Keep the raw code only in debugger memory long enough to paste it into the browser checkout form; do not print, log, save to a shared file, put in URL, or add to API response.
+3. Sign in as a sandbox admin, create a store for the fixture employee's location and grant that active employee store access explicitly. Sign in as that employee, enter the private code into the lookup form, record a small partial spend using a unique dummy receipt, and verify the audit/reversal as admin. Remove dummy grants, tokens, ledger rows, card, redemption, and store when finished. The API integration fixtures clean themselves automatically, so use separate browser fixtures.

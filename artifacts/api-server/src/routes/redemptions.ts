@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { IRouter } from "express";
-import { db, redemptionsTable, rewardsTable, rewardSizesTable, employeesTable, transactionsTable, giftCardIssuesTable } from "@workspace/db";
+import { db, redemptionsTable, rewardsTable, rewardSizesTable, employeesTable, transactionsTable, giftCardIssuesTable, storeCardLedgerTable } from "@workspace/db";
 import { eq, and, or, isNull, gt, sql, desc, notInArray } from "drizzle-orm";
 import {
   ListRedemptionsQueryParams,
@@ -249,7 +249,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   // Time Off rewards can never skip payroll sign-off: even when the first
   // approval is not required, they stop at pending_payroll instead of approved.
   const needsPayroll = requiresPayrollApproval(reward);
-  const initialStatus = reward.approvalRequired ? "requested" : needsPayroll ? "pending_payroll" : "approved";
+  const initialStatus = reward.isCustomGiftCard || reward.approvalRequired ? "requested" : needsPayroll ? "pending_payroll" : "approved";
   let redemption: typeof redemptionsTable.$inferSelect;
   try {
     redemption = await db.transaction(async (trx) => {
@@ -350,7 +350,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
         e.status === "active" &&
         !!e.email &&
         e.notifyNewRedemptionRequests &&
-        (e.role === "admin" || (e.role === "manager" && chainSet.has(e.id))),
+        (e.role === "admin" || (!reward.isCustomGiftCard && e.role === "manager" && chainSet.has(e.id))),
     );
     const employeeName = `${user.firstName} ${user.lastName}`;
     for (const approver of approvers) {
@@ -484,6 +484,9 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
   }
 
   // Admins may decide any redemption; managers only those from their own reports.
+  if (redemption.giftCardLbAmount !== null && user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
   if (!(await canDecideRedemptionFor(user, redemption.employeeId))) {
     res.status(403).json({ error: "Forbidden" });
     return;
@@ -565,6 +568,7 @@ router.patch("/redemptions/:id/payroll-approve", requireAuth, async (req, res): 
     res.status(404).json({ error: "Redemption not found" });
     return;
   }
+  if (redemption.giftCardLbAmount !== null) { res.status(403).json({ error: "Gift card approvals are admin-only" }); return; }
   if (redemption.status !== "pending_payroll") {
     res.status(400).json({ error: "Redemption is not awaiting payroll sign-off" });
     return;
@@ -602,7 +606,7 @@ router.patch("/redemptions/:id/payroll-reject", requireAuth, async (req, res): P
 
   const params = RejectRedemptionParams.safeParse(req.params);
   const body = RejectRedemptionBody.safeParse(req.body);
-  if (!params.success || !body.success) {
+  if (!params.success || !body.success || (body.data.adminNote && /LBGC/i.test(body.data.adminNote))) {
     res.status(400).json({ error: "Invalid request" });
     return;
   }
@@ -612,6 +616,7 @@ router.patch("/redemptions/:id/payroll-reject", requireAuth, async (req, res): P
     res.status(404).json({ error: "Redemption not found" });
     return;
   }
+  if (redemption.giftCardLbAmount !== null) { res.status(403).json({ error: "Gift card decisions are admin-only" }); return; }
   if (redemption.status !== "pending_payroll") {
     res.status(400).json({ error: "Redemption is not awaiting payroll sign-off" });
     return;
@@ -660,7 +665,7 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
 
   const params = RejectRedemptionParams.safeParse(req.params);
   const body = RejectRedemptionBody.safeParse(req.body);
-  if (!params.success || !body.success) {
+  if (!params.success || !body.success || (body.data.adminNote && /LBGC/i.test(body.data.adminNote))) {
     res.status(400).json({ error: "Invalid request" });
     return;
   }
@@ -672,6 +677,9 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
   }
 
   // Admins may decide any redemption; managers only those from their own reports.
+  if (redemption.giftCardLbAmount !== null && user.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
   if (!(await canDecideRedemptionFor(user, redemption.employeeId))) {
     res.status(403).json({ error: "Forbidden" });
     return;
@@ -689,6 +697,10 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
       // delivery-ambiguous, so any current card must be explicitly voided
       // before the underlying redemption can be refunded.
       await trx.execute(sql`SELECT pg_advisory_xact_lock(${redemption.id})`);
+      const [spent] = await trx.select({ id: storeCardLedgerTable.id }).from(storeCardLedgerTable)
+        .innerJoin(giftCardIssuesTable, eq(giftCardIssuesTable.id, storeCardLedgerTable.cardId))
+        .where(and(eq(giftCardIssuesTable.redemptionId, redemption.id), eq(storeCardLedgerTable.kind, "spend"))).limit(1);
+      if (spent) throw new Error("Cannot reject a gift card with spending history");
       const [activeIssue] = await trx
         .select({ id: giftCardIssuesTable.id })
         .from(giftCardIssuesTable)
@@ -773,25 +785,27 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
     return;
   }
 
-  const [updated] = await db
-    .update(redemptionsTable)
-    .set({ status: "cancelled" })
-    .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, "requested")))
-    .returning();
-  if (!updated) {
-    res.status(400).json({ error: "Redemption has already been resolved" });
-    return;
+  let updated: typeof redemptionsTable.$inferSelect;
+  try {
+    updated = await db.transaction(async (trx) => {
+      await trx.execute(sql`SELECT pg_advisory_xact_lock(${redemption.id})`);
+      const [spent] = await trx.select({ id: storeCardLedgerTable.id }).from(storeCardLedgerTable)
+        .innerJoin(giftCardIssuesTable, eq(giftCardIssuesTable.id, storeCardLedgerTable.cardId))
+        .where(and(eq(giftCardIssuesTable.redemptionId, redemption.id), eq(storeCardLedgerTable.kind, "spend"))).limit(1);
+      if (spent) throw new Error("Cannot cancel a gift card with spending history");
+      const [resolved] = await trx.update(redemptionsTable).set({ status: "cancelled" })
+        .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, "requested"))).returning();
+      if (!resolved) throw new Error("Redemption has already been resolved");
+      await trx.insert(transactionsTable).values({
+        type: "refund", amount: redemption.buckCost,
+        fromEmployeeId: null, toEmployeeId: redemption.employeeId,
+        note: `Refund for cancelled redemption #${redemption.id}`, redemptionId: redemption.id,
+      });
+      return resolved;
+    });
+  } catch {
+    res.status(409).json({ error: "Cannot cancel this redemption" }); return;
   }
-
-  // Refund bucks
-  await db.insert(transactionsTable).values({
-    type: "refund",
-    amount: redemption.buckCost,
-    fromEmployeeId: null,
-    toEmployeeId: redemption.employeeId,
-    note: `Refund for cancelled redemption #${redemption.id}`,
-    redemptionId: redemption.id,
-  });
 
   // Restore stock (per-size for sized redemptions, pooled otherwise)
   await restoreStock(redemption);
@@ -869,6 +883,11 @@ async function createIssue(redemptionId: number, adminId: number, isReissue: boo
     if (!isReissue && current) throw new Error("A card has already been issued; use Reissue Card");
     if (isReissue && (!current || current.status === "voided" || current.status === "reissued")) {
       throw new Error("There is no active card to reissue");
+    }
+    if (isReissue && current) {
+      const [spent] = await trx.select({ id: storeCardLedgerTable.id }).from(storeCardLedgerTable)
+        .where(and(eq(storeCardLedgerTable.cardId, current.id), eq(storeCardLedgerTable.kind, "spend"))).limit(1);
+      if (spent) throw new Error("Cannot reissue a card with spending history");
     }
     if (isReissue && current) {
       await trx.update(giftCardIssuesTable).set({
@@ -955,16 +974,22 @@ router.post("/redemptions/:id/gift-card/void", requireAuth, async (req, res): Pr
   const params = VoidGiftCardParams.safeParse(req.params);
   const body = VoidGiftCardBody.safeParse(req.body);
   if (user.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
-  if (!params.success || !body.success) { res.status(400).json({ error: "A void reason is required" }); return; }
-  const [issue] = await db.transaction(async (trx) => {
+  if (!params.success || !body.success || /LBGC/i.test(body.data.reason)) { res.status(400).json({ error: "A valid void reason is required" }); return; }
+  let issue: typeof giftCardIssuesTable.$inferSelect | undefined;
+  try {
+  [issue] = await db.transaction(async (trx) => {
     await trx.execute(sql`SELECT pg_advisory_xact_lock(${params.data.id})`);
     const [current] = await trx.select().from(giftCardIssuesTable)
       .where(eq(giftCardIssuesTable.redemptionId, params.data.id)).orderBy(desc(giftCardIssuesTable.id)).limit(1);
     if (!current || current.status === "voided" || current.status === "reissued") return [];
+    const [spent] = await trx.select({ id: storeCardLedgerTable.id }).from(storeCardLedgerTable)
+      .where(and(eq(storeCardLedgerTable.cardId, current.id), eq(storeCardLedgerTable.kind, "spend"))).limit(1);
+    if (spent) throw new Error("Cannot void a card with spending history");
     return trx.update(giftCardIssuesTable).set({
       status: "voided", voidedAt: new Date(), voidReason: body.data.reason.trim(),
     }).where(eq(giftCardIssuesTable.id, current.id)).returning();
   });
+  } catch { res.status(409).json({ error: "Cannot void a card with spending history" }); return; }
   if (!issue) { res.status(400).json({ error: "There is no active card to void" }); return; }
   res.json(VoidGiftCardResponse.parse(issueToResponse(issue)));
 });

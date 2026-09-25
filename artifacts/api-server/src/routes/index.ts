@@ -11,6 +11,7 @@ import goalsRouter from "./goals";
 import settingsRouter from "./settings";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
+import storeGiftCardsRouter from "./storeGiftCards";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(goalsRouter);
 router.use(settingsRouter);
 router.use(dashboardRouter);
 router.use(storageRouter);
+router.use(storeGiftCardsRouter);
 
 export default router;

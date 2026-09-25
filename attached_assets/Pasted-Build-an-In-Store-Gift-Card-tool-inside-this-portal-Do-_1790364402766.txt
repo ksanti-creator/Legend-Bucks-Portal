@@ -1,0 +1,13 @@
+Build an In-Store Gift Card tool inside this portal. Do not integrate with Salesforce or create a separate app. The portal must be the source of truth for each card’s remaining CAD balance.
+
+ Store workflow:​ An authorized, signed-in store employee scans or enters the existing gift-card code. Show only the masked code, card status, and current CAD balance. The employee enters the amount spent in dollars (for example, 12.50) and the store receipt number, reviews a confirmation, then records the spend. Show the new balance and a transaction reference. Allow partial spending until the balance reaches zero.
+
+ Permissions:​ An admin explicitly grants or revokes store-verification access for individual employees assigned to a store. Being a manager or having an ordinary portal login must not grant this access. Gift-card request approval and card issuance remain admin-only, separate actions—fix any manager-approval loophole in both the screen and API.
+
+ Balance safety:​ Accept only issued, successfully emailed, unvoided cards. Store amounts as integer CAD cents. Check the live balance and deduct the spend in one database transaction, so simultaneous stores cannot overdraw it. Make retries/double-clicks idempotent; a network timeout must not cause a second charge. Require a unique store receipt reference and keep an audit record of amount, previous/new balance, store, employee, receipt, and time.
+
+ Corrections:​ Staff cannot edit balances. Give admins an audited reversal action requiring a reason and the original transaction reference. Do not restore an employee’s Legend Bucks when reversing a store spend. Block voiding or reissuing a card with spending history until safe remaining-value rules are implemented.
+
+ Security and rollout:​ Never put full card codes in URLs, logs, exports, receipt fields, or API responses. Add the database migration for existing issued cards without changing their face value. Use dummy cards for tests. Test partial spends, insufficient balance, invalid/voided cards, unauthorized staff, retry, two simultaneous stores, and reversal. Do not publish or enable real store use until these tests pass and an admin reviews the checkout/reconciliation procedure.​
+
+ Deliver the working page, API, migration, and test results. Tell me what remains untested in the deployed Repl.

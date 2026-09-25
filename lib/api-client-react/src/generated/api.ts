@@ -52,6 +52,7 @@ import type {
   ListGoalsParams,
   ListRedemptionsParams,
   ListRewardsParams,
+  ListStoreGiftCardTransactionsParams,
   ListTransactionsParams,
   Location,
   MagicLinkRequest,
@@ -71,6 +72,17 @@ import type {
   Settings,
   SettingsUpdate,
   StartingBalanceInfo,
+  Store,
+  StoreAccess,
+  StoreCardLookup,
+  StoreCardLookupInput,
+  StoreCardReversal,
+  StoreCardReversalInput,
+  StoreCardSpend,
+  StoreCardSpendInput,
+  StoreCardTransaction,
+  StoreGiftCardStatus,
+  StoreInput,
   Transaction,
   TransactionPage,
   TransactionSummary,
@@ -104,6 +116,760 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetStoreGiftCardStatusUrl = () => {
+
+
+
+
+  return `/api/store-gift-cards/status`
+}
+
+export const getStoreGiftCardStatus = async ( options?: RequestInit): Promise<StoreGiftCardStatus> => {
+
+  return customFetch<StoreGiftCardStatus>(getGetStoreGiftCardStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStoreGiftCardStatusQueryKey = () => {
+    return [
+    `/api/store-gift-cards/status`
+    ] as const;
+    }
+
+
+export const getGetStoreGiftCardStatusQueryOptions = <TData = Awaited<ReturnType<typeof getStoreGiftCardStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStoreGiftCardStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStoreGiftCardStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoreGiftCardStatus>>> = ({ signal }) => getStoreGiftCardStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStoreGiftCardStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStoreGiftCardStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getStoreGiftCardStatus>>>
+export type GetStoreGiftCardStatusQueryError = ErrorType<unknown>
+
+
+
+export function useGetStoreGiftCardStatus<TData = Awaited<ReturnType<typeof getStoreGiftCardStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStoreGiftCardStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStoreGiftCardStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListStoresUrl = () => {
+
+
+
+
+  return `/api/stores`
+}
+
+export const listStores = async ( options?: RequestInit): Promise<Store[]> => {
+
+  return customFetch<Store[]>(getListStoresUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStoresQueryKey = () => {
+    return [
+    `/api/stores`
+    ] as const;
+    }
+
+
+export const getListStoresQueryOptions = <TData = Awaited<ReturnType<typeof listStores>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStoresQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStores>>> = ({ signal }) => listStores({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStores>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStoresQueryResult = NonNullable<Awaited<ReturnType<typeof listStores>>>
+export type ListStoresQueryError = ErrorType<unknown>
+
+
+
+export function useListStores<TData = Awaited<ReturnType<typeof listStores>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStoresQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateStoreUrl = () => {
+
+
+
+
+  return `/api/stores`
+}
+
+export const createStore = async (storeInput: StoreInput, options?: RequestInit): Promise<Store> => {
+
+  return customFetch<Store>(getCreateStoreUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(storeInput)
+  }
+);}
+
+
+
+
+export const getCreateStoreMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStore>>, TError,{data: BodyType<StoreInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStore>>, TError,{data: BodyType<StoreInput>}, TContext> => {
+
+const mutationKey = ['createStore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStore>>, {data: BodyType<StoreInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStore(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStoreMutationResult = NonNullable<Awaited<ReturnType<typeof createStore>>>
+    export type CreateStoreMutationBody = BodyType<StoreInput>
+    export type CreateStoreMutationError = ErrorType<unknown>
+
+    export const useCreateStore = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStore>>, TError,{data: BodyType<StoreInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStore>>,
+        TError,
+        {data: BodyType<StoreInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStoreMutationOptions(options));
+    }
+
+export const getListStoreAccessUrl = () => {
+
+
+
+
+  return `/api/stores/access`
+}
+
+export const listStoreAccess = async ( options?: RequestInit): Promise<StoreAccess[]> => {
+
+  return customFetch<StoreAccess[]>(getListStoreAccessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStoreAccessQueryKey = () => {
+    return [
+    `/api/stores/access`
+    ] as const;
+    }
+
+
+export const getListStoreAccessQueryOptions = <TData = Awaited<ReturnType<typeof listStoreAccess>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStoreAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStoreAccessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStoreAccess>>> = ({ signal }) => listStoreAccess({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStoreAccess>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStoreAccessQueryResult = NonNullable<Awaited<ReturnType<typeof listStoreAccess>>>
+export type ListStoreAccessQueryError = ErrorType<unknown>
+
+
+
+export function useListStoreAccess<TData = Awaited<ReturnType<typeof listStoreAccess>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStoreAccess>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStoreAccessQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGrantStoreAccessUrl = () => {
+
+
+
+
+  return `/api/stores/access`
+}
+
+export const grantStoreAccess = async (storeAccess: StoreAccess, options?: RequestInit): Promise<StoreAccess> => {
+
+  return customFetch<StoreAccess>(getGrantStoreAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(storeAccess)
+  }
+);}
+
+
+
+
+export const getGrantStoreAccessMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantStoreAccess>>, TError,{data: BodyType<StoreAccess>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof grantStoreAccess>>, TError,{data: BodyType<StoreAccess>}, TContext> => {
+
+const mutationKey = ['grantStoreAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof grantStoreAccess>>, {data: BodyType<StoreAccess>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  grantStoreAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GrantStoreAccessMutationResult = NonNullable<Awaited<ReturnType<typeof grantStoreAccess>>>
+    export type GrantStoreAccessMutationBody = BodyType<StoreAccess>
+    export type GrantStoreAccessMutationError = ErrorType<unknown>
+
+    export const useGrantStoreAccess = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantStoreAccess>>, TError,{data: BodyType<StoreAccess>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof grantStoreAccess>>,
+        TError,
+        {data: BodyType<StoreAccess>},
+        TContext
+      > => {
+      return useMutation(getGrantStoreAccessMutationOptions(options));
+    }
+
+export const getRevokeStoreAccessUrl = (storeId: number,
+    employeeId: number,) => {
+
+
+
+
+  return `/api/stores/access/${storeId}/${employeeId}`
+}
+
+export const revokeStoreAccess = async (storeId: number,
+    employeeId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeStoreAccessUrl(storeId,employeeId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeStoreAccessMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeStoreAccess>>, TError,{storeId: number;employeeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeStoreAccess>>, TError,{storeId: number;employeeId: number}, TContext> => {
+
+const mutationKey = ['revokeStoreAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeStoreAccess>>, {storeId: number;employeeId: number}> = (props) => {
+          const {storeId,employeeId} = props ?? {};
+
+          return  revokeStoreAccess(storeId,employeeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeStoreAccessMutationResult = NonNullable<Awaited<ReturnType<typeof revokeStoreAccess>>>
+
+    export type RevokeStoreAccessMutationError = ErrorType<unknown>
+
+    export const useRevokeStoreAccess = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeStoreAccess>>, TError,{storeId: number;employeeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeStoreAccess>>,
+        TError,
+        {storeId: number;employeeId: number},
+        TContext
+      > => {
+      return useMutation(getRevokeStoreAccessMutationOptions(options));
+    }
+
+export const getListMyStoresUrl = () => {
+
+
+
+
+  return `/api/store-gift-cards/my-stores`
+}
+
+export const listMyStores = async ( options?: RequestInit): Promise<Store[]> => {
+
+  return customFetch<Store[]>(getListMyStoresUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyStoresQueryKey = () => {
+    return [
+    `/api/store-gift-cards/my-stores`
+    ] as const;
+    }
+
+
+export const getListMyStoresQueryOptions = <TData = Awaited<ReturnType<typeof listMyStores>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyStores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyStoresQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyStores>>> = ({ signal }) => listMyStores({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyStores>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyStoresQueryResult = NonNullable<Awaited<ReturnType<typeof listMyStores>>>
+export type ListMyStoresQueryError = ErrorType<unknown>
+
+
+
+export function useListMyStores<TData = Awaited<ReturnType<typeof listMyStores>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyStores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyStoresQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListStoreGiftCardTransactionsUrl = (params?: ListStoreGiftCardTransactionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/store-gift-cards/transactions?${stringifiedParams}` : `/api/store-gift-cards/transactions`
+}
+
+/**
+ * @summary Admin-only checkout and reversal audit
+ */
+export const listStoreGiftCardTransactions = async (params?: ListStoreGiftCardTransactionsParams, options?: RequestInit): Promise<StoreCardTransaction[]> => {
+
+  return customFetch<StoreCardTransaction[]>(getListStoreGiftCardTransactionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStoreGiftCardTransactionsQueryKey = (params?: ListStoreGiftCardTransactionsParams,) => {
+    return [
+    `/api/store-gift-cards/transactions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListStoreGiftCardTransactionsQueryOptions = <TData = Awaited<ReturnType<typeof listStoreGiftCardTransactions>>, TError = ErrorType<unknown>>(params?: ListStoreGiftCardTransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStoreGiftCardTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStoreGiftCardTransactionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStoreGiftCardTransactions>>> = ({ signal }) => listStoreGiftCardTransactions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStoreGiftCardTransactions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStoreGiftCardTransactionsQueryResult = NonNullable<Awaited<ReturnType<typeof listStoreGiftCardTransactions>>>
+export type ListStoreGiftCardTransactionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin-only checkout and reversal audit
+ */
+
+export function useListStoreGiftCardTransactions<TData = Awaited<ReturnType<typeof listStoreGiftCardTransactions>>, TError = ErrorType<unknown>>(
+ params?: ListStoreGiftCardTransactionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStoreGiftCardTransactions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStoreGiftCardTransactionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLookupStoreGiftCardUrl = () => {
+
+
+
+
+  return `/api/store-gift-cards/lookup`
+}
+
+export const lookupStoreGiftCard = async (storeCardLookupInput: StoreCardLookupInput, options?: RequestInit): Promise<StoreCardLookup> => {
+
+  return customFetch<StoreCardLookup>(getLookupStoreGiftCardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(storeCardLookupInput)
+  }
+);}
+
+
+
+
+export const getLookupStoreGiftCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof lookupStoreGiftCard>>, TError,{data: BodyType<StoreCardLookupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof lookupStoreGiftCard>>, TError,{data: BodyType<StoreCardLookupInput>}, TContext> => {
+
+const mutationKey = ['lookupStoreGiftCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof lookupStoreGiftCard>>, {data: BodyType<StoreCardLookupInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  lookupStoreGiftCard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LookupStoreGiftCardMutationResult = NonNullable<Awaited<ReturnType<typeof lookupStoreGiftCard>>>
+    export type LookupStoreGiftCardMutationBody = BodyType<StoreCardLookupInput>
+    export type LookupStoreGiftCardMutationError = ErrorType<unknown>
+
+    export const useLookupStoreGiftCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof lookupStoreGiftCard>>, TError,{data: BodyType<StoreCardLookupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof lookupStoreGiftCard>>,
+        TError,
+        {data: BodyType<StoreCardLookupInput>},
+        TContext
+      > => {
+      return useMutation(getLookupStoreGiftCardMutationOptions(options));
+    }
+
+export const getSpendStoreGiftCardUrl = () => {
+
+
+
+
+  return `/api/store-gift-cards/spend`
+}
+
+export const spendStoreGiftCard = async (storeCardSpendInput: StoreCardSpendInput, options?: RequestInit): Promise<StoreCardSpend> => {
+
+  return customFetch<StoreCardSpend>(getSpendStoreGiftCardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(storeCardSpendInput)
+  }
+);}
+
+
+
+
+export const getSpendStoreGiftCardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof spendStoreGiftCard>>, TError,{data: BodyType<StoreCardSpendInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof spendStoreGiftCard>>, TError,{data: BodyType<StoreCardSpendInput>}, TContext> => {
+
+const mutationKey = ['spendStoreGiftCard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof spendStoreGiftCard>>, {data: BodyType<StoreCardSpendInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  spendStoreGiftCard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SpendStoreGiftCardMutationResult = NonNullable<Awaited<ReturnType<typeof spendStoreGiftCard>>>
+    export type SpendStoreGiftCardMutationBody = BodyType<StoreCardSpendInput>
+    export type SpendStoreGiftCardMutationError = ErrorType<unknown>
+
+    export const useSpendStoreGiftCard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof spendStoreGiftCard>>, TError,{data: BodyType<StoreCardSpendInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof spendStoreGiftCard>>,
+        TError,
+        {data: BodyType<StoreCardSpendInput>},
+        TContext
+      > => {
+      return useMutation(getSpendStoreGiftCardMutationOptions(options));
+    }
+
+export const getReverseStoreGiftCardSpendUrl = () => {
+
+
+
+
+  return `/api/store-gift-cards/reverse`
+}
+
+export const reverseStoreGiftCardSpend = async (storeCardReversalInput: StoreCardReversalInput, options?: RequestInit): Promise<StoreCardReversal> => {
+
+  return customFetch<StoreCardReversal>(getReverseStoreGiftCardSpendUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(storeCardReversalInput)
+  }
+);}
+
+
+
+
+export const getReverseStoreGiftCardSpendMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseStoreGiftCardSpend>>, TError,{data: BodyType<StoreCardReversalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reverseStoreGiftCardSpend>>, TError,{data: BodyType<StoreCardReversalInput>}, TContext> => {
+
+const mutationKey = ['reverseStoreGiftCardSpend'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reverseStoreGiftCardSpend>>, {data: BodyType<StoreCardReversalInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reverseStoreGiftCardSpend(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReverseStoreGiftCardSpendMutationResult = NonNullable<Awaited<ReturnType<typeof reverseStoreGiftCardSpend>>>
+    export type ReverseStoreGiftCardSpendMutationBody = BodyType<StoreCardReversalInput>
+    export type ReverseStoreGiftCardSpendMutationError = ErrorType<unknown>
+
+    export const useReverseStoreGiftCardSpend = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseStoreGiftCardSpend>>, TError,{data: BodyType<StoreCardReversalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reverseStoreGiftCardSpend>>,
+        TError,
+        {data: BodyType<StoreCardReversalInput>},
+        TContext
+      > => {
+      return useMutation(getReverseStoreGiftCardSpendMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

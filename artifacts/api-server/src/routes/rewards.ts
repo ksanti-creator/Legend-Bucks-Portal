@@ -168,7 +168,7 @@ router.post("/rewards", requireAuth, async (req, res): Promise<void> => {
       quantity: body.data.isCustomGiftCard ? null : (body.data.quantity ?? null),
       locationRestriction: body.data.locationRestriction ?? null,
       active: body.data.active ?? true,
-      approvalRequired: body.data.approvalRequired ?? (body.data.isCustomGiftCard ? true : false),
+      approvalRequired: body.data.isCustomGiftCard ? true : (body.data.approvalRequired ?? false),
       isCustomGiftCard: body.data.isCustomGiftCard ?? false,
       giftCardIncrementLb: increment,
       giftCardMinimumLb: minimum,
@@ -286,7 +286,8 @@ router.patch("/rewards/:id", requireAuth, async (req, res): Promise<void> => {
   if ("quantity" in body.data) updates.quantity = body.data.quantity;
   if ("locationRestriction" in body.data) updates.locationRestriction = body.data.locationRestriction;
   if (body.data.active !== undefined) updates.active = body.data.active;
-  if (body.data.approvalRequired !== undefined) updates.approvalRequired = body.data.approvalRequired;
+  if (custom) updates.approvalRequired = true;
+  else if (body.data.approvalRequired !== undefined) updates.approvalRequired = body.data.approvalRequired;
   if (body.data.isCustomGiftCard !== undefined) updates.isCustomGiftCard = body.data.isCustomGiftCard;
   if ("giftCardIncrementLb" in body.data || body.data.isCustomGiftCard !== undefined) updates.giftCardIncrementLb = increment;
   if ("giftCardMinimumLb" in body.data || body.data.isCustomGiftCard !== undefined) updates.giftCardMinimumLb = minimum;

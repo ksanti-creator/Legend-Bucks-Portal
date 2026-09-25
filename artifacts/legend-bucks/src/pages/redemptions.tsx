@@ -18,8 +18,9 @@ export default function Redemptions() {
   const canViewQueue = isAdmin || isManager || user?.role === "accounting_admin";
   // Admins can decide anything; a manager can decide their reports' requests
   // but never their own.
-  const canDecide = (item: { employeeId?: number }) =>
-    isAdmin || (isManager && item.employeeId !== user?.id);
+  // Gift card requests are admin-only decisions; managers cannot approve them.
+  const canDecide = (item: { employeeId?: number; giftCardLbAmount?: number | null }) =>
+    isAdmin || (isManager && item.employeeId !== user?.id && item.giftCardLbAmount == null);
   // Payroll sign-off on Time Off redemptions: accounting admins and admins only.
   const canPayroll = isAdmin || user?.role === "accounting_admin";
   const { toast } = useToast();

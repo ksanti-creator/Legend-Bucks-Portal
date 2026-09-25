@@ -9,3 +9,4 @@ export * from "./redemptions";
 export * from "./goals";
 export * from "./settings";
 export * from "./giftCardIssues";
+export * from "./storeGiftCards";

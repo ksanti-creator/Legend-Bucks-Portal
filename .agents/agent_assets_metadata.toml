@@ -98,3 +98,31 @@ mtime_ms = 1790357494059
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/647dfcb9-f86a-41d7-bd18-5a01b5373894/b3023ea6-0f87-4aba-8c25-fb83bbd4fde3"
 storage_version_token = "1790357501086116"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "F0E2cB_3Crt3tQ473lQ-r"
+uri = "file://docs/store-card-test-results.md"
+type = "text"
+title = "Store gift card test results"
+description = "Passed sandbox checks and remaining deployed-environment verification."
+logical_id = "976ec02a-20e1-44fe-b1dd-aaf4ecddf856"
+content_hash = "sha256:4ebfddc55b378b9438d541971e1b4382cc644fb21035ce1cf55cc00655179291"
+size = 5140
+mtime_ms = 1790365980196
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/976ec02a-20e1-44fe-b1dd-aaf4ecddf856/6897a64e-b866-4bdb-9202-a8361697d5df"
+storage_version_token = "1790366034190370"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "35W6-riox7adhdt2wDCkA"
+uri = "file://docs/store-card-checkout-reconciliation.md"
+type = "text"
+title = "Checkout and reconciliation — draft"
+description = "Procedure for admin review before real store use."
+logical_id = "d55c57d6-1c78-4a88-8d8f-9a06749dda15"
+content_hash = "sha256:060db7f286b70f0fe96c57f6c2c608bd7225ba704e4cc3d716a21ce773e9186c"
+size = 4271
+mtime_ms = 1790364821879
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/d55c57d6-1c78-4a88-8d8f-9a06749dda15/b78f3d53-e39a-4635-a675-b84dc6607745"
+storage_version_token = "1790366034815612"
+content_type = "text/markdown"

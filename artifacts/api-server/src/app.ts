@@ -15,7 +15,9 @@ app.use(
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          // Even malformed URLs must never disclose a bearer gift-card code
+          // in access logs; all valid checkout codes belong in JSON bodies only.
+          url: req.url?.split("?")[0].replace(/LBGC[^/?]*/gi, "[REDACTED-CARD]"),
         };
       },
       res(res) {
@@ -57,7 +59,7 @@ app.use(
       if (!origin) return callback(null, true);
       const trusted = TRUSTED_ORIGIN_PATTERNS.some((re) => re.test(origin));
       if (trusted) return callback(null, true);
-      callback(new Error(`CORS: origin '${origin}' is not allowed`));
+      callback(new Error("CORS: origin is not allowed"));
     },
     credentials: true,
   }),

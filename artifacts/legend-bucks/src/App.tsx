@@ -19,6 +19,8 @@ import Redemptions from '@/pages/redemptions';
 import Goals from '@/pages/goals';
 import Settings from '@/pages/settings';
 import Help from '@/pages/help';
+import StoreGiftCards from '@/pages/store-gift-cards';
+import StoreGiftCardsAdmin from '@/pages/store-gift-cards-admin';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +63,8 @@ function Router() {
             <Route path="/goals" component={Goals} />
             <Route path="/settings" component={Settings} />
             <Route path="/help" component={Help} />
+            <Route path="/store-gift-cards/admin" component={StoreGiftCardsAdmin} />
+            <Route path="/store-gift-cards" component={StoreGiftCards} />
             <Route component={NotFound} />
           </Switch>
         </Shell>

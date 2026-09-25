@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useGetMe, useLogout } from "@workspace/api-client-react";
+import { useGetMe, useLogout, useListMyStores, getListMyStoresQueryKey } from "@workspace/api-client-react";
 import { 
   LayoutDashboard, 
   Users, 
@@ -15,7 +15,9 @@ import {
   Building2,
   HelpCircle,
   Coins,
-  Menu
+  Menu,
+  CreditCard,
+  ShieldCheck
 } from "lucide-react";
 
 import { cn, getInitials } from "@/lib/utils";
@@ -51,7 +53,7 @@ function SidebarContent({
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = location.startsWith(item.href);
+          const isActive = location.startsWith(item.href) && !navItems.some((o) => o.href.length > item.href.length && o.href.startsWith(item.href) && location.startsWith(o.href));
           return (
             <Link 
               key={item.href} 
@@ -105,6 +107,8 @@ function SidebarContent({
 export function Shell({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useGetMe();
   const logout = useLogout();
+  // Store checkout link is driven by explicit server-side store grants, not by role.
+  const { data: myStores } = useListMyStores({ query: { enabled: !!user, queryKey: getListMyStoresQueryKey() } });
   const [location, setLocation] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -166,6 +170,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
     if (user.role === "admin") {
       navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
     }
+  }
+
+  if (myStores && myStores.length > 0) {
+    navItems.push({ href: "/store-gift-cards", label: "Store Gift Cards", icon: CreditCard });
+  }
+  if (user.role === "admin") {
+    navItems.push({ href: "/store-gift-cards/admin", label: "Store Card Admin", icon: ShieldCheck });
   }
 
   navItems.push({ href: "/help", label: "Help", icon: HelpCircle });
