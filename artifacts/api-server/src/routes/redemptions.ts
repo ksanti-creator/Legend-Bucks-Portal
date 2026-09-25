@@ -109,6 +109,7 @@ async function enrichRedemption(r: any, isAdmin: boolean) {
     employeeName: emp ? `${emp.firstName} ${emp.lastName}` : "Unknown",
     rewardId: r.rewardId,
     rewardName: reward?.name ?? "Unknown",
+    rewardCategory: reward?.category ?? null,
     status: r.status,
     buckCost: r.buckCost,
     // CAD value is accounting-only: only expose it to admins, never to managers or staff.
@@ -800,7 +801,7 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
 
 router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
-  if (user.role !== "admin") {
+  if (user.role !== "admin" && user.role !== "accounting_admin") {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -817,6 +818,10 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
     return;
   }
   const [fulfillReward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+  if (user.role === "accounting_admin" && !requiresPayrollApproval(fulfillReward)) {
+    res.status(403).json({ error: "Accounting admins can only fulfill Time Off redemptions" });
+    return;
+  }
   if (fulfillReward?.isCustomGiftCard || redemption.giftCardLbAmount !== null) {
     res.status(400).json({ error: "Use Issue & Email Gift Card for custom gift cards" });
     return;
@@ -825,8 +830,12 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
   const [updated] = await db
     .update(redemptionsTable)
     .set({ status: "fulfilled" })
-    .where(eq(redemptionsTable.id, params.data.id))
+    .where(and(eq(redemptionsTable.id, params.data.id), eq(redemptionsTable.status, "approved")))
     .returning();
+  if (!updated) {
+    res.status(400).json({ error: "Only approved redemptions can be fulfilled" });
+    return;
+  }
 
   // Notify the employee their reward is on its way — best-effort, never blocks.
   try {
@@ -840,7 +849,7 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
     req.log.error({ err, redemptionId: updated.id }, "Failed to send redemption fulfilled email");
   }
 
-  res.json(FulfillRedemptionResponse.parse(await enrichRedemption(updated, user.role === "admin")));
+  res.json(FulfillRedemptionResponse.parse(await enrichRedemption(updated, canViewAccounting(user.role))));
 });
 
 async function createIssue(redemptionId: number, adminId: number, isReissue: boolean) {

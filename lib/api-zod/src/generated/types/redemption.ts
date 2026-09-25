@@ -14,6 +14,11 @@ export interface Redemption {
   employeeName?: string;
   rewardId: number;
   rewardName?: string;
+  /**
+     * Category of the associated reward, or null if unavailable.
+     * @nullable
+     */
+  rewardCategory?: string | null;
   status: RedemptionStatus;
   buckCost: number;
   /** @nullable */

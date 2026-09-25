@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Transactions() {
   const { data: user } = useGetMe();
   const { toast } = useToast();
-  // Full admins and the read-only accounting_admin role can see the whole
+  // Full admins and accounting admins can see the whole
   // organization's ledger and export it; everyone else sees only their own.
   const canViewAll = user?.role === "admin" || user?.role === "accounting_admin";
   const [exporting, setExporting] = useState(false);

@@ -3512,7 +3512,7 @@ export const getFulfillRedemptionUrl = (id: number,) => {
 }
 
 /**
- * @summary Mark a redemption as fulfilled (admin only)
+ * @summary Mark an approved redemption as fulfilled (admins; accounting admins for Time Off only)
  */
 export const fulfillRedemption = async (id: number, options?: RequestInit): Promise<Redemption> => {
 
@@ -3560,7 +3560,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type FulfillRedemptionMutationError = ErrorType<unknown>
 
     /**
- * @summary Mark a redemption as fulfilled (admin only)
+ * @summary Mark an approved redemption as fulfilled (admins; accounting admins for Time Off only)
  */
 export const useFulfillRedemption = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof fulfillRedemption>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}

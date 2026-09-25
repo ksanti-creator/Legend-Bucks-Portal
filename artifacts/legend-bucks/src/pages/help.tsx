@@ -217,11 +217,12 @@ const FLOWS: Record<Role, Flow[]> = {
       ],
     },
     {
-      title: "Review redemptions (read-only)",
-      summary: "See reward requests and their cost, without processing them.",
+      title: "Review redemptions and process Time Off",
+      summary: "See reward requests and their cost, and complete Time Off payroll processing.",
       steps: [
         "Open Redemptions to view all reward requests and their status.",
-        "Approving, rejecting, and fulfilling are handled by admins — you have view-only access.",
+        "After adding Time Off in Lieu to BambooHR, approve the request in the Payroll tab, then mark the approved Time Off redemption fulfilled.",
+        "Other reward approvals and fulfillment are handled by admins.",
       ],
     },
   ],
@@ -249,7 +250,7 @@ const ROLE_META: Record<
   accounting_admin: {
     label: "Accounting Admin",
     icon: Calculator,
-    blurb: "View and export the ledger and cost reports — read-only.",
+    blurb: "View and export accounting reports, and process Time Off payroll requests.",
   },
 };
 

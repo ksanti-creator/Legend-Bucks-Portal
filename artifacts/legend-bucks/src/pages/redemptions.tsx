@@ -13,12 +13,11 @@ export default function Redemptions() {
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
   const isManager = user?.role === "manager";
-  // accounting_admin can view all redemptions (for cost reconciliation) but
-  // cannot process them. Managers see their reports' requests (the API scopes
-  // the list to their reporting subtree plus their own).
+  // Accounting admins can view all redemptions, but process Time Off only.
+  // Managers see their reports' requests plus their own.
   const canViewQueue = isAdmin || isManager || user?.role === "accounting_admin";
   // Admins can decide anything; a manager can decide their reports' requests
-  // but never their own. Fulfillment is admin-only.
+  // but never their own.
   const canDecide = (item: { employeeId?: number }) =>
     isAdmin || (isManager && item.employeeId !== user?.id);
   // Payroll sign-off on Time Off redemptions: accounting admins and admins only.
@@ -275,7 +274,7 @@ export default function Redemptions() {
                       </span>
                     )}
 
-                     {isAdmin && item.status === 'approved' && item.giftCardLbAmount == null && (
+                     {(isAdmin || (canPayroll && item.rewardCategory?.trim().toLowerCase() === 'time off')) && item.status === 'approved' && item.giftCardLbAmount == null && (
                       <Button 
                         className="w-full bg-primary hover:bg-primary/90"
                         onClick={() => handleAction(item.id, 'fulfill')}

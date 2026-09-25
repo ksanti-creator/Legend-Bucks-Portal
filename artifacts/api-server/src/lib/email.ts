@@ -497,7 +497,7 @@ export async function sendTimeOffPayrollEmail(
      Reward: <strong>${escapeHtml(rewardName)}</strong><br />
      Request reference: #${redemptionId}</p>
      ${rewardDescription ? `<p>${escapeHtml(rewardDescription)}</p>` : ""}
-     <p style="color:#4f4f51;line-height:1.6;">Use the reward's stated time allowance; confirm the duration before making an entry if it is unclear. This email does not update BambooHR automatically. Complete the existing payroll sign-off in Legend Bucks after processing.</p>`);
+     <p style="color:#4f4f51;line-height:1.6;">Use the reward's stated time allowance; confirm the duration before making an entry if it is unclear. This email does not update BambooHR automatically. After adding the balance in BambooHR, approve the request in the Payroll tab in Legend Bucks, then mark the approved Time Off redemption fulfilled.</p>`);
   await sendBrandedEmail("payroll@legendboats.com", `Time Off in Lieu: ${employeeName} — request #${redemptionId}`, html, "Failed to send Time Off payroll email");
 }
 

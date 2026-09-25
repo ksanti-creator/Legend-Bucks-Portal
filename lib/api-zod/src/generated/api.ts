@@ -908,6 +908,7 @@ export const ListRedemptionsResponseItem = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -957,6 +958,7 @@ export const CreateRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1001,6 +1003,7 @@ export const GetRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1039,6 +1042,7 @@ export const ApproveRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1081,6 +1085,7 @@ export const RejectRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1119,6 +1124,7 @@ export const PayrollApproveRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1161,6 +1167,7 @@ export const PayrollRejectRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1199,6 +1206,7 @@ export const CancelRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),
@@ -1225,7 +1233,7 @@ export const CancelRedemptionResponse = zod.object({
 
 
 /**
- * @summary Mark a redemption as fulfilled (admin only)
+ * @summary Mark an approved redemption as fulfilled (admins; accounting admins for Time Off only)
  */
 export const FulfillRedemptionParams = zod.object({
   "id": zod.coerce.number()
@@ -1237,6 +1245,7 @@ export const FulfillRedemptionResponse = zod.object({
   "employeeName": zod.string().optional(),
   "rewardId": zod.number(),
   "rewardName": zod.string().optional(),
+  "rewardCategory": zod.string().nullish().describe('Category of the associated reward, or null if unavailable.'),
   "status": zod.enum(['requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled']),
   "buckCost": zod.number(),
   "cadValueCents": zod.number().nullish(),

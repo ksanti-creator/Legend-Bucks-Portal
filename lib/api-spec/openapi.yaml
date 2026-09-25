@@ -1078,7 +1078,7 @@ paths:
     patch:
       operationId: fulfillRedemption
       tags: [redemptions]
-      summary: Mark a redemption as fulfilled (admin only)
+      summary: Mark an approved redemption as fulfilled (admins; accounting admins for Time Off only)
       parameters:
         - name: id
           in: path
@@ -2180,6 +2180,9 @@ components:
           type: integer
         rewardName:
           type: string
+        rewardCategory:
+          type: ["string", "null"]
+          description: Category of the associated reward, or null if unavailable.
         status:
           type: string
           enum: [requested, approved, pending_payroll, rejected, fulfilled, cancelled]
