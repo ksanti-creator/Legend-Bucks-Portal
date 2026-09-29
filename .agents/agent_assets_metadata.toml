@@ -126,3 +126,17 @@ mtime_ms = 1790364821879
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/d55c57d6-1c78-4a88-8d8f-9a06749dda15/b78f3d53-e39a-4635-a675-b84dc6607745"
 storage_version_token = "1790366034815612"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "9dMbLXU1Qq8ftQi5O7ROX"
+uri = "file://docs/gift-card-user-guide.html"
+type = "html"
+title = "Legend Bucks — Gift Card & Verification Guide"
+description = "Printable guide covering employee requests, admin approval and issuance, store verification, partial spending, retries, reconciliation, and reversals. Includes current rollout restrictions."
+logical_id = "ecaca4e3-d2be-41a8-a94e-ba0a95ce0598"
+content_hash = "sha256:0761704f40ab032b12500144d4baf510e8c2da00a8df56d58cd1823ba9164aae"
+size = 14179
+mtime_ms = 1790688703544
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/ecaca4e3-d2be-41a8-a94e-ba0a95ce0598/0663e3fc-7ed0-490a-8605-aa6c71e03b60"
+storage_version_token = "1790688710061882"
+content_type = "text/html"

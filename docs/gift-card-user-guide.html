@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legend Bucks — Gift Card &amp; Verification Guide</title>
+<style>
+body{font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;color:#20302b;background:#f4f6f4;margin:0}main{max-width:900px;margin:32px auto;padding:48px;background:white}h1{font-size:34px;line-height:1.2;margin:8px 0 18px}h2{color:#195941;margin-top:36px;border-bottom:1px solid #d6e2dc;padding-bottom:8px}h3{margin-bottom:6px}p,li{max-width:80ch}li{margin:7px 0}.eyebrow{font-size:12px;letter-spacing:2px;font-weight:700;color:#195941}.note{background:#eef6f1;border-left:4px solid #237252;padding:14px 18px}.warning{background:#fff7e7;border-left:4px solid #b58115;padding:14px 18px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;padding:12px;border:1px solid #d6e2dc}th{background:#eef6f1}footer{border-top:1px solid #d6e2dc;margin-top:36px;padding-top:16px;font-size:13px;color:#596c64}a{color:#195941}@media(max-width:640px){main{margin:0;padding:24px}h1{font-size:28px}table{font-size:12px}th,td{padding:7px}}@media print{body{background:white;font-size:11pt}main{margin:0;max-width:none;padding:0}h2,h3{break-after:avoid}tr,.note,.warning{break-inside:avoid}@page{margin:18mm}}
+</style>
+</head>
+<body><main>
+<div class="eyebrow">LEGEND BUCKS · OPERATIONS GUIDE</div>
+<h1>Gift Cards &amp; Verification</h1>
+<p>Instructions for employees, store staff, and administrators<br><strong>Prepared September 29, 2026 · Draft for administrator review</strong></p>
+<div class="warning"><strong>Release status:</strong> Real-store verification and checkout are currently configured off. Store instructions below are for training and approved rollout—not permission to accept live cards. Use dummy cards in the sandbox. A successful sandbox test does not confirm production email delivery or checkout.</div>
+<p>This guide covers converting Legend Bucks into an emailed custom gift card, verifying that card in the portal, recording partial spending in Canadian dollars (CAD), and reviewing corrections. It does not describe an external point-of-sale integration.</p>
+<h2>1. Who does what?</h2>
+<table><thead><tr><th>Role</th><th>Responsibility</th></tr></thead><tbody>
+<tr><td>Employee / card recipient</td><td>Request a card, follow its status in My Redemptions, and present the emailed code or QR code at checkout. Keep the code private.</td></tr>
+<tr><td>Administrator</td><td>Approve and issue cards, manage stores and explicit staff access, review transactions, and reverse eligible spends.</td></tr>
+<tr><td>Authorized store staff</td><td>Verify a presented card, check its current balance, and record a spend at an assigned store.</td></tr>
+<tr><td>Manager</td><td>Cannot approve gift-card requests. Manager or administrator status alone does not grant store checkout access.</td></tr>
+</tbody></table>
+<div class="note"><strong>What “verification” means:</strong> The portal checks whether the presented code identifies an eligible issued card and shows its current CAD balance. This is not an identity check of the person presenting it. Follow any separately approved store identity policy; do not assume the portal performs that check.</div>
+<h2>2. Employee: request and receive a gift card</h2>
+<ol>
+<li>Sign in and open <strong>Rewards</strong>. Select the custom gift-card reward.</li>
+<li>Enter the <strong>Legend Bucks to convert</strong>. Follow the minimum, increment, and any maximum shown. The amount must be a whole number and cannot exceed your available balance.</li>
+<li>Review the displayed CAD conversion. Legend Bucks and CAD are different units; use the conversion shown rather than assuming a fixed exchange rate.</li>
+<li>Select <strong>Purchase</strong>, review the <strong>Confirm Purchase</strong> dialog, and select <strong>Confirm Purchase</strong>.</li>
+<li>Open <strong>Redemptions → My Redemptions</strong> to follow the request. Submission is not an issued gift card: an administrator must approve and then issue it.</li>
+<li>After issuance, use the gift-card email sent to your account email address. Present its QR code or full code to authorized store staff once live use has been approved.</li>
+</ol>
+<p>If the email has not arrived, check spam or junk and contact an administrator. Do not submit another purchase merely to obtain a second email. Gift cards cannot be exchanged for cash.</p>
+<h2>3. Administrator: approve, issue, and deliver</h2>
+<ol>
+<li>Open <strong>Redemptions</strong> and the <strong>Fulfillment Center</strong>. Under <strong>Pending Approval</strong>, review the employee, reward, requested Legend Bucks, and CAD value.</li>
+<li>Use the row’s approval checkmark or rejection X as appropriate. Gift-card approval is restricted to administrators.</li>
+<li>Locate the approved card request, using <strong>To Fulfill</strong> or <strong>All</strong> as needed. Select <strong>Issue &amp; Email</strong>.</li>
+<li>Wait for the result. <strong>Gift card emailed</strong> indicates successful issuance and sending; the request is marked fulfilled. This is not proof the recipient has opened the email.</li>
+<li>If the result says <strong>Gift card created, but email failed</strong>, do not tell the employee it is ready. Review the record and use <strong>Reissue Card</strong> where eligible. A replacement permanently invalidates the previous code.</li>
+</ol>
+<p><strong>Approval and issuance are separate steps.</strong> An approval notification is not the spendable card. Treat the full emailed code as sensitive; the portal’s masked code is for identification and audit, not checkout entry.</p>
+<h2>4. Administrator: prepare store verification access</h2>
+<ol>
+<li>Open <strong>Store Gift Card Admin</strong>. In <strong>Stores</strong>, enter the <strong>Store name</strong> and <strong>Location</strong>, then select <strong>Add store</strong>.</li>
+<li>In <strong>Store verification access</strong>, choose the active <strong>Store</strong> and an <strong>Employee at store location</strong>, then select <strong>Grant</strong>.</li>
+<li>Confirm the employee/store pairing is correct. Staff need an explicit grant for the store where they work; their role alone is not enough.</li>
+<li>Use <strong>Revoke</strong> and confirm when access should end.</li>
+</ol>
+<p>If no eligible employee appears, review the employee’s location and the store setup. Do not grant an unrelated person access as a workaround. Real-store enablement is a separate server-controlled release decision and cannot be switched on from this page.</p>
+<h2>5. Store staff: verify a card before accepting it</h2>
+<ol>
+<li>Sign in with your own authorized account and open <strong>Store Gift Cards</strong>.</li>
+<li>Check the mode banner. If it says real store use is disabled, stop live checkout. If it says sandbox, use only dummy cards.</li>
+<li>Select the correct store from your assigned stores.</li>
+<li>Focus <strong>Scan card or type code</strong>. Scan using a scanner that enters text into the field, or type the full emailed code. Select <strong>Look up</strong>. Built-in camera scanning is not provided.</li>
+<li>Check the returned masked code, <strong>Active</strong> status, and current <strong>Balance</strong> in CAD. Do not rely on the opening value printed in an older email.</li>
+<li>If the card is unavailable, not eligible, or has no remaining balance, do not accept a spend against it. Ask an administrator to investigate where needed.</li>
+</ol>
+<div class="note"><strong>Looking up a card does not charge it or reserve its balance.</strong> The portal checks the balance again when recording the spend. Another transaction may change the balance after lookup.</div>
+<h2>6. Store staff: record a full or partial spend</h2>
+<ol>
+<li>Enter <strong>Amount spent (CAD)</strong> using no more than two decimal places. It must be greater than zero and no more than the available balance.</li>
+<li>Enter the actual <strong>Store receipt number</strong>. Each reference must be unique within that store, including after a reversal. Never enter a gift-card code in the receipt field.</li>
+<li>Select <strong>Review spend</strong>. Confirm the store, card, amount, receipt, and resulting balance.</li>
+<li>In <strong>Confirm spend</strong>, select <strong>Record spend</strong> once and wait for the result.</li>
+<li>On success, check the transaction reference, amount, receipt, previous balance, and new balance. Associate the portal transaction reference with the store receipt—not the full card code.</li>
+<li>Select <strong>Next card</strong> when ready for a different transaction.</li>
+</ol>
+<p><strong>Example:</strong> A card with CAD $30.00 available is charged CAD $12.50. Its remaining balance is CAD $17.50, which can be spent later. If the purchase exceeds the available balance, follow the store’s approved process for another payment method; the portal records only the gift-card portion.</p>
+<p>The portal does not automatically update an external cash register or POS. Complete any required store-side payment recording separately, following the approved store procedure.</p>
+<h2>7. Timeouts, interruptions, and errors</h2>
+<table><thead><tr><th>Situation</th><th>What to do</th></tr></thead><tbody>
+<tr><td>Spend awaiting confirmation / network timeout</td><td>Do not assume it failed. Use <strong>Retry same spend</strong>. The locked draft resends the same request so an identical retry does not deduct twice. Do not start another charge or change the receipt to get around the pending state.</td></tr>
+<tr><td>Checkout session expired</td><td>Use the pending draft’s <strong>Re-scan</strong> field with the same card. This refreshes verification and resends the identical spend. Do not substitute a different card.</td></tr>
+<tr><td>Need to abandon a draft</td><td>Ask an administrator to reconcile it first. Use <strong>Abandon draft</strong> only after the outcome is established. Abandoning a local draft is not a reversal of a recorded spend.</td></tr>
+<tr><td>Not permitted</td><td>Check the selected store, staff access grant, and rollout status with an administrator. Do not use another person’s account.</td></tr>
+<tr><td>Card not found or not eligible</td><td>Check that the code was entered correctly and that issuance/email succeeded. Voided, replaced, or otherwise ineligible cards cannot be used.</td></tr>
+<tr><td>Insufficient balance or duplicate receipt</td><td>Review the current balance and actual receipt. Ask an administrator to inspect earlier transactions if needed. Never invent a new receipt reference to bypass a duplicate warning.</td></tr>
+</tbody></table>
+<h2>8. Administrator: reconcile and reverse mistakes</h2>
+<h3>Review the audit trail</h3>
+<p>Open <strong>Store Gift Card Admin → Reconciliation</strong>. Use <strong>Refresh</strong>, <strong>Previous</strong>, and <strong>Next</strong> to review the newest-first records. Match each portal entry to the store receipt using store, staff member, time, amount, transaction reference, and before/after balances. Investigate unresolved drafts, missing receipts, and unexpected access assignments.</p>
+<p><strong>Balance check:</strong> opening CAD value − recorded spends + recorded reversals = remaining CAD balance.</p>
+<h3>Reverse an incorrect spend</h3>
+<ol>
+<li>Locate the original spend in reconciliation and select <strong>Reverse</strong>, or enter its <strong>Original transaction ref</strong> in <strong>Reverse a store spend</strong>.</li>
+<li>Enter a meaningful <strong>Reason</strong> without a full card code.</li>
+<li>Select <strong>Review reversal</strong>, review the original spend, then confirm with <strong>Reverse spend</strong>.</li>
+<li>Check the reversal record and restored balance. If the outcome is uncertain, use <strong>Retry same reversal</strong> rather than creating a different correction.</li>
+</ol>
+<p>A reversal restores the original spend’s CAD amount to the card. It does not delete the original entry, refund Legend Bucks, or process an external POS refund. The same spend cannot be reversed twice. The original receipt reference remains used; follow the store’s correction/replacement receipt process for any new transaction.</p>
+<h2>9. Lost cards, voiding, and reissuing</h2>
+<ul>
+<li><strong>Unused eligible card:</strong> An administrator can use <strong>Reissue Card</strong> in Redemptions to replace it, or <strong>Void Card</strong> with a reason to invalidate it.</li>
+<li><strong>Replacement:</strong> The old code is permanently invalid. The recipient must use the replacement email/code.</li>
+<li><strong>Any spending history:</strong> Voiding and reissuing are blocked, even if all spends were reversed. Escalate a lost or compromised spent card to an administrator; do not manually issue replacement value to bypass the restriction.</li>
+<li><strong>No automatic Legend Bucks refund:</strong> Do not promise a Legend Bucks refund for voiding, reissuing, or reversing a store spend.</li>
+</ul>
+<h2>10. Security and launch checklist</h2>
+<ul>
+<li>Keep full codes out of receipts, notes, URLs, screenshots, support messages, and reconciliation documents. Share only masked codes and transaction references for troubleshooting.</li>
+<li>Use individual staff accounts and grant only the store access each person needs.</li>
+<li>Before live use, obtain administrator approval of this procedure, receipt-number conventions, access assignments, reversal responsibilities, and daily reconciliation ownership.</li>
+<li>Confirm the published app and database are compatible, live email delivery works, and the actual store scanner/browser and interrupted-checkout retry flow have been checked.</li>
+<li>Keep real-store checkout disabled until release approval. Development tests alone do not authorize live use.</li>
+</ul>
+<footer>Legend Bucks · Gift Card &amp; Verification Guide<br>Based on the current implementation. Screen availability depends on permissions and rollout status. Open this document in a browser and use Print → Save as PDF for a printable copy.</footer>
+</main></body></html>
