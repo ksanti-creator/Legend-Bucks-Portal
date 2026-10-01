@@ -42,7 +42,7 @@ function SidebarContent({
   onLogout: () => void;
 }) {
   return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+    <div className="flex h-full flex-col bg-sidebar/95 text-sidebar-foreground">
       <div className="px-5 py-6">
         <img
           src="/logos/legend-bucks-rewards.png"
@@ -51,33 +51,38 @@ function SidebarContent({
         />
       </div>
 
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto" aria-label="Main">
+        {navItems.map((item, idx) => {
+          const prev = navItems[idx - 1];
+          const groupOf = (h: string) => h.startsWith("/store-gift-cards") ? 2 : h === "/help" ? 3 : ["/dashboard", "/send", "/rewards"].includes(h) ? 0 : 1;
+          const newGroup = !!prev && groupOf(prev.href) !== groupOf(item.href);
           const isActive = location.startsWith(item.href) && !navItems.some((o) => o.href.length > item.href.length && o.href.startsWith(item.href) && location.startsWith(o.href));
           return (
+            <div key={item.href}>
+            {newGroup && <div aria-hidden="true" className="mx-3 my-3 border-t border-sidebar-border" />}
             <Link 
-              key={item.href} 
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-sm font-medium",
+                "flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive 
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-[0_6px_16px_-8px_hsl(196_100%_40%/0.6)]" 
+                  : "text-sidebar-foreground/85 hover:bg-muted hover:text-foreground"
               )}
             >
-              <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive && "text-sidebar-primary")} />
+              <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-primary-foreground" : "text-slate-500")} />
               {item.label}
             </Link>
+            </div>
           );
         })}
       </nav>
 
       <div className="p-3 mt-2">
-        <div className="rounded-2xl border border-sidebar-border bg-secondary/50 p-3">
+        <div className="rounded-2xl border border-sidebar-border panel-sand p-3">
           <div className="flex items-center gap-3 mb-3">
             <Avatar className="h-10 w-10 border border-sidebar-border">
-              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                 {getInitials(user.firstName, user.lastName)}
               </AvatarFallback>
             </Avatar>
@@ -87,7 +92,7 @@ function SidebarContent({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" size="sm" className="w-full bg-card" asChild>
+            <Button variant="outline" size="sm" className="w-full bg-muted/70 border-transparent hover:bg-muted" asChild>
               <Link href="/settings" onClick={onNavigate}>
                 <Settings className="h-4 w-4 mr-1.5" />
                 Settings
@@ -184,7 +189,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen app-gradient-bg text-foreground">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 border-r border-sidebar-border flex-col z-40">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 border-r border-sidebar-border/80 flex-col bg-sidebar/90 backdrop-blur z-40">
         <SidebarContent
           navItems={navItems}
           location={location}
@@ -194,13 +199,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 lg:pl-64 flex flex-col min-h-screen">
+      <main className="shell-main relative isolate flex-1 min-w-0 lg:pl-64 flex flex-col min-h-[100dvh]">
+        <ShellScenery />
         {import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
           <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold text-amber-950">
             SANDBOX PREVIEW — Dummy data only. Emails and real storage are disabled.
           </div>
         )}
-        <header className="h-16 border-b border-border/70 bg-background/70 backdrop-blur-md flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+        <header className="h-16 border-b border-border/60 bg-background/75 backdrop-blur-md flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
           <div className="flex items-center gap-2 min-w-0">
             {/* Mobile nav trigger */}
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -208,7 +214,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden -ml-1 shrink-0"
+                  className="lg:hidden -ml-1 shrink-0 rounded-xl bg-muted/70 hover:bg-muted"
                   aria-label="Open navigation menu"
                 >
                   <Menu className="h-5 w-5" />
@@ -233,7 +239,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-2.5 rounded-full bg-primary/10 pl-3 pr-4 py-1.5">
+            <div className="flex items-center gap-2.5 rounded-full border border-primary/25 bg-card/90 card-lift pl-3 pr-4 py-1.5">
               <Coins className="h-4 w-4 text-primary" />
               <div className="leading-tight">
                 <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">My Balance</p>
@@ -244,10 +250,28 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </header>
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="relative z-10 flex-1 w-full max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-10">
           {children}
         </div>
       </main>
+    </div>
+  );
+}
+
+/** Decorative lakeside edge details for the authenticated canvas. */
+function ShellScenery() {
+  return (
+    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden select-none" aria-hidden="true">
+      <svg className="cloud-drift-slow absolute right-[6%] top-24 w-28 opacity-80" viewBox="0 0 120 50">
+        <path d="M20 44h82a16 16 0 0 0 0-32 22 22 0 0 0-40-6 18 18 0 0 0-30 12A14 14 0 0 0 20 44z" fill="#fff" />
+      </svg>
+      <svg className="absolute right-[18%] top-40 hidden w-8 opacity-50 md:block" viewBox="0 0 40 16">
+        <path d="M2 10 Q10 2 20 10 Q30 2 38 10" fill="none" stroke="#5B7480" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+      <svg className="fixed bottom-0 right-0 hidden h-24 w-[min(46rem,60vw)] opacity-40 md:block" viewBox="0 0 720 100" preserveAspectRatio="none">
+        <path d="M0 100 L0 80 L30 50 L55 78 L90 36 L125 78 L160 54 L195 80 L240 30 L280 78 L320 56 L360 82 L410 40 L450 80 L500 58 L540 82 L590 34 L630 80 L680 52 L720 72 V100Z" fill="#AFCFC9" />
+        <rect y="92" width="720" height="8" fill="#BEE5F3" />
+      </svg>
     </div>
   );
 }

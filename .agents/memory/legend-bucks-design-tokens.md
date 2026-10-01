@@ -13,4 +13,8 @@ The Legend Bucks web app (`artifacts/legend-bucks`) is themed almost entirely fr
 
 **How to apply:** treat any token used for *contrast* (light-on-dark or dark-on-light) as coupled to every consumer's assumption about its brightness. Re-theme all consumers in the same change, or give the odd-one-out its own dedicated tokens.
 
-**Layout note:** the app is a desktop-only internal tool — fixed `w-64` sidebar + `pl-64` main content, no mobile/hamburger drawer. Narrow-viewport clipping of the sidebar is expected/by-design, not a redesign regression.
+**Brand boundary:** use the Scaling Up site only as a visual-language reference, never as a source of shop identity or proprietary artwork. Preserve the approved Legend Bucks Shop logos, product images, and copy.
+
+**Why:** The user explicitly requested a visual-only restyle and prohibited importing Scaling Up logos, navigation, metrics, and business rules.
+
+**How to apply:** Original low-priority decorative illustrations are acceptable; reuse existing licensed project fonts. Verify mobile layouts rather than assuming desktop-only support.

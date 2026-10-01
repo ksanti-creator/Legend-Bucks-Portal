@@ -120,7 +120,7 @@ export default function Dashboard() {
                 {activity.map((item) => (
                   <div key={item.id} className="p-6 flex items-start gap-4 hover:bg-muted/10 transition-colors">
                     <div className="bg-muted p-2 rounded-full shrink-0">
-                      {item.type === 'award' ? <Trophy className="h-5 w-5 text-accent" /> :
+                      {item.type === 'award' ? <Trophy className="h-5 w-5 text-emerald-700" /> :
                        item.type === 'redemption' ? <Gift className="h-5 w-5 text-primary" /> :
                        item.type === 'goal_contribution' ? <Target className="h-5 w-5 text-green-600" /> :
                        <Activity className="h-5 w-5 text-muted-foreground" />}
@@ -131,7 +131,7 @@ export default function Dashboard() {
                         {item.actorName && item.targetName ? ' ' : ''}
                         {item.description}
                         {item.targetName && <span className="font-semibold"> {item.targetName}</span>}
-                        {item.amount && <span className="font-bold text-accent ml-1">({item.amount} LB)</span>}
+                        {item.amount && <span className="font-bold text-emerald-700 ml-1">({item.amount} LB)</span>}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {formatDateTime(item.createdAt)}
@@ -153,7 +153,7 @@ export default function Dashboard() {
         <Card className="flex flex-col h-[500px]">
           <CardHeader className="border-b bg-muted/20 pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5 text-accent" />
+              <TrendingUp className="h-5 w-5 text-emerald-700" />
               Top Earners
             </CardTitle>
             <CardDescription>This month's leaders</CardDescription>

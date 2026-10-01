@@ -171,7 +171,7 @@ export default function SendBucks() {
                     <FormLabel>Amount (Legend Bucks)</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <Coins className="absolute left-3 top-3.5 h-5 w-5 text-accent" />
+                        <Coins className="absolute left-3 top-3.5 h-5 w-5 text-emerald-700" />
                         <Input 
                           type="number" 
                           min="1" 

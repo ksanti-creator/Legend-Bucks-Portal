@@ -1,0 +1,36 @@
+Legend Bucks API baseline verification
+Completed (UTC): 2026-10-01T16:03:49Z
+Purpose: Baseline for a presentation-only visual refresh.
+
+Exact command:
+NODE_ENV=development pnpm --filter @workspace/api-server test
+
+Safety verification before running:
+- LEGEND_BUCKS_SANDBOX was already true; it was not changed.
+- NODE_ENV was unset in the shell; development was explicitly set for verification and the test command only.
+- Database connection was configured; no credentials were printed.
+- Database URL had no options override.
+- Read-only database verification confirmed search_path = legend_bucks_sandbox
+  and current_schemas(false) contained only legend_bucks_sandbox.
+- Read .agents/memory/legend-bucks-api-tests.md and inspected existing fixture cleanup.
+- Existing Vitest configuration runs suites serially.
+- No manual seeding, schema changes, or cleanup was performed; only the existing test fixtures and their cleanup ran.
+
+Results:
+Exit code: 1
+Test files: 18 total; 16 passed; 2 failed.
+Tests: 150 total; 148 passed; 2 failed.
+Duration: 34.41 seconds.
+
+Failures:
+1. src/test/accounting-admin.test.ts:211
+   Accounting admin — blocked from every write/admin action >
+   cannot approve, reject, or fulfil a redemption (403)
+   Expected HTTP 403; received HTTP 400.
+
+2. src/test/reward-sizes.test.ts:229
+   Reward sizes > deleting a reward cascades its size rows
+   Expected no size rows after deleting a reward; one size row remained.
+
+No application code, business rules, or tests were changed to fix these baseline failures.
+This report contains no credentials, tokens, or raw request logs.

@@ -243,7 +243,7 @@ export default function RewardDetail() {
                 </div>
               )}
               {reward.approvalRequired && (
-                <div className="flex items-center gap-2 py-2 text-sm text-accent">
+                <div className="flex items-center gap-2 py-2 text-sm text-emerald-700">
                   <AlertCircle className="h-4 w-4" />
                   <span>Requires manager approval</span>
                 </div>

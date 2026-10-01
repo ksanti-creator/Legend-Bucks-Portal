@@ -1,0 +1,16 @@
+Restyle the existing Legend Bucks Shop portal to match the authenticated dashboard design in the two attached Scaling Up screenshots. Use the screenshots as the primary visual reference and https://scalingup.legendboats.com/ as a secondary reference.
+
+ Keep the product identity:​ retain the existing approved Legend Bucks Shop logos, name, product images, and shop-specific copy. Do not use the Scaling Up logo, “Growth OS” wording, its navigation labels, or its metrics.
+
+ Match the design system closely:​
+ - A clean white left sidebar with the Legend Bucks Shop logo at the top, grouped navigation with simple grey line icons, soft-grey rounded controls, a bright Legend Blue active state, and the user/profile area at the bottom. Use the shop’s existing navigation items.
+ - A very pale blue main canvas (#F4FAFD) with generous margins and whitespace. Use small, widely tracked uppercase section labels, oversized bold dark headings, and grey supporting text.
+ - Large white cards with very rounded corners, faint borders, soft shadows, and roomy padding. For the shop, adapt the screenshot’s metric-card treatment to real existing information such as available balance and order status—never invent numbers or new reward rules. Use compact colored icon tiles or thin blue/green/orange/red top accents where they convey meaning.
+ - Primary blue #00B1F0, dark ink around #16242A, and restrained grey text. Use Gotham HTF only if approved font assets are available in the project; otherwise use a close, licensed sans-serif fallback.
+ - Subtle clouds, gulls, and lakeside/tree details around the edges of the main area, as seen in the screenshots. Keep them low-priority and out of the way of product photos, prices, buttons, and forms. Use approved project assets or create original simple illustrations; don’t copy assets from the other site without permission.
+
+ Apply the system consistently to the existing shop home, catalogue/product cards, balance, redemption/checkout, order history, sign-in, and admin views where present. On mobile, make the sidebar usable without consuming the screen and keep cards readable.
+
+ This is a visual redesign, not a rebuild.​ First inspect the current app and reuse its components and stack. Preserve all routes, authentication, permissions, balances, approval controls, gift-card issuance, redemption/spend logic, records, and integrations. Do not create a Salesforce spending flow or change any business rules.
+
+ Run the existing tests and manually verify sign-in, browsing, and a safe test redemption. Provide desktop and mobile screenshots of the updated shop, plus a short list of what changed and any missing approved brand assets.

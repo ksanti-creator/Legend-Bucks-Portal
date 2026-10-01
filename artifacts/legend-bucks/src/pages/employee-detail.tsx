@@ -548,7 +548,7 @@ export default function EmployeeDetail() {
           </div>
 
           {employeeCanAward && canViewBudget && budgetInfo?.budget != null && (
-            <Card className="border-none shadow-sm bg-accent/5">
+            <Card className="border-none shadow-sm panel-sand">
               <CardContent className="p-6 flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Yearly Award Budget</p>

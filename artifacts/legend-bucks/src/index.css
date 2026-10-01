@@ -73,8 +73,8 @@
   /* #4f4f51  →  240   1% 31% */
   /* #ffffff  →  0    0% 100% */
 
-  --font-sans: 'Gotham', sans-serif;
-  --font-display: 'Gotham', sans-serif;
+  --font-sans: 'Gotham', 'Montserrat', system-ui, sans-serif;
+  --font-display: 'Gotham', 'Montserrat', system-ui, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -84,57 +84,40 @@
 }
 
 :root {
-  /* ── Light mode — "Events HQ" sky-blue aesthetic ────────────── */
-
-  /* Canvas — soft sky-blue tint (gradient applied on the app shell) */
-  --background: 202 60% 97%;
-  --foreground: 222 20% 22%;
-
-  /* Cards — clean white with soft light borders */
+  /* Lakeside palette: Legend Blue #00B1F0, ink #16242A, canvas #F4FAFD, sand #F6EFE2 */
+  --background: 200 64% 97%;
+  --foreground: 197 31% 13%;
   --card: 0 0% 100%;
-  --card-foreground: 222 20% 22%;
-  --card-border: 210 32% 92%;
-
-  /* Popovers */
+  --card-foreground: 197 31% 13%;
+  --card-border: 199 45% 90%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 20% 22%;
-  --popover-border: 210 32% 92%;
-
-  /* Primary = Legend Blue #00afed */
-  --primary: 199 100% 46%;
-  --primary-foreground: 0 0% 100%;
-
-  /* Secondary = soft blue-grey tint */
-  --secondary: 205 40% 95%;
-  --secondary-foreground: 222 20% 30%;
-
-  /* Muted */
-  --muted: 205 35% 95%;
-  --muted-foreground: 215 16% 52%;
-
-  /* Accent = Legend Green #35b729 */
-  --accent: 115 63% 44%;
-  --accent-foreground: 0 0% 100%;
-
-  /* Destructive */
-  --destructive: 0 70% 48%;
+  --popover-foreground: 197 31% 13%;
+  --popover-border: 199 45% 88%;
+  /* Blue fills carry ink text: #16242A on #00B1F0 ~ 6.9:1 */
+  --primary: 196 100% 47%;
+  --primary-foreground: 197 31% 13%;
+  /* Readable blue for text on light surfaces (~5.2:1 on white) */
+  --primary-text: 199 100% 30%;
+  --secondary: 39 56% 93%;
+  --secondary-foreground: 197 31% 18%;
+  --muted: 200 40% 94%;
+  --muted-foreground: 199 14% 38%;
+  --accent: 196 85% 93%;
+  --accent-foreground: 197 31% 13%;
+  --destructive: 0 68% 44%;
   --destructive-foreground: 0 0% 100%;
-
-  /* Borders / Inputs */
-  --border: 210 30% 90%;
-  --input: 210 30% 90%;
-  --ring: 199 100% 46%;
-
-  /* Sidebar = light / white with soft blue active pill */
+  --border: 199 38% 88%;
+  --input: 199 32% 84%;
+  --ring: 199 100% 36%;
   --sidebar: 0 0% 100%;
-  --sidebar-foreground: 222 18% 32%;
-  --sidebar-border: 210 32% 92%;
-  --sidebar-primary: 199 100% 46%;
+  --sidebar-foreground: 197 25% 22%;
+  --sidebar-border: 199 45% 90%;
+  --sidebar-primary: 199 100% 33%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 199 100% 95%;
-  --sidebar-accent-foreground: 199 90% 38%;
-
-  --radius: 0.85rem;
+  --sidebar-accent: 196 90% 93%;
+  --sidebar-accent-foreground: 197 31% 13%;
+  --sand: 39 56% 93%;
+  --radius: 1rem;
 }
 
 .dark {
@@ -191,18 +174,39 @@
   }
 }
 
-/* ── Events HQ soft sky-blue gradient page background ──────────── */
+/* ── Lakeside canvas ───────────────────────────────────────── */
 .app-gradient-bg {
   background:
-    radial-gradient(1200px 600px at 100% -10%, hsl(199 100% 92% / 0.55), transparent 60%),
-    radial-gradient(900px 500px at -10% 0%, hsl(199 100% 94% / 0.5), transparent 55%),
-    linear-gradient(180deg, hsl(202 70% 97%) 0%, hsl(0 0% 100%) 45%, hsl(202 60% 97%) 100%);
+    radial-gradient(1100px 520px at 85% -12%, hsl(199 90% 88% / 0.55), transparent 62%),
+    radial-gradient(900px 480px at -8% 0%, hsl(39 70% 92% / 0.55), transparent 55%),
+    linear-gradient(180deg, hsl(200 70% 95%) 0%, hsl(200 64% 97%) 40%, hsl(200 64% 97%) 100%);
+}
+.panel-sand { background-color: hsl(var(--sand)); }
+.card-lift {
+  box-shadow: 0 1px 2px hsl(199 40% 30% / 0.05), 0 12px 32px -14px hsl(199 60% 30% / 0.22);
+}
+@keyframes cloud-drift { from { transform: translateX(0); } to { transform: translateX(40px); } }
+@keyframes water-shimmer { 0%,100% { opacity: .55; } 50% { opacity: .9; } }
+.cloud-drift { animation: cloud-drift 26s ease-in-out infinite alternate; }
+.cloud-drift-slow { animation: cloud-drift 38s ease-in-out infinite alternate-reverse; }
+.water-shimmer { animation: water-shimmer 7s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .cloud-drift, .cloud-drift-slow, .water-shimmer { animation: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 /* Section header helpers for a consistent title + subtitle rhythm */
 .section-title {
-  @apply text-3xl font-display font-bold tracking-tight text-foreground;
+  @apply text-3xl sm:text-4xl font-display font-bold tracking-tight text-foreground;
 }
 .section-subtitle {
   @apply text-muted-foreground mt-1;
 }
+
+/* Readable blue text on light surfaces (blue fills keep #00B1F0) */
+.text-primary { color: hsl(var(--primary-text)); }
+h1, h2, h3 { color: inherit; }
+
+/* Oversized dark page headings in the authenticated area */
+.shell-main h1 { font-size: clamp(1.875rem, 1.4rem + 1.6vw, 2.625rem); line-height: 1.1; color: hsl(var(--foreground)); letter-spacing: -0.02em; }
+.eyebrow { font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: hsl(var(--muted-foreground)); }

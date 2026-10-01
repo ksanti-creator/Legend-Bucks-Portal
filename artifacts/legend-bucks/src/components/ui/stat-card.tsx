@@ -5,10 +5,18 @@ import { Card } from "@/components/ui/card";
 
 type Tint = "blue" | "green" | "amber" | "rose" | "slate";
 
+const accentMap: Record<Tint, string> = {
+  blue: "bg-primary",
+  green: "bg-emerald-500",
+  amber: "bg-amber-500",
+  rose: "bg-rose-500",
+  slate: "bg-slate-400",
+};
+
 const tintMap: Record<Tint, string> = {
   blue: "bg-primary/10 text-primary",
-  green: "bg-accent/10 text-accent",
-  amber: "bg-amber-500/10 text-amber-600",
+  green: "bg-emerald-500/10 text-emerald-700",
+  amber: "bg-amber-500/10 text-amber-700",
   rose: "bg-rose-500/10 text-rose-600",
   slate: "bg-slate-500/10 text-slate-600",
 };
@@ -38,19 +46,20 @@ export function StatCard({
   ...props
 }: StatCardProps) {
   return (
-    <Card className={cn("relative overflow-hidden p-6", className)} {...props}>
+    <Card className={cn("relative overflow-hidden p-6 sm:p-7", className)} {...props}>
+      <span aria-hidden="true" className={cn("absolute inset-x-0 top-0 h-1", accentMap[tint])} />
       {Icon && (
         <div
           className={cn(
-            "absolute top-5 right-5 flex h-11 w-11 items-center justify-center rounded-full",
+            "absolute top-6 right-6 flex h-11 w-11 items-center justify-center rounded-2xl",
             tintMap[tint],
           )}
         >
           <Icon className="h-5 w-5" />
         </div>
       )}
-      <p className="text-sm font-medium text-muted-foreground pr-12">{label}</p>
-      <div className="mt-2 text-3xl font-display font-bold text-foreground leading-none">
+      <p className="eyebrow pr-14">{label}</p>
+      <div className="mt-3 text-3xl sm:text-4xl font-display break-words font-bold text-foreground leading-none">
         {value}
       </div>
       {rows && rows.length > 0 && (
