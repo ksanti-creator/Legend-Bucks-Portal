@@ -4,12 +4,14 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDateTime, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 import { Trophy, TrendingUp, Users, Target, Activity, ArrowUpRight, Gift, Coins, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
+  const { t, number, date } = useI18n();
   const { data: user } = useGetMe();
   const { data: summary, isLoading: isLoadingSummary } = useGetDashboardSummary({
     query: {
@@ -30,10 +32,10 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div>
           <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">
-            Welcome back, {user?.firstName}
+            {t("Welcome back, {name}", { name: user?.firstName ?? "" })}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Here's what's happening on the floor today.
+            {t("Here's what's happening on the floor today.")}
           </p>
         </div>
         
@@ -44,15 +46,15 @@ export default function Dashboard() {
               <Coins className="h-8 w-8 text-primary-foreground" />
             </div>
             <div>
-              <p className="text-primary-foreground/80 font-medium text-sm uppercase tracking-wider mb-1">Your Balance</p>
+              <p className="text-primary-foreground/80 font-medium text-sm uppercase tracking-wider mb-1">{t("Your Balance")}</p>
               <div className="text-4xl font-display font-bold">
-                {user?.balance?.toLocaleString()} <span className="text-xl text-primary-foreground/70">LB</span>
+                {number(user?.balance ?? 0)} <span className="text-xl text-primary-foreground/70">LB</span>
               </div>
             </div>
             <div className="sm:ml-4 sm:pl-6 sm:border-l border-primary-foreground/20">
               <Button variant="secondary" className="bg-white text-primary hover:bg-white/90 font-bold" asChild>
                 <Link href="/rewards">
-                  Redeem
+                  {t("Redeem")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -65,28 +67,28 @@ export default function Dashboard() {
       {isAdminOrManager && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            label="Total Employees"
+            label={t("Total Employees")}
             icon={Users}
             tint="blue"
-            value={isLoadingSummary ? <Skeleton className="h-8 w-16" /> : summary?.totalEmployees}
+            value={isLoadingSummary ? <Skeleton className="h-8 w-16" /> : number(summary?.totalEmployees ?? 0)}
           />
           <StatCard
-            label="Bucks Awarded (Month)"
+            label={t("Bucks Awarded (Month)")}
             icon={Trophy}
             tint="green"
-            value={isLoadingSummary ? <Skeleton className="h-8 w-24" /> : (summary?.thisMonthBucksAwarded?.toLocaleString() || 0)}
+            value={isLoadingSummary ? <Skeleton className="h-8 w-24" /> : number(summary?.thisMonthBucksAwarded ?? 0)}
           />
           <StatCard
-            label="Pending Approvals"
+            label={t("Pending Approvals")}
             icon={Activity}
             tint="amber"
-            value={isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.pendingApprovals}
+            value={isLoadingSummary ? <Skeleton className="h-8 w-12" /> : number(summary?.pendingApprovals ?? 0)}
           />
           <StatCard
-            label="Active Goals"
+            label={t("Active Goals")}
             icon={Target}
             tint="slate"
-            value={isLoadingSummary ? <Skeleton className="h-8 w-12" /> : summary?.activeGoals}
+            value={isLoadingSummary ? <Skeleton className="h-8 w-12" /> : number(summary?.activeGoals ?? 0)}
           />
         </div>
       )}
@@ -98,7 +100,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Activity className="h-5 w-5 text-primary" />
-                Recent Activity
+                {t("Recent Activity")}
               </CardTitle>
             </div>
           </CardHeader>
@@ -131,10 +133,10 @@ export default function Dashboard() {
                         {item.actorName && item.targetName ? ' ' : ''}
                         {item.description}
                         {item.targetName && <span className="font-semibold"> {item.targetName}</span>}
-                        {item.amount && <span className="font-bold text-emerald-700 ml-1">({item.amount} LB)</span>}
+                        {item.amount && <span className="font-bold text-emerald-700 ml-1">({number(item.amount)} LB)</span>}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formatDateTime(item.createdAt)}
+                        {date(item.createdAt, { dateStyle: "medium", timeStyle: "short" })}
                       </p>
                     </div>
                   </div>
@@ -143,7 +145,7 @@ export default function Dashboard() {
             ) : (
               <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
                 <Activity className="h-12 w-12 opacity-20 mb-4" />
-                <p>No recent activity.</p>
+                <p>{t("No recent activity.")}</p>
               </div>
             )}
           </CardContent>
@@ -154,9 +156,9 @@ export default function Dashboard() {
           <CardHeader className="border-b bg-muted/20 pb-4">
             <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5 text-emerald-700" />
-              Top Earners
+              {t("Top Earners")}
             </CardTitle>
-            <CardDescription>This month's leaders</CardDescription>
+            <CardDescription>{t("This month's leaders")}</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto p-0">
             {isLoadingLeaderboard ? (
@@ -179,7 +181,7 @@ export default function Dashboard() {
                       ${idx === 0 ? 'bg-yellow-100 text-yellow-700' : 
                         idx === 1 ? 'bg-gray-200 text-gray-700' : 
                         idx === 2 ? 'bg-orange-100 text-orange-800' : 'bg-muted text-muted-foreground'}`}>
-                      #{entry.rank}
+                      #{number(entry.rank)}
                     </div>
                     <Avatar className="h-10 w-10 border">
                       <AvatarFallback>{getInitials(entry.employeeName.split(' ')[0], entry.employeeName.split(' ')[1] || '')}</AvatarFallback>
@@ -189,7 +191,7 @@ export default function Dashboard() {
                       {entry.department && <p className="text-xs text-muted-foreground truncate">{entry.department}</p>}
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-bold text-primary">{entry.bucksReceived}</p>
+                      <p className="font-bold text-primary">{number(entry.bucksReceived)}</p>
                       <p className="text-[10px] text-muted-foreground uppercase">LB</p>
                     </div>
                   </div>
@@ -198,7 +200,7 @@ export default function Dashboard() {
             ) : (
               <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-full">
                 <Trophy className="h-12 w-12 opacity-20 mb-4" />
-                <p>Leaderboard is empty for this month.</p>
+                <p>{t("Leaderboard is empty for this month.")}</p>
               </div>
             )}
           </CardContent>

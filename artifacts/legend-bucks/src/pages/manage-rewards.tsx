@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch"; // Need to generate this
 import { MultiImageUpload } from "@/components/image-upload";
+import { useI18n } from "@/lib/i18n";
 
 import giftCardImg from "@assets/Untitled_design_(70)_1788380591097.png";
 import ptoImg from "@assets/generated_images/pto.png";
@@ -47,45 +48,46 @@ const fallbackImages: Record<string, string> = {
   "Lunch": lunchImg,
 };
 
-const rewardSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
+const createRewardSchema = (t: (source: string) => string) => z.object({
+  name: z.string().min(3, t("Name must be at least 3 characters")),
   description: z.string().optional(),
   category: z.string().optional(),
-  buckCost: z.coerce.number().min(1, "Cost must be at least 1 LB"),
+  buckCost: z.coerce.number({ invalid_type_error: t("Enter a valid number") }).min(1, t("Cost must be at least 1 LB")),
   // Blank input must map to null (not 0), so a missing CAD value stays unset.
   cadValue: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),
-    z.coerce.number().min(0, "Value cannot be negative").nullable(),
+    z.coerce.number({ invalid_type_error: t("Enter a valid number") }).min(0, t("Value cannot be negative")).nullable(),
   ),
   imageUrls: z.array(z.string()).default([]),
   sizes: z
     .array(
       z.object({
-        label: z.string().min(1, "Label required").max(40),
-        quantity: z.number().int().min(0).nullable(),
+        label: z.string().min(1, t("Label required")).max(40, t("Label must be at most 40 characters")),
+        quantity: z.number({ invalid_type_error: t("Enter a valid number") }).int(t("Enter a whole number")).min(0, t("Quantity cannot be negative")).nullable(),
       }),
     )
-    .max(20)
+    .max(20, t("You can add up to 20 sizes"))
     .default([]),
   productCode: z.string().optional(),
   serialNumber: z.string().optional(),
-  quantity: z.coerce.number().optional().nullable(),
+  quantity: z.coerce.number({ invalid_type_error: t("Enter a valid number") }).optional().nullable(),
   locationRestriction: z.string().optional().nullable(),
   active: z.boolean().default(true),
   approvalRequired: z.boolean().default(false),
   isCustomGiftCard: z.boolean().default(false),
   giftCardIncrementLb: z.literal(100).nullable().default(100),
-  giftCardMinimumLb: z.coerce.number().int().positive().nullable().default(100),
+  giftCardMinimumLb: z.coerce.number({ invalid_type_error: t("Enter a valid number") }).int(t("Enter a whole number")).positive(t("Enter a positive amount")).nullable().default(100),
   giftCardMaximumLb: z.preprocess(
     (v) => (v === "" || v === null || v === undefined ? null : v),
-    z.coerce.number().int().positive().nullable(),
+    z.coerce.number({ invalid_type_error: t("Enter a valid number") }).int(t("Enter a whole number")).positive(t("Enter a positive amount")).nullable(),
   ),
 });
+type RewardValues = z.infer<ReturnType<typeof createRewardSchema>>;
 
 // Explicit blank form values. react-hook-form's reset(values) replaces the
 // stored defaults, so a bare reset() after editing would re-fill the last
 // edited reward — always reset to these instead.
-const emptyRewardValues: z.infer<typeof rewardSchema> = {
+const emptyRewardValues: RewardValues = {
   name: "",
   description: "",
   category: "",
@@ -106,6 +108,8 @@ const emptyRewardValues: z.infer<typeof rewardSchema> = {
 };
 
 export default function ManageRewards() {
+  const { t, number, currency, label } = useI18n();
+  const rewardSchema = createRewardSchema(t);
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
   const { toast } = useToast();
@@ -120,17 +124,17 @@ export default function ManageRewards() {
   const updateMut = useUpdateReward();
   const deleteMut = useDeleteReward();
 
-  const form = useForm<z.infer<typeof rewardSchema>>({
+  const form = useForm<RewardValues>({
     resolver: zodResolver(rewardSchema),
     defaultValues: emptyRewardValues,
   });
   const isCustomGiftCard = form.watch("isCustomGiftCard");
 
   if (!isAdmin && user) {
-    return <div className="p-8 text-center text-destructive">Unauthorized. Admins only.</div>;
+    return <div className="p-8 text-center text-destructive">{t("Unauthorized. Admins only.")}</div>;
   }
 
-  const onSubmit = (data: z.infer<typeof rewardSchema>) => {
+  const onSubmit = (data: RewardValues) => {
     // Transform empty strings to null for optional API fields.
     // CAD value is entered in dollars but stored as integer cents.
     const { cadValue, ...rest } = data;
@@ -156,11 +160,11 @@ export default function ManageRewards() {
           onSuccess: () => {
             setOpenCreate(false);
             setEditingId(null);
-            toast({ title: "Reward updated successfully" });
+            toast({ title: t("Reward updated successfully") });
             queryClient.invalidateQueries({ queryKey: ["/api/rewards"] });
             form.reset(emptyRewardValues);
           },
-          onError: () => toast({ title: "Failed to update reward", variant: "destructive" })
+          onError: () => toast({ title: t("Failed to update reward"), variant: "destructive" })
         }
       );
     } else {
@@ -169,11 +173,11 @@ export default function ManageRewards() {
         {
           onSuccess: () => {
             setOpenCreate(false);
-            toast({ title: "Reward created successfully" });
+            toast({ title: t("Reward created successfully") });
             queryClient.invalidateQueries({ queryKey: ["/api/rewards"] });
             form.reset(emptyRewardValues);
           },
-          onError: () => toast({ title: "Failed to create reward", variant: "destructive" })
+          onError: () => toast({ title: t("Failed to create reward"), variant: "destructive" })
         }
       );
     }
@@ -204,13 +208,13 @@ export default function ManageRewards() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this reward? This cannot be undone.")) {
+    if (confirm(t("Are you sure you want to delete this reward? This cannot be undone."))) {
       deleteMut.mutate({ id }, {
         onSuccess: () => {
-          toast({ title: "Reward deleted" });
+          toast({ title: t("Reward deleted") });
           queryClient.invalidateQueries({ queryKey: ["/api/rewards"] });
         },
-        onError: () => toast({ title: "Failed to delete reward", variant: "destructive" })
+        onError: () => toast({ title: t("Failed to delete reward"), variant: "destructive" })
       });
     }
   };
@@ -220,14 +224,14 @@ export default function ManageRewards() {
       <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
         <Link href="/rewards">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Catalog
+          {t("Back to Catalog")}
         </Link>
       </Button>
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight">Manage Catalog</h1>
-          <p className="text-muted-foreground mt-1">Add, edit, or remove rewards from the catalog.</p>
+          <h1 className="text-3xl font-display font-bold tracking-tight">{t("Manage Catalog")}</h1>
+          <p className="text-muted-foreground mt-1">{t("Add, edit, or remove rewards from the catalog.")}</p>
         </div>
         
         <Dialog open={openCreate} onOpenChange={(open) => {
@@ -240,14 +244,14 @@ export default function ManageRewards() {
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
               <Plus className="h-4 w-4 mr-2" />
-              New Reward
+              {t("New Reward")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingId ? "Edit Reward" : "Add New Reward"}</DialogTitle>
+              <DialogTitle>{editingId ? t("Edit Reward") : t("Add New Reward")}</DialogTitle>
               <DialogDescription>
-                Configure item details, cost, and availability.
+                {t("Configure item details, cost, and availability.")}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -258,9 +262,9 @@ export default function ManageRewards() {
                     name="name"
                     render={({ field }) => (
                       <FormItem className="col-span-2 md:col-span-1">
-                        <FormLabel>Reward Name</FormLabel>
+                        <FormLabel>{t("Reward Name")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Legend Hoodie" {...field} />
+                          <Input placeholder={t("e.g. Legend Hoodie")} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -272,7 +276,7 @@ export default function ManageRewards() {
                     name="buckCost"
                     render={({ field }) => (
                       <FormItem className="col-span-2 md:col-span-1">
-                        <FormLabel>Cost (LB)</FormLabel>
+                        <FormLabel>{t("Cost (LB)")}</FormLabel>
                         <FormControl>
                           <Input type="number" min="1" {...field} />
                         </FormControl>
@@ -287,19 +291,19 @@ export default function ManageRewards() {
                   name="cadValue"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>CAD Value ($) — Accounting only</FormLabel>
+                      <FormLabel>{t("CAD Value ($) — Accounting only")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="0"
                           step="0.01"
-                          placeholder="e.g. 49.99"
+                          placeholder={t("e.g. {amount}", { amount: number(49.99, { minimumFractionDigits: 2 }) })}
                           {...field}
                           value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormDescription>
-                        The real dollar cost of this reward. Visible only to admins on accounting ledgers — never shown to employees.
+                        {t("The real dollar cost of this reward. Visible only to admins on accounting ledgers — never shown to employees.")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -313,8 +317,8 @@ export default function ManageRewards() {
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between space-y-0">
                         <div>
-                          <FormLabel>Custom denomination</FormLabel>
-                          <FormDescription>Legend Bucks Gift Card · 100 LB = $10 CAD</FormDescription>
+                          <FormLabel>{t("Custom denomination")}</FormLabel>
+                          <FormDescription>{t("Legend Bucks Gift Card · {bucks} LB = {value}", { bucks: number(100), value: currency(10) })}</FormDescription>
                         </div>
                         <Switch
                           checked={field.value}
@@ -334,13 +338,13 @@ export default function ManageRewards() {
                   {isCustomGiftCard && (
                     <div className="grid grid-cols-3 gap-3">
                        <FormField control={form.control} name="giftCardIncrementLb" render={({ field }) => (
-                         <FormItem><FormLabel>LB increment</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? 100} disabled /></FormControl><FormDescription>Fixed for Legend Bucks gift cards</FormDescription><FormMessage /></FormItem>
+                         <FormItem><FormLabel>{t("LB increment")}</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? 100} disabled /></FormControl><FormDescription>{t("Fixed for Legend Bucks gift cards")}</FormDescription><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="giftCardMinimumLb" render={({ field }) => (
-                        <FormItem><FormLabel>Minimum LB</FormLabel><FormControl><Input type="number" min="1" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t("Minimum LB")}</FormLabel><FormControl><Input type="number" min="1" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="giftCardMaximumLb" render={({ field }) => (
-                        <FormItem><FormLabel>Maximum LB</FormLabel><FormControl><Input type="number" min="1" placeholder="Balance limit" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t("Maximum LB")}</FormLabel><FormControl><Input type="number" min="1" placeholder={t("Balance limit")} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   )}
@@ -348,9 +352,9 @@ export default function ManageRewards() {
 
                 <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
                   <div>
-                    <h3 className="text-sm font-semibold">Product Identifiers — Admin only</h3>
+                    <h3 className="text-sm font-semibold">{t("Product Identifiers — Admin only")}</h3>
                     <p className="text-xs text-muted-foreground">
-                      Optional internal tracking details. Visible only to admins — never shown to employees.
+                      {t("Optional internal tracking details. Visible only to admins — never shown to employees.")}
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -359,9 +363,9 @@ export default function ManageRewards() {
                       name="productCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Product Code (Optional)</FormLabel>
+                          <FormLabel>{t("Product Code (Optional)")}</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g. SKU-12345" {...field} value={field.value ?? ""} />
+                            <Input placeholder={t("e.g. SKU-12345")} {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -373,9 +377,9 @@ export default function ManageRewards() {
                       name="serialNumber"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Serial Number (Optional)</FormLabel>
+                          <FormLabel>{t("Serial Number (Optional)")}</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g. SN-000123" {...field} value={field.value ?? ""} />
+                            <Input placeholder={t("e.g. SN-000123")} {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -389,9 +393,9 @@ export default function ManageRewards() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t("Description")}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Item details..." {...field} />
+                        <Textarea placeholder={t("Item details...")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -404,19 +408,19 @@ export default function ManageRewards() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category</FormLabel>
+                        <FormLabel>{t("Category")}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={isCustomGiftCard}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
+                              <SelectValue placeholder={t("Select category")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Gear">Gear</SelectItem>
-                            <SelectItem value="Experience">Experience</SelectItem>
-                            <SelectItem value="Time Off">Time Off</SelectItem>
-                            <SelectItem value="Gift Card">Gift Card</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
+                            <SelectItem value="Gear">{t("Gear")}</SelectItem>
+                            <SelectItem value="Experience">{t("Experience")}</SelectItem>
+                            <SelectItem value="Time Off">{t("Time Off")}</SelectItem>
+                            <SelectItem value="Gift Card">{t("Gift Card")}</SelectItem>
+                            <SelectItem value="Other">{t("Other")}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -431,7 +435,7 @@ export default function ManageRewards() {
                   name="imageUrls"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Photos (Optional)</FormLabel>
+                      <FormLabel>{t("Photos (Optional)")}</FormLabel>
                       <FormControl>
                         <MultiImageUpload
                           value={field.value ?? []}
@@ -456,9 +460,9 @@ export default function ManageRewards() {
                         <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
                           <div className="flex items-center justify-between">
                             <div>
-                              <FormLabel>Sizes (Optional)</FormLabel>
+                              <FormLabel>{t("Sizes (Optional)")}</FormLabel>
                               <p className="text-xs text-muted-foreground mt-1">
-                                For sized items (shirts, boots...). Employees must pick a size; stock is tracked per size and the pooled quantity below is ignored.
+                                {t("For sized items (shirts, boots...). Employees must pick a size; stock is tracked per size and the pooled quantity below is ignored.")}
                               </p>
                             </div>
                             <Button
@@ -468,7 +472,7 @@ export default function ManageRewards() {
                               disabled={sizes.length >= 20}
                               onClick={() => field.onChange([...sizes, { label: "", quantity: null }])}
                             >
-                              <Plus className="h-4 w-4 mr-1" /> Add Size
+                              <Plus className="h-4 w-4 mr-1" /> {t("Add Size")}
                             </Button>
                           </div>
                           {sizes.length > 0 && (
@@ -476,7 +480,8 @@ export default function ManageRewards() {
                               {sizes.map((s, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                   <Input
-                                    placeholder="Label (e.g. M)"
+                                    placeholder={t("Label (e.g. M)")}
+                                    aria-label={t("Label (e.g. M)")}
                                     value={s.label}
                                     onChange={(e) => setSize(i, { label: e.target.value })}
                                     className="flex-1"
@@ -484,26 +489,26 @@ export default function ManageRewards() {
                                   <Input
                                     type="number"
                                     min="0"
-                                    placeholder="Unlimited"
+                                    placeholder={t("Unlimited")}
                                     value={s.quantity ?? ""}
                                     onChange={(e) =>
                                       setSize(i, { quantity: e.target.value === "" ? null : Math.max(0, parseInt(e.target.value, 10) || 0) })
                                     }
                                     className="w-32"
-                                    aria-label={`Stock for size ${s.label || i + 1}`}
+                                    aria-label={t("Stock for size {size}", { size: s.label || number(i + 1) })}
                                   />
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    aria-label="Remove size"
+                                    aria-label={t("Remove size")}
                                     onClick={() => field.onChange(sizes.filter((_, idx) => idx !== i))}
                                   >
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                   </Button>
                                 </div>
                               ))}
-                              <p className="text-[11px] text-muted-foreground">Leave stock blank for unlimited. Sizes show in this order.</p>
+                              <p className="text-[11px] text-muted-foreground">{t("Leave stock blank for unlimited. Sizes show in this order.")}</p>
                             </div>
                           )}
                         </div>
@@ -519,7 +524,7 @@ export default function ManageRewards() {
                     name="quantity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Inventory Quantity (Leave blank for unlimited)</FormLabel>
+                        <FormLabel>{t("Inventory Quantity (Leave blank for unlimited)")}</FormLabel>
                         <FormControl>
                           <Input type="number" {...field} value={field.value || ""} />
                         </FormControl>
@@ -533,9 +538,9 @@ export default function ManageRewards() {
                     name="locationRestriction"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Location Restriction (Optional)</FormLabel>
+                        <FormLabel>{t("Location Restriction (Optional)")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Plant 1 Only" {...field} value={field.value || ""} />
+                          <Input placeholder={t("e.g. Plant 1 Only")} {...field} value={field.value || ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -557,7 +562,7 @@ export default function ManageRewards() {
                             onChange={field.onChange} 
                           />
                         </FormControl>
-                        <FormLabel className="cursor-pointer">Active in Catalog</FormLabel>
+                        <FormLabel className="cursor-pointer">{t("Active in Catalog")}</FormLabel>
                       </FormItem>
                     )}
                   />
@@ -575,17 +580,17 @@ export default function ManageRewards() {
                             onChange={field.onChange} 
                           />
                         </FormControl>
-                        <FormLabel className="cursor-pointer">Requires Admin Approval</FormLabel>
+                        <FormLabel className="cursor-pointer">{t("Requires Admin Approval")}</FormLabel>
                       </FormItem>
                     )}
                   />
                 </div>
 
                 <DialogFooter className="pt-4">
-                  <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>Cancel</Button>
+                  <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>{t("Cancel")}</Button>
                   <Button type="submit" disabled={createMut.isPending || updateMut.isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     {(createMut.isPending || updateMut.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingId ? "Save Changes" : "Create Reward"}
+                    {editingId ? t("Save Changes") : t("Create Reward")}
                   </Button>
                 </DialogFooter>
               </form>
@@ -599,23 +604,23 @@ export default function ManageRewards() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead>Reward</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>CAD Value</TableHead>
-                <TableHead>Inventory</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("Reward")}</TableHead>
+                <TableHead>{t("Category")}</TableHead>
+                <TableHead>{t("Cost")}</TableHead>
+                <TableHead>{t("CAD Value")}</TableHead>
+                <TableHead>{t("Inventory")}</TableHead>
+                <TableHead>{t("Status")}</TableHead>
+                <TableHead className="text-right">{t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Loading catalog...</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("Loading catalog...")}</TableCell>
                 </TableRow>
               ) : rewards?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Catalog is empty.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t("Catalog is empty.")}</TableCell>
                 </TableRow>
               ) : (
                 rewards?.map((reward) => (
@@ -625,21 +630,21 @@ export default function ManageRewards() {
                         {reward.imageUrl || fallbackImages[reward.category || ""] ? (
                           <img src={reward.imageUrl || fallbackImages[reward.category || ""]} alt="" className="w-10 h-10 rounded object-cover" />
                         ) : (
-                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-xs">No Img</div>
+                          <div className="w-10 h-10 rounded bg-muted flex items-center justify-center text-xs">{t("No Img")}</div>
                         )}
                         <div>
                           {reward.name}
-                           {reward.approvalRequired && <Badge variant="outline" className="ml-2 text-[10px] uppercase">Approval Req</Badge>}
-                           {reward.isCustomGiftCard && <Badge className="ml-2 text-[10px] uppercase">Custom Value</Badge>}
+                           {reward.approvalRequired && <Badge variant="outline" className="ml-2 text-[10px] uppercase">{t("Approval Req")}</Badge>}
+                           {reward.isCustomGiftCard && <Badge className="ml-2 text-[10px] uppercase">{t("Custom Value")}</Badge>}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{reward.category}</TableCell>
+                    <TableCell>{reward.category && label(reward.category)}</TableCell>
                      <TableCell className="font-bold text-primary">
-                       {reward.isCustomGiftCard ? `Custom · ${reward.giftCardIncrementLb ?? 100} LB increments` : `${reward.buckCost} LB`}
+                       {reward.isCustomGiftCard ? t("Custom · {amount} LB increments", { amount: number(reward.giftCardIncrementLb ?? 100) }) : t("{amount} LB", { amount: number(reward.buckCost) })}
                      </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {reward.cadValueCents != null ? `${(reward.cadValueCents / 100).toFixed(2)}` : '—'}
+                      {reward.cadValueCents != null ? currency(reward.cadValueCents / 100) : '—'}
                     </TableCell>
                     <TableCell>
                       {reward.sizes && reward.sizes.length > 0 ? (
@@ -650,27 +655,27 @@ export default function ManageRewards() {
                               variant={s.quantity === 0 ? "destructive" : "outline"}
                               className="text-[10px]"
                             >
-                              {s.label}: {s.quantity === null ? "∞" : s.quantity}
+                              {s.label}: {s.quantity === null ? "∞" : number(s.quantity)}
                             </Badge>
                           ))}
                         </div>
                       ) : reward.quantity !== null ? (
-                        reward.quantity
+                        reward.quantity !== undefined ? number(reward.quantity) : null
                       ) : (
-                        "Unlimited"
+                        t("Unlimited")
                       )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={reward.active ? "success" : "secondary"}>
-                        {reward.active ? "Active" : "Inactive"}
+                        {reward.active ? t("Active") : t("Inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(reward)}>
+                        <Button aria-label={t("Edit {name}", { name: reward.name })} variant="ghost" size="icon" onClick={() => handleEdit(reward)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(reward.id)}>
+                        <Button aria-label={t("Delete {name}", { name: reward.name })} variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(reward.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

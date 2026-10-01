@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { IRouter } from "express";
 import { db, employeesTable, transactionsTable, redemptionsTable, goalsTable } from "@workspace/db";
+import type { Employee } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import {
   GetRecentActivityQueryParams,
@@ -13,6 +14,27 @@ import { requireAuth, getCurrentUser } from "../lib/auth";
 import { resolveOrgNames } from "../lib/org";
 
 const router: IRouter = Router();
+
+/** Authored activity copy only. Actor/target names remain separate, untouched. */
+export function activityDescription(
+  type: "award" | "goal_contribution" | "redemption",
+  amount: number,
+  language: Employee["preferredLanguage"],
+): string {
+  const formattedAmount = amount.toLocaleString(language === "fr-CA" ? "fr-CA" : "en-CA");
+  switch (type) {
+    case "award":
+      return language === "fr-CA" ? `a envoyé ${formattedAmount} Bucks à` : `sent ${formattedAmount} bucks to`;
+    case "goal_contribution":
+      return language === "fr-CA"
+        ? `a contribué ${formattedAmount} Bucks à un objectif d’équipe`
+        : `contributed ${formattedAmount} bucks to a team goal`;
+    case "redemption":
+      return language === "fr-CA"
+        ? `a échangé ses Bucks contre une récompense (${formattedAmount} Bucks)`
+        : `redeemed a reward (${formattedAmount} bucks)`;
+  }
+}
 
 function currentMonth(): string {
   const now = new Date();
@@ -110,7 +132,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res): Promise<void> =
       items.push({
         id: tx.id,
         type: "award",
-        description: `sent ${tx.amount} bucks to`,
+        description: activityDescription("award", tx.amount, user.preferredLanguage),
         actorName: fromName,
         targetName: toName,
         amount: tx.amount,
@@ -125,7 +147,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res): Promise<void> =
       items.push({
         id: tx.id + 10000,
         type: "goal_contribution",
-        description: `contributed ${tx.amount} bucks to a team goal`,
+        description: activityDescription("goal_contribution", tx.amount, user.preferredLanguage),
         actorName: fromName,
         targetName: null,
         amount: tx.amount,
@@ -146,7 +168,7 @@ router.get("/dashboard/activity", requireAuth, async (req, res): Promise<void> =
     items.push({
       id: r.id + 20000,
       type: "redemption",
-      description: `redeemed a reward (${r.buckCost} bucks)`,
+      description: activityDescription("redemption", r.buckCost, user.preferredLanguage),
       actorName: emp ? `${emp.firstName} ${emp.lastName}` : null,
       targetName: null,
       amount: r.buckCost,

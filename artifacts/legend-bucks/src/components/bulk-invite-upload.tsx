@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Download, Loader2, CheckCircle2, XCircle, FileSpreadsheet, RotateCcw } from "lucide-react";
+import { useI18n, type TranslationParams } from "@/lib/i18n";
 
 const MAX_ROWS = 300;
 
@@ -65,6 +66,7 @@ const ROLE_ALIASES: Record<string, "admin" | "manager" | "team_member" | "accoun
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+type Message = { key: string; params?: TranslationParams };
 type ParsedRow = {
   rowNumber: number; // 1-based spreadsheet row (excluding header)
   firstName: string;
@@ -80,31 +82,32 @@ type ParsedRow = {
   managerId: number | null;
   awardBudgetYearly: number | null;
   startingBalance: number | null;
-  errors: string[];
+  errors: Message[];
 };
 
 // Normalize a header cell to match template columns loosely.
 function normHeader(h: string): string {
-  return h.toLowerCase().replace(/[^a-z]/g, "");
+  return h.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
 }
 
 const HEADER_MAP: Record<string, keyof typeof COLUMN_KEYS> = {};
 const COLUMN_KEYS = {
-  firstName: ["firstname", "first"],
-  lastName: ["lastname", "last", "surname"],
-  email: ["email", "emailaddress"],
+  firstName: ["firstname", "first", "prenom"],
+  lastName: ["lastname", "last", "surname", "nomdefamille"],
+  email: ["email", "emailaddress", "courriel", "adressecourriel"],
   role: ["role"],
-  department: ["department", "dept"],
-  location: ["location", "office"],
-  managerEmail: ["manageremail", "manager"],
-  awardBudgetYearly: ["yearlyawardbudget", "awardbudget", "awardbudgetyearly", "budget"],
-  startingBalance: ["startingbalance", "startingbucks", "initialbalance", "openingbalance"],
+  department: ["department", "dept", "service"],
+  location: ["location", "office", "etablissement"],
+  managerEmail: ["manageremail", "manager", "courrieldugestionnaire"],
+  awardBudgetYearly: ["yearlyawardbudget", "awardbudget", "awardbudgetyearly", "budget", "budgetannueldattribution"],
+  startingBalance: ["startingbalance", "startingbucks", "initialbalance", "openingbalance", "soldeinitial"],
 } as const;
 for (const [key, aliases] of Object.entries(COLUMN_KEYS)) {
   for (const a of aliases) HEADER_MAP[a] = key as keyof typeof COLUMN_KEYS;
 }
 
 export default function BulkInviteUpload() {
+  const { t, label, error, number } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,7 +119,7 @@ export default function BulkInviteUpload() {
 
   const [rows, setRows] = useState<ParsedRow[] | null>(null);
   const [fileName, setFileName] = useState("");
-  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<Message | null>(null);
   const [results, setResults] = useState<{
     invitedCount: number;
     skippedCount: number;
@@ -127,7 +130,7 @@ export default function BulkInviteUpload() {
 
   const downloadTemplate = () => {
     const csv =
-      TEMPLATE_HEADERS.join(",") +
+      TEMPLATE_HEADERS.map((header) => t(header)).join(",") +
       "\n" +
       TEMPLATE_EXAMPLE.join(",") +
       "\n";
@@ -152,11 +155,11 @@ export default function BulkInviteUpload() {
       if (!sheet) throw new Error("The file has no sheets");
       const raw: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: "" });
       if (raw.length === 0) {
-        setParseError("The file has no data rows. Download the template to see the expected format.");
+        setParseError({ key: "The file has no data rows. Download the template to see the expected format." });
         return;
       }
       if (raw.length > MAX_ROWS) {
-        setParseError(`Too many rows (${raw.length}). The maximum per upload is ${MAX_ROWS} — split the file and upload in parts.`);
+        setParseError({ key: "Too many rows ({count}). The maximum per upload is {max} — split the file and upload in parts.", params: { count: raw.length, max: MAX_ROWS } });
         return;
       }
 
@@ -184,49 +187,49 @@ export default function BulkInviteUpload() {
         const budgetRaw = getCell(r, "awardBudgetYearly");
         const startingBalanceRaw = getCell(r, "startingBalance");
 
-        const errors: string[] = [];
-        if (firstName.length < 2) errors.push("First name required (min 2 characters)");
-        if (lastName.length < 2) errors.push("Last name required (min 2 characters)");
-        if (!EMAIL_RE.test(email)) errors.push("Invalid email address");
+        const errors: Message[] = [];
+        if (firstName.length < 2) errors.push({ key: "First name required (min 2 characters)" });
+        if (lastName.length < 2) errors.push({ key: "Last name required (min 2 characters)" });
+        if (!EMAIL_RE.test(email)) errors.push({ key: "Invalid email address" });
         else {
-          if (seen.has(email)) errors.push("Duplicate email in this file");
+          if (seen.has(email)) errors.push({ key: "Duplicate email in this file" });
           seen.add(email);
-          if (employeeByEmail.has(email)) errors.push("Already in the system");
+          if (employeeByEmail.has(email)) errors.push({ key: "Already in the system" });
         }
 
         const role = ROLE_ALIASES[roleRaw.toLowerCase().trim()] ?? null;
-        if (!role) errors.push(roleRaw ? `Unknown role "${roleRaw}"` : "Role required (admin, manager, or team_member)");
+        if (!role) errors.push(roleRaw ? { key: 'Unknown role "{role}"', params: { role: roleRaw } } : { key: "Role required (admin, manager, or team_member)" });
 
         let departmentId: number | null = null;
         if (departmentName) {
           departmentId = deptByName.get(departmentName.toLowerCase()) ?? null;
-          if (departmentId === null) errors.push(`Unknown department "${departmentName}"`);
+          if (departmentId === null) errors.push({ key: 'Unknown department "{name}"', params: { name: departmentName } });
         }
         let locationId: number | null = null;
         if (locationName) {
           locationId = locByName.get(locationName.toLowerCase()) ?? null;
-          if (locationId === null) errors.push(`Unknown location "${locationName}"`);
+          if (locationId === null) errors.push({ key: 'Unknown location "{name}"', params: { name: locationName } });
         }
         let managerId: number | null = null;
         if (managerEmail) {
           const mgr = employeeByEmail.get(managerEmail);
-          if (!mgr) errors.push(`Manager "${managerEmail}" not found`);
-          else if (mgr.role !== "manager" && mgr.role !== "admin") errors.push(`"${managerEmail}" is not a manager or admin`);
+          if (!mgr) errors.push({ key: 'Manager "{email}" not found', params: { email: managerEmail } });
+          else if (mgr.role !== "manager" && mgr.role !== "admin") errors.push({ key: '"{email}" is not a manager or admin', params: { email: managerEmail } });
           else managerId = mgr.id;
         }
 
         let awardBudgetYearly: number | null = null;
         if (budgetRaw !== "") {
           const n = Number(budgetRaw);
-          if (!Number.isInteger(n) || n < 1) errors.push(`Invalid yearly award budget "${budgetRaw}"`);
-          else if (role && role !== "admin" && role !== "manager") errors.push("Only admins and managers can have an award budget");
+          if (!Number.isInteger(n) || n < 1) errors.push({ key: 'Invalid yearly award budget "{value}"', params: { value: budgetRaw } });
+          else if (role && role !== "admin" && role !== "manager") errors.push({ key: "Only admins and managers can have an award budget" });
           else awardBudgetYearly = n;
         }
 
         let startingBalance: number | null = null;
         if (startingBalanceRaw !== "") {
           const n = Number(startingBalanceRaw);
-          if (!Number.isInteger(n) || n < 1) errors.push(`Invalid starting balance "${startingBalanceRaw}" — use a whole number of 1 or more, or leave the cell empty`);
+          if (!Number.isInteger(n) || n < 1) errors.push({ key: 'Invalid starting balance "{value}" — use a whole number of 1 or more, or leave the cell empty', params: { value: startingBalanceRaw } });
           else startingBalance = n;
         }
 
@@ -251,7 +254,7 @@ export default function BulkInviteUpload() {
 
       setRows(parsed);
     } catch (err: any) {
-      setParseError(`Could not read the file: ${err?.message ?? "unknown error"}. Upload a .csv or .xlsx file.`);
+      setParseError({ key: "Could not read the file: {error}. Upload a .csv or .xlsx file.", params: { error: err?.message ?? "unknown error" } });
     }
   };
 
@@ -289,14 +292,14 @@ export default function BulkInviteUpload() {
           setRows(null);
           queryClient.invalidateQueries({ queryKey: ["/api/employees"] });
           toast({
-            title: `${data.invitedCount} team member${data.invitedCount === 1 ? "" : "s"} invited`,
-            description: data.skippedCount > 0 ? `${data.skippedCount} row(s) were skipped.` : "Invitation emails are on their way.",
+            title: t(data.invitedCount === 1 ? "{count} team member invited" : "{count} team members invited", { count: number(data.invitedCount) }),
+            description: data.skippedCount > 0 ? t("{count} row(s) were skipped.", { count: number(data.skippedCount) }) : t("Invitation emails are on their way."),
           });
         },
         onError: () =>
           toast({
-            title: "Bulk invite failed",
-            description: "No invitations were sent. Please try again.",
+            title: t("Bulk invite failed"),
+            description: t("No invitations were sent. Please try again."),
             variant: "destructive",
           }),
       },
@@ -315,7 +318,7 @@ export default function BulkInviteUpload() {
     return (
       <Card className="border-none shadow-md">
         <CardContent className="p-8 text-center text-muted-foreground">
-          Bulk upload is available to administrators only.
+          {t("Bulk upload is available to administrators only.")}
         </CardContent>
       </Card>
     );
@@ -324,10 +327,9 @@ export default function BulkInviteUpload() {
   return (
     <Card className="border-none shadow-md">
       <CardHeader className="border-b bg-muted/20">
-        <CardTitle className="text-2xl font-display">Bulk Upload</CardTitle>
+        <CardTitle className="text-2xl font-display">{t("Bulk Upload")}</CardTitle>
         <CardDescription>
-          Add many team members at once from a CSV or Excel file. Each new member receives the normal
-          invitation email.
+          {t("Add many team members at once from a CSV or Excel file. Each new member receives the normal invitation email.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
@@ -335,11 +337,11 @@ export default function BulkInviteUpload() {
         <div className="flex flex-col sm:flex-row gap-3">
           <Button variant="outline" onClick={downloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
-            Download Template
+            {t("Download Template")}
           </Button>
           <Button onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4 mr-2" />
-            Choose File
+            {t("Choose File")}
           </Button>
           <input
             ref={fileInputRef}
@@ -361,7 +363,7 @@ export default function BulkInviteUpload() {
 
         {parseError && (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-            {parseError}
+            {t(parseError.key, parseError.params ? Object.fromEntries(Object.entries(parseError.params).map(([key, value]) => [key, key === "error" ? error(value) : typeof value === "number" ? number(value) : value])) : undefined)}
           </div>
         )}
 
@@ -369,46 +371,46 @@ export default function BulkInviteUpload() {
         {rows && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Badge variant="secondary">{rows.length} rows</Badge>
-              <Badge className="bg-green-600 hover:bg-green-600 text-white">{validRows.length} ready</Badge>
-              {invalidRows.length > 0 && <Badge variant="destructive">{invalidRows.length} with problems</Badge>}
+              <Badge variant="secondary">{t("{count} rows", { count: number(rows.length) })}</Badge>
+              <Badge className="bg-green-600 hover:bg-green-600 text-white">{t("{count} ready", { count: number(validRows.length) })}</Badge>
+              {invalidRows.length > 0 && <Badge variant="destructive">{t("{count} with problems", { count: number(invalidRows.length) })}</Badge>}
             </div>
 
             <div className="border rounded-md overflow-x-auto max-h-96 overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">Row</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Dept / Location</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="w-12">{t("Row")}</TableHead>
+                    <TableHead>{t("Name")}</TableHead>
+                    <TableHead>{t("Email")}</TableHead>
+                    <TableHead>{t("Role")}</TableHead>
+                    <TableHead>{t("Dept / Location")}</TableHead>
+                    <TableHead>{t("Status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.map((r) => (
                     <TableRow key={r.rowNumber} className={r.errors.length ? "bg-destructive/5" : ""}>
-                      <TableCell className="text-muted-foreground">{r.rowNumber}</TableCell>
+                      <TableCell className="text-muted-foreground">{number(r.rowNumber)}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {r.firstName} {r.lastName}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{r.email}</TableCell>
-                      <TableCell>{r.role ?? r.roleRaw}</TableCell>
+                      <TableCell>{r.role ? label(r.role) : r.roleRaw}</TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {[r.departmentName, r.locationName].filter(Boolean).join(" / ") || "—"}
                       </TableCell>
                       <TableCell>
                         {r.errors.length === 0 ? (
                           <span className="inline-flex items-center text-green-600 text-sm">
-                            <CheckCircle2 className="h-4 w-4 mr-1" /> Ready
+                            <CheckCircle2 className="h-4 w-4 mr-1" /> {t("Ready")}
                           </span>
                         ) : (
                           <div className="space-y-0.5">
                             {r.errors.map((e, i) => (
                               <div key={i} className="inline-flex items-start text-destructive text-xs">
                                 <XCircle className="h-3.5 w-3.5 mr-1 mt-px shrink-0" />
-                                {e}
+                                {t(e.key, e.params)}
                               </div>
                             ))}
                           </div>
@@ -423,7 +425,7 @@ export default function BulkInviteUpload() {
             <div className="flex justify-end gap-3 pt-2 border-t">
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Start Over
+                {t("Start Over")}
               </Button>
               <Button onClick={submit} disabled={validRows.length === 0 || bulkMut.isPending}>
                 {bulkMut.isPending ? (
@@ -431,13 +433,12 @@ export default function BulkInviteUpload() {
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                Invite {validRows.length} Member{validRows.length === 1 ? "" : "s"}
+                {t(validRows.length === 1 ? "Invite {count} Member" : "Invite {count} Members", { count: number(validRows.length) })}
               </Button>
             </div>
             {invalidRows.length > 0 && (
               <p className="text-xs text-muted-foreground text-right">
-                Rows with problems will be skipped. Fix them in the file and re-upload if needed — already-invited
-                members are never double-invited.
+                {t("Rows with problems will be skipped. Fix them in the file and re-upload if needed — already-invited members are never double-invited.")}
               </p>
             )}
           </div>
@@ -448,23 +449,23 @@ export default function BulkInviteUpload() {
           <div className="space-y-3">
             <div className="rounded-md border border-green-600/30 bg-green-600/5 p-4 text-sm">
               <span className="font-medium text-green-700">
-                {results.invitedCount} team member{results.invitedCount === 1 ? "" : "s"} invited successfully.
+                {t(results.invitedCount === 1 ? "{count} team member invited successfully." : "{count} team members invited successfully.", { count: number(results.invitedCount) })}
               </span>{" "}
               {results.skippedCount > 0 && (
-                <span className="text-muted-foreground">{results.skippedCount} row(s) skipped:</span>
+                <span className="text-muted-foreground">{t("{count} row(s) skipped:", { count: number(results.skippedCount) })}</span>
               )}
             </div>
             {results.failed.length > 0 && (
               <ul className="text-sm space-y-1">
                 {results.failed.map((f, i) => (
                   <li key={i} className="text-destructive">
-                    Row {f.rowNumber} ({f.email}): {f.error}
+                    {t("Row {row} ({email}): {error}", { row: number(f.rowNumber), email: f.email, error: error(f.error) })}
                   </li>
                 ))}
               </ul>
             )}
             <Button variant="outline" size="sm" onClick={reset}>
-              Upload Another File
+              {t("Upload Another File")}
             </Button>
           </div>
         )}

@@ -47,6 +47,7 @@ import type {
   GoalUpdate,
   HealthStatus,
   InviteInput,
+  LanguagePreferences,
   LeaderboardEntry,
   ListEmployeesParams,
   ListGoalsParams,
@@ -1024,6 +1025,76 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+
+export const getUpdateLanguagePreferencesUrl = () => {
+
+
+
+
+  return `/api/auth/me/preferences`
+}
+
+/**
+ * @summary Update only the authenticated employee's preferred language
+ */
+export const updateLanguagePreferences = async (languagePreferences: LanguagePreferences, options?: RequestInit): Promise<LanguagePreferences> => {
+
+  return customFetch<LanguagePreferences>(getUpdateLanguagePreferencesUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(languagePreferences)
+  }
+);}
+
+
+
+
+export const getUpdateLanguagePreferencesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLanguagePreferences>>, TError,{data: BodyType<LanguagePreferences>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLanguagePreferences>>, TError,{data: BodyType<LanguagePreferences>}, TContext> => {
+
+const mutationKey = ['updateLanguagePreferences'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLanguagePreferences>>, {data: BodyType<LanguagePreferences>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateLanguagePreferences(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLanguagePreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updateLanguagePreferences>>>
+    export type UpdateLanguagePreferencesMutationBody = BodyType<LanguagePreferences>
+    export type UpdateLanguagePreferencesMutationError = ErrorType<void>
+
+    /**
+ * @summary Update only the authenticated employee's preferred language
+ */
+export const useUpdateLanguagePreferences = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLanguagePreferences>>, TError,{data: BodyType<LanguagePreferences>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLanguagePreferences>>,
+        TError,
+        {data: BodyType<LanguagePreferences>},
+        TContext
+      > => {
+      return useMutation(getUpdateLanguagePreferencesMutationOptions(options));
+    }
 
 export const getUpdateNotificationPreferencesUrl = () => {
 

@@ -220,8 +220,21 @@ export const GetMeResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().optional().describe('Current Legend Bucks balance'),
   "notifyBucksReceived": zod.boolean().describe('Receive an email when awarded Legend Bucks'),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']),
   "notifyRedemptionUpdates": zod.boolean().describe('Receive emails about reward redemption status'),
   "notifyNewRedemptionRequests": zod.boolean().describe('Receive an email when a new redemption request needs your attention (admins\/managers)')
+})
+
+
+/**
+ * @summary Update only the authenticated employee's preferred language
+ */
+export const UpdateLanguagePreferencesBody = zod.object({
+  "preferredLanguage": zod.enum(['en', 'fr-CA'])
+})
+
+export const UpdateLanguagePreferencesResponse = zod.object({
+  "preferredLanguage": zod.enum(['en', 'fr-CA'])
 })
 
 
@@ -245,7 +258,8 @@ export const UpdateNotificationPreferencesResponse = zod.object({
  * @summary Request a magic link login email
  */
 export const RequestMagicLinkBody = zod.object({
-  "email": zod.string().email()
+  "email": zod.string().email(),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']).optional().describe('Language for this sign-in email; saved only after successful token verification. Omit to use the employee\'s saved language.')
 })
 
 export const RequestMagicLinkResponse = zod.object({
@@ -273,7 +287,8 @@ export const VerifyMagicLinkResponse = zod.object({
   "managerId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive', 'invited']),
   "balance": zod.number().optional().describe('Current Legend Bucks balance'),
-  "token": zod.string().describe('Session token to store client-side and send as Bearer auth')
+  "token": zod.string().describe('Session token to store client-side and send as Bearer auth'),
+  "preferredLanguage": zod.enum(['en', 'fr-CA'])
 })
 
 
@@ -305,6 +320,7 @@ export const InviteEmployeeBody = zod.object({
 export const InviteEmployeeResponse = zod.object({
   "id": zod.number(),
   "firstName": zod.string(),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']),
   "lastName": zod.string(),
   "email": zod.string(),
   "department": zod.string().nullish(),
@@ -371,6 +387,7 @@ export const ListEmployeesQueryParams = zod.object({
 export const ListEmployeesResponseItem = zod.object({
   "id": zod.number(),
   "firstName": zod.string(),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']),
   "lastName": zod.string(),
   "email": zod.string(),
   "department": zod.string().nullish(),
@@ -398,6 +415,7 @@ export const GetEmployeeParams = zod.object({
 export const GetEmployeeResponse = zod.object({
   "id": zod.number(),
   "firstName": zod.string(),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']),
   "lastName": zod.string(),
   "email": zod.string(),
   "department": zod.string().nullish(),
@@ -438,6 +456,7 @@ export const UpdateEmployeeBody = zod.object({
 export const UpdateEmployeeResponse = zod.object({
   "id": zod.number(),
   "firstName": zod.string(),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']),
   "lastName": zod.string(),
   "email": zod.string(),
   "department": zod.string().nullish(),
@@ -495,6 +514,7 @@ export const DeactivateEmployeeParams = zod.object({
 export const DeactivateEmployeeResponse = zod.object({
   "id": zod.number(),
   "firstName": zod.string(),
+  "preferredLanguage": zod.enum(['en', 'fr-CA']),
   "lastName": zod.string(),
   "email": zod.string(),
   "department": zod.string().nullish(),

@@ -7,6 +7,7 @@
  */
 import type { CurrentUserRole } from './currentUserRole';
 import type { CurrentUserStatus } from './currentUserStatus';
+import type { PreferredLanguage } from './preferredLanguage';
 
 export interface CurrentUser {
   id: number;
@@ -27,6 +28,7 @@ export interface CurrentUser {
   balance?: number;
   /** Receive an email when awarded Legend Bucks */
   notifyBucksReceived: boolean;
+  preferredLanguage: PreferredLanguage;
   /** Receive emails about reward redemption status */
   notifyRedemptionUpdates: boolean;
   /** Receive an email when a new redemption request needs your attention (admins/managers) */

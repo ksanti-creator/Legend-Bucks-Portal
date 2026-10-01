@@ -22,6 +22,9 @@ import {
 
 import { cn, getInitials } from "@/lib/utils";
 import { clearSessionToken } from "@/lib/auth-token";
+import { useI18n } from "@/lib/i18n";
+import { useQueryClient } from "@tanstack/react-query";
+import { LanguageSelector } from "@/components/language-selector";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -41,6 +44,7 @@ function SidebarContent({
   onNavigate?: () => void;
   onLogout: () => void;
 }) {
+  const { t, label } = useI18n();
   return (
     <div className="flex h-full flex-col bg-sidebar/95 text-sidebar-foreground">
       <div className="px-5 py-6">
@@ -51,7 +55,7 @@ function SidebarContent({
         />
       </div>
 
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto" aria-label="Main">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto" aria-label={t("Main")}>
         {navItems.map((item, idx) => {
           const prev = navItems[idx - 1];
           const groupOf = (h: string) => h.startsWith("/store-gift-cards") ? 2 : h === "/help" ? 3 : ["/dashboard", "/send", "/rewards"].includes(h) ? 0 : 1;
@@ -88,19 +92,19 @@ function SidebarContent({
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate text-foreground">{user.firstName} {user.lastName}</p>
-              <p className="text-xs text-muted-foreground truncate capitalize">{user.role.replace('_', ' ')}</p>
+              <p className="text-xs text-muted-foreground truncate">{label(user.role)}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" size="sm" className="w-full bg-muted/70 border-transparent hover:bg-muted" asChild>
               <Link href="/settings" onClick={onNavigate}>
                 <Settings className="h-4 w-4 mr-1.5" />
-                Settings
+                {t("Settings")}
               </Link>
             </Button>
             <Button variant="outline" size="sm" className="w-full bg-card text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive" onClick={onLogout}>
               <LogOut className="h-4 w-4 mr-1.5" />
-              Logout
+              {t("Logout")}
             </Button>
           </div>
         </div>
@@ -110,6 +114,8 @@ function SidebarContent({
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
+  const { t, number } = useI18n();
+  const queryClient = useQueryClient();
   const { data: user, isLoading } = useGetMe();
   const logout = useLogout();
   // Store checkout link is driven by explicit server-side store grants, not by role.
@@ -143,6 +149,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     logout.mutate(undefined, {
       onSettled: () => {
         clearSessionToken();
+        queryClient.clear();
         setLocation("/login");
       },
     });
@@ -154,37 +161,37 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   if (user.role === "accounting_admin") {
     navItems = [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/transactions", label: "Ledger", icon: ArrowRightLeft },
-      { href: "/redemptions", label: "Redemptions", icon: Ship },
+      { href: "/dashboard", label: t("Dashboard"), icon: LayoutDashboard },
+      { href: "/transactions", label: t("Ledger"), icon: ArrowRightLeft },
+      { href: "/redemptions", label: t("Redemptions"), icon: Ship },
     ];
   } else {
     navItems = [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/rewards", label: "Rewards", icon: Gift },
-      { href: "/employees", label: "Team Directory", icon: Users },
-      { href: "/transactions", label: "Ledger", icon: ArrowRightLeft },
-      { href: "/goals", label: "Goals", icon: Target },
+      { href: "/dashboard", label: t("Dashboard"), icon: LayoutDashboard },
+      { href: "/rewards", label: t("Rewards"), icon: Gift },
+      { href: "/employees", label: t("Team Directory"), icon: Users },
+      { href: "/transactions", label: t("Ledger"), icon: ArrowRightLeft },
+      { href: "/goals", label: t("Goals"), icon: Target },
     ];
 
     if (user.role === "admin" || user.role === "manager") {
-      navItems.splice(1, 0, { href: "/send", label: "Send Bucks", icon: Send });
-      navItems.push({ href: "/redemptions", label: "Redemptions", icon: Ship });
+      navItems.splice(1, 0, { href: "/send", label: t("Send Bucks"), icon: Send });
+      navItems.push({ href: "/redemptions", label: t("Redemptions"), icon: Ship });
     }
 
     if (user.role === "admin") {
-      navItems.push({ href: "/employees/manage", label: "Departments", icon: Building2 });
+      navItems.push({ href: "/employees/manage", label: t("Departments"), icon: Building2 });
     }
   }
 
   if (myStores && myStores.length > 0) {
-    navItems.push({ href: "/store-gift-cards", label: "Store Gift Cards", icon: CreditCard });
+    navItems.push({ href: "/store-gift-cards", label: t("Store Gift Cards"), icon: CreditCard });
   }
   if (user.role === "admin") {
-    navItems.push({ href: "/store-gift-cards/admin", label: "Store Card Admin", icon: ShieldCheck });
+    navItems.push({ href: "/store-gift-cards/admin", label: t("Store Card Admin"), icon: ShieldCheck });
   }
 
-  navItems.push({ href: "/help", label: "Help", icon: HelpCircle });
+  navItems.push({ href: "/help", label: t("Help"), icon: HelpCircle });
 
   return (
     <div className="flex min-h-screen app-gradient-bg text-foreground">
@@ -203,10 +210,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <ShellScenery />
         {import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
           <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold text-amber-950">
-            SANDBOX PREVIEW — Dummy data only. Emails and real storage are disabled.
+            {t("SANDBOX PREVIEW — Dummy data only. Emails and real storage are disabled.")}
           </div>
         )}
-        <header className="h-16 border-b border-border/60 bg-background/75 backdrop-blur-md flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+        <header className="min-h-16 py-2 border-b border-border/60 bg-background/75 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
           <div className="flex items-center gap-2 min-w-0">
             {/* Mobile nav trigger */}
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
@@ -215,13 +222,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   variant="ghost"
                   size="icon"
                   className="lg:hidden -ml-1 shrink-0 rounded-xl bg-muted/70 hover:bg-muted"
-                  aria-label="Open navigation menu"
+                  aria-label={t("Open navigation menu")}
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-72 max-w-[85vw] p-0 border-sidebar-border">
-                <SheetTitle className="sr-only">Navigation</SheetTitle>
+                <SheetTitle className="sr-only">{t("Navigation")}</SheetTitle>
                 <SidebarContent
                   navItems={navItems}
                   location={location}
@@ -239,12 +246,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
+            <LanguageSelector compact />
             <div className="flex items-center gap-2.5 rounded-full border border-primary/25 bg-card/90 card-lift pl-3 pr-4 py-1.5">
               <Coins className="h-4 w-4 text-primary" />
               <div className="leading-tight">
-                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">My Balance</p>
+                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{t("My Balance")}</p>
                 <p className="font-display font-bold text-sm leading-none text-primary">
-                  {user.balance?.toLocaleString() || 0} LB
+                  {number(user.balance ?? 0)} LB
                 </p>
               </div>
             </div>

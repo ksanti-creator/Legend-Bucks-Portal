@@ -12,14 +12,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Coins, Loader2 } from "lucide-react";
-
-const sendSchema = z.object({
-  toEmployeeId: z.coerce.number().min(1, "Please select an employee"),
-  amount: z.coerce.number().min(1, "Amount must be at least 1"),
-  note: z.string().min(10, "Please provide a descriptive note (min 10 chars) for the recognition"),
-});
+import { useI18n } from "@/lib/i18n";
 
 export default function SendBucks() {
+  const { t, number, error } = useI18n();
+  const sendSchema = z.object({
+    toEmployeeId: z.coerce.number().min(1, t("Please select an employee")),
+    amount: z.coerce.number().min(1, t("Amount must be at least 1")),
+    note: z.string().min(10, t("Please provide a descriptive note (min 10 chars) for the recognition")),
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -72,7 +73,7 @@ export default function SendBucks() {
   const blocked = hasNoBudget || overBudget || overMax;
 
   if (user?.role !== "admin" && user?.role !== "manager") {
-    return <div className="p-8 text-center text-destructive">Unauthorized. Managers only.</div>;
+    return <div className="p-8 text-center text-destructive">{t("Unauthorized. Managers only.")}</div>;
   }
 
   const onSubmit = (data: z.infer<typeof sendSchema>) => {
@@ -81,15 +82,15 @@ export default function SendBucks() {
       {
         onSuccess: () => {
           toast({
-            title: "Bucks Sent!",
-            description: `Successfully sent ${data.amount} LB to recognize great work.`,
+            title: t("Bucks Sent!"),
+            description: t("Successfully sent {amount} LB to recognize great work.", { amount: number(data.amount) }),
           });
           setLocation("/dashboard");
         },
         onError: (err: any) => {
           toast({
-            title: "Failed to send bucks",
-            description: err?.message || "Please try again.",
+            title: t("Failed to send bucks"),
+            description: error(err?.message || "Please try again."),
             variant: "destructive",
           });
         },
@@ -103,8 +104,8 @@ export default function SendBucks() {
         <div className="inline-flex items-center justify-center p-4 bg-primary/10 text-primary rounded-full mb-4">
           <Send className="h-8 w-8" />
         </div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Recognize Great Work</h1>
-        <p className="text-muted-foreground mt-2">Send Legend Bucks to a team member to show your appreciation.</p>
+        <h1 className="text-3xl font-display font-bold tracking-tight">{t("Recognize Great Work")}</h1>
+        <p className="text-muted-foreground mt-2">{t("Send Legend Bucks to a team member to show your appreciation.")}</p>
       </div>
 
       <Card className="border-none shadow-lg">
@@ -117,14 +118,14 @@ export default function SendBucks() {
                 name="toEmployeeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Team Member</FormLabel>
+                    <FormLabel>{t("Team Member")}</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value?.toString()}
                     >
                       <FormControl>
                         <SelectTrigger className="h-12 text-base">
-                          <SelectValue placeholder="Select someone to recognize" />
+                          <SelectValue placeholder={t("Select someone to recognize")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-[300px]">
@@ -142,21 +143,21 @@ export default function SendBucks() {
 
               {hasNoBudget ? (
                 <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
-                  You don't have an award budget set. Ask an admin to set your yearly award budget before you can send bucks.
+                  {t("You don't have an award budget set. Ask an admin to set your yearly award budget before you can send bucks.")}
                 </div>
               ) : (
                 (budget != null || maxSingleAward != null) && (
                   <div className="rounded-md bg-muted/50 border border-border px-4 py-3 text-sm space-y-1">
                     {budget != null && (
                       <div>
-                        <span className="text-muted-foreground">Your remaining award budget this year: </span>
-                        <strong className="text-foreground">{remaining?.toLocaleString()} LB</strong>
-                        <span className="text-muted-foreground"> of {budget.toLocaleString()} LB.</span>
+                        <span className="text-muted-foreground">{t("Your remaining award budget this year:")} </span>
+                        <strong className="text-foreground">{number(remaining ?? 0)} LB</strong>
+                        <span className="text-muted-foreground"> {t("of {budget} LB.", { budget: number(budget) })}</span>
                       </div>
                     )}
                     {maxSingleAward != null && (
                       <div className="text-muted-foreground">
-                        Maximum single award: <strong className="text-foreground">{maxSingleAward.toLocaleString()} LB</strong>.
+                        {t("Maximum single award:")} <strong className="text-foreground">{number(maxSingleAward)} LB</strong>.
                       </div>
                     )}
                   </div>
@@ -168,7 +169,7 @@ export default function SendBucks() {
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (Legend Bucks)</FormLabel>
+                    <FormLabel>{t("Amount (Legend Bucks)")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Coins className="absolute left-3 top-3.5 h-5 w-5 text-emerald-700" />
@@ -182,12 +183,12 @@ export default function SendBucks() {
                     </FormControl>
                     {overMax && (
                       <p className="text-sm text-destructive">
-                        Exceeds the maximum single award of {maxSingleAward?.toLocaleString()} LB.
+                        {t("Exceeds the maximum single award of {amount} LB.", { amount: number(maxSingleAward ?? 0) })}
                       </p>
                     )}
                     {!overMax && overBudget && (
                       <p className="text-sm text-destructive">
-                        Exceeds your remaining award budget ({remaining?.toLocaleString()} LB left this year).
+                        {t("Exceeds your remaining award budget ({amount} LB left this year).", { amount: number(remaining ?? 0) })}
                       </p>
                     )}
                     <FormMessage />
@@ -200,16 +201,16 @@ export default function SendBucks() {
                 name="note"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Recognition Note</FormLabel>
+                    <FormLabel>{t("Recognition Note")}</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Tell them why they are receiving this award. Be specific about their great work..." 
+                        placeholder={t("Tell them why they are receiving this award. Be specific about their great work...")} 
                         className="min-h-[120px] text-base resize-none"
                         {...field} 
                       />
                     </FormControl>
                     <FormDescription>
-                      This message will be visible to the employee and appear in the activity feed.
+                      {t("This message will be visible to the employee and appear in the activity feed.")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -224,7 +225,7 @@ export default function SendBucks() {
                   disabled={sendMut.isPending || blocked}
                 >
                   {sendMut.isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Send className="h-5 w-5 mr-2" />}
-                  Send Award
+                  {t("Send Award")}
                 </Button>
               </div>
             </form>

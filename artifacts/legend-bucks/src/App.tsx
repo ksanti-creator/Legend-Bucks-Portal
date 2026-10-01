@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { Shell } from '@/components/layout/Shell';
+import { I18nProvider, useI18n } from '@/lib/i18n';
 
 import Home from '@/pages/index';
 import Login from '@/pages/login';
@@ -32,10 +33,11 @@ const queryClient = new QueryClient({
 });
 
 function NotFound() {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
       <h1 className="text-4xl font-display font-bold text-foreground">404</h1>
-      <p className="mt-2 text-muted-foreground">Page not found</p>
+      <p className="mt-2 text-muted-foreground">{t("Page not found")}</p>
     </div>
   );
 }
@@ -76,10 +78,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <I18nProvider>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <Router />
       </WouterRouter>
       <Toaster />
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

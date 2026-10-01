@@ -12,14 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Mail, KeyRound, Loader2, FlaskConical, ShieldCheck, Users, User, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { setSessionToken } from "@/lib/auth-token";
-
-const emailSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
-
-const tokenSchema = z.object({
-  token: z.string().min(6, "Token must be at least 6 characters"),
-});
+import { useI18n } from "@/lib/i18n";
+import { LanguageSelector } from "@/components/language-selector";
 
 const DEV_ACCOUNTS = [
   {
@@ -53,6 +47,13 @@ const DEV_ACCOUNTS = [
 ] as const;
 
 export default function Login() {
+  const { t, loginPreference } = useI18n();
+  const emailSchema = z.object({
+    email: z.string().email(t("Please enter a valid email address")),
+  });
+  const tokenSchema = z.object({
+    token: z.string().min(6, t("Token must be at least 6 characters")),
+  });
   const [step, setStep] = useState<"email" | "token">("email");
   const [email, setEmail] = useState("");
   const [quickLoggingIn, setQuickLoggingIn] = useState<string | null>(null);
@@ -76,15 +77,15 @@ export default function Login() {
   const onEmailSubmit = (data: z.infer<typeof emailSchema>) => {
     setEmail(data.email);
     requestMagicLink.mutate(
-      { data: { email: data.email } },
+      { data: { email: data.email, ...loginPreference } },
       {
         onSuccess: (res) => {
           setStep("token");
-          toast({ title: "Magic link sent!", description: "Check your email for the login token." });
+          toast({ title: t("Magic link sent!"), description: t("Check your email for the login token.") });
           if (res.token) tokenForm.setValue("token", res.token);
         },
         onError: () => {
-          toast({ title: "Error", description: "Failed to send magic link. Check your email and try again.", variant: "destructive" });
+          toast({ title: t("Error"), description: t("Failed to send magic link. Check your email and try again."), variant: "destructive" });
         },
       }
     );
@@ -97,11 +98,11 @@ export default function Login() {
         onSuccess: ({ token, ...user }) => {
           setSessionToken(token);
           queryClient.setQueryData(getGetMeQueryKey(), user);
-          toast({ title: "Welcome back!" });
+          toast({ title: t("Welcome back!") });
           setLocation("/dashboard");
         },
         onError: () => {
-          toast({ title: "Invalid token", description: "The token is invalid or has expired.", variant: "destructive" });
+          toast({ title: t("Invalid token"), description: t("The token is invalid or has expired."), variant: "destructive" });
         },
       }
     );
@@ -129,13 +130,13 @@ export default function Login() {
         onSuccess: ({ token, ...user }) => {
           setSessionToken(token);
           queryClient.setQueryData(getGetMeQueryKey(), user);
-          toast({ title: "Welcome back!" });
+          toast({ title: t("Welcome back!") });
           setLocation("/dashboard");
         },
         onError: () => {
           toast({
-            title: "Invalid or expired link",
-            description: "Enter your email below to get a fresh sign-in link.",
+            title: t("Invalid or expired link"),
+            description: t("Enter your email below to get a fresh sign-in link."),
             variant: "destructive",
           });
         },
@@ -150,11 +151,11 @@ export default function Login() {
     try {
       await new Promise<void>((resolve, reject) => {
         requestMagicLink.mutate(
-          { data: { email: accountEmail } },
+          { data: { email: accountEmail, ...loginPreference } },
           {
             onSuccess: (res) => {
               if (!res.token) {
-                reject(new Error("No token returned — quick login only works in development mode."));
+                reject(new Error(t("No token returned — quick login only works in development mode.")));
                 return;
               }
               verifyMagicLink.mutate(
@@ -175,7 +176,7 @@ export default function Login() {
         );
       });
     } catch {
-      toast({ title: "Quick login failed", description: "Make sure the API server is running.", variant: "destructive" });
+      toast({ title: t("Quick login failed"), description: t("Make sure the API server is running."), variant: "destructive" });
     } finally {
       setQuickLoggingIn(null);
     }
@@ -191,9 +192,10 @@ export default function Login() {
         </div>
 
         <div className="w-full max-w-md space-y-5 rounded-[2rem] border border-white/70 bg-white/85 p-6 card-lift backdrop-blur-md sm:p-8">
+          <div className="flex justify-end"><LanguageSelector /></div>
           <img src="/logos/legend-bucks-rewards.png" alt="Legend Bucks" className="mx-auto h-14 w-auto sm:h-16" />
           <p className="text-center text-sm text-muted-foreground leading-relaxed">
-            Recognise great work. Reward your crew. Built for the Legend Boats team.
+            {t("Recognise great work. Reward your crew. Built for the Legend Boats team.")}
           </p>
           {/* ── Dev Quick Login (development only) ───────────────── */}
           {import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
@@ -201,7 +203,7 @@ export default function Login() {
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20">
                   <FlaskConical className="h-3.5 w-3.5 text-amber-800 shrink-0" />
-                  <span className="text-amber-800 text-xs font-semibold uppercase tracking-wider">Sandbox preview — simulated data, no emails or awards to real employees</span>
+                  <span className="text-amber-800 text-xs font-semibold uppercase tracking-wider">{t("Sandbox preview — simulated data, no emails or awards to real employees")}</span>
                 </div>
                 <div className="p-3 space-y-2">
                   {DEV_ACCOUNTS.map((account) => {
@@ -220,7 +222,7 @@ export default function Login() {
                         }
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">{account.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{account.role}</p>
+                          <p className="text-xs text-muted-foreground truncate">{t(account.role)}</p>
                         </div>
                         <span className="text-xs text-muted-foreground shrink-0">→</span>
                       </button>
@@ -232,7 +234,7 @@ export default function Login() {
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 border-t border-border" />
-                <span className="text-xs text-muted-foreground uppercase tracking-wider">or sign in with email</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("or sign in with email")}</span>
                 <div className="flex-1 border-t border-border" />
               </div>
             </>
@@ -242,12 +244,12 @@ export default function Login() {
           <div>
             <div className="mb-5">
               <h1 className="text-2xl font-bold text-foreground mb-1 text-center">
-                {step === "email" ? "Sign In" : "Check Your Email"}
+                {step === "email" ? t("Sign In") : t("Check Your Email")}
               </h1>
               <p className="text-muted-foreground text-sm text-center">
                 {step === "email"
-                  ? "Enter your company email to receive a magic login link."
-                  : `We sent a code to ${email}`}
+                  ? t("Enter your company email to receive a magic login link.")
+                  : t("We sent a code to {email}", { email })}
               </p>
             </div>
 
@@ -261,7 +263,7 @@ export default function Login() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">Email Address</FormLabel>
+                            <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">{t("Email Address")}</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -282,7 +284,7 @@ export default function Login() {
                         disabled={requestMagicLink.isPending}
                       >
                         {requestMagicLink.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Send Magic Link
+                         {t("Send Magic Link")}
                       </Button>
                     </form>
                   </Form>
@@ -294,12 +296,12 @@ export default function Login() {
                         name="token"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">Login Token</FormLabel>
+                            <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">{t("Login Token")}</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  placeholder="Paste your token here"
+                                  placeholder={t("Paste your token here")}
                                   className="pl-10 font-mono tracking-wider"
                                   {...field}
                                 />
@@ -316,7 +318,7 @@ export default function Login() {
                           disabled={verifyMagicLink.isPending}
                         >
                           {verifyMagicLink.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                          Verify &amp; Log In
+                           {t("Verify & Log In")}
                         </Button>
                         <Button
                           type="button"
@@ -324,7 +326,7 @@ export default function Login() {
                           className="text-muted-foreground hover:text-foreground text-sm"
                           onClick={() => setStep("email")}
                         >
-                          ← Back to email
+                           {t("← Back to email")}
                         </Button>
                       </div>
                     </form>
@@ -335,7 +337,7 @@ export default function Login() {
           </div>
 
           <p className="text-center text-muted-foreground text-xs">
-            No account? Ask your manager to invite you.
+            {t("No account? Ask your manager to invite you.")}
           </p>
         </div>
         <p className="mt-6 text-xs text-[#16242A]/70">© {new Date().getFullYear()} Legend Boats Inc.</p>

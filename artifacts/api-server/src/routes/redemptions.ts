@@ -86,7 +86,7 @@ async function notifyPayrollApprovers(
     );
     for (const acct of accountants) {
       try {
-        await sendPayrollApprovalNeededEmail(acct.email, acct.firstName, employeeName, reward.name, redemption.buckCost);
+        await sendPayrollApprovalNeededEmail(acct.email, acct.firstName, employeeName, reward.name, redemption.buckCost, acct.preferredLanguage);
         log.info({ redemptionId: redemption.id, accountantId: acct.id }, "Payroll approval needed email sent");
       } catch (err) {
         log.error({ err, redemptionId: redemption.id, accountantId: acct.id }, "Failed to send payroll approval needed email");
@@ -328,6 +328,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
               message: redemption.giftCardMessage,
             }
           : undefined,
+        user.preferredLanguage,
       );
       req.log.info({ redemptionId: redemption.id }, "Redemption receipt email sent");
     } catch (err) {
@@ -363,6 +364,7 @@ router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
           redemption.buckCost,
           redemption.note,
           redemption.sizeLabel,
+          approver.preferredLanguage,
         );
         req.log.info({ redemptionId: redemption.id, approverId: approver.id }, "New redemption request email sent");
       } catch (err) {
@@ -519,13 +521,15 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
     // Accounting admins take it from here.
     if (reward && emp) {
       try {
-        await sendTimeOffPayrollEmail(`${emp.firstName} ${emp.lastName}`, emp.email, reward.name, reward.description, updated.id);
+        const [payrollMailboxEmployee] = await db.select().from(employeesTable)
+          .where(sql`lower(${employeesTable.email}) = 'payroll@legendboats.com'`).limit(1);
+        await sendTimeOffPayrollEmail(`${emp.firstName} ${emp.lastName}`, emp.email, reward.name, reward.description, updated.id, payrollMailboxEmployee?.preferredLanguage ?? "en");
       } catch (err) {
         req.log.error({ err, redemptionId: updated.id }, "Failed to email payroll about approved Time Off");
       }
       if (emp.notifyRedemptionUpdates) {
         try {
-          await sendTimeOffApprovedEmail(emp.email, emp.firstName, reward.name);
+          await sendTimeOffApprovedEmail(emp.email, emp.firstName, reward.name, emp.preferredLanguage);
         } catch (err) {
           req.log.error({ err, redemptionId: updated.id }, "Failed to email team member about approved Time Off");
         }
@@ -536,7 +540,7 @@ router.patch("/redemptions/:id/approve", requireAuth, async (req, res): Promise<
     // Notify the employee their redemption was approved — best-effort, never blocks.
     try {
       if (emp?.email && emp.notifyRedemptionUpdates) {
-        await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
+        await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? (emp.preferredLanguage === "fr-CA" ? "votre récompense" : "your reward"), emp.preferredLanguage);
         req.log.info({ redemptionId: updated.id }, "Redemption approved email sent");
       }
     } catch (err) {
@@ -585,7 +589,7 @@ router.patch("/redemptions/:id/payroll-approve", requireAuth, async (req, res): 
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
     const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, updated.rewardId)).limit(1);
     if (emp?.email && emp.notifyRedemptionUpdates) {
-      await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
+      await sendRedemptionApprovedEmail(emp.email, emp.firstName, reward?.name ?? (emp.preferredLanguage === "fr-CA" ? "votre récompense" : "your reward"), emp.preferredLanguage);
       req.log.info({ redemptionId: updated.id }, "Redemption approved email sent");
     }
   } catch (err) {
@@ -650,7 +654,7 @@ router.patch("/redemptions/:id/payroll-reject", requireAuth, async (req, res): P
   try {
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
     if (emp?.email && emp.notifyRedemptionUpdates) {
-      await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? "your reward", updated.buckCost, updated.adminNote);
+      await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? (emp.preferredLanguage === "fr-CA" ? "votre récompense" : "your reward"), updated.buckCost, updated.adminNote, emp.preferredLanguage);
       req.log.info({ redemptionId: updated.id }, "Redemption rejected email sent");
     }
   } catch (err) {
@@ -745,7 +749,7 @@ router.patch("/redemptions/:id/reject", requireAuth, async (req, res): Promise<v
   try {
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
     if (emp?.email && emp.notifyRedemptionUpdates) {
-      await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? "your reward", updated.buckCost, updated.adminNote);
+      await sendRedemptionRejectedEmail(emp.email, emp.firstName, reward?.name ?? (emp.preferredLanguage === "fr-CA" ? "votre récompense" : "your reward"), updated.buckCost, updated.adminNote, emp.preferredLanguage);
       req.log.info({ redemptionId: updated.id }, "Redemption rejected email sent");
     }
   } catch (err) {
@@ -856,7 +860,7 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
     const [emp] = await db.select().from(employeesTable).where(eq(employeesTable.id, updated.employeeId)).limit(1);
     const [reward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, updated.rewardId)).limit(1);
     if (emp?.email && emp.notifyRedemptionUpdates) {
-      await sendRedemptionFulfilledEmail(emp.email, emp.firstName, reward?.name ?? "your reward");
+      await sendRedemptionFulfilledEmail(emp.email, emp.firstName, reward?.name ?? (emp.preferredLanguage === "fr-CA" ? "votre récompense" : "your reward"), emp.preferredLanguage);
       req.log.info({ redemptionId: updated.id }, "Redemption fulfilled email sent");
     }
   } catch (err) {
@@ -910,8 +914,11 @@ async function createIssue(redemptionId: number, adminId: number, isReissue: boo
     if (isReissue && current) {
       await trx.update(giftCardIssuesTable).set({ replacementIssueId: issue.id }).where(eq(giftCardIssuesTable.id, current.id));
     }
+    const [purchaser] = await trx.select().from(employeesTable)
+      .where(eq(employeesTable.id, redemption.employeeId)).limit(1);
     return {
       issue,
+      purchaserPreferredLanguage: purchaser?.preferredLanguage ?? "en",
       catalogImageUrl:
         reward.imageUrls[0] ??
         reward.imageUrl ??
@@ -925,6 +932,7 @@ async function createIssue(redemptionId: number, adminId: number, isReissue: boo
       code,
       cadValueCents: created.issue.cadValueCents,
       catalogImageUrl: created.catalogImageUrl,
+      purchaserPreferredLanguage: created.purchaserPreferredLanguage,
     });
     const [emailed] = await db.transaction(async (trx) => {
       const rows = await trx.update(giftCardIssuesTable).set({ status: "emailed", emailedAt: new Date() })

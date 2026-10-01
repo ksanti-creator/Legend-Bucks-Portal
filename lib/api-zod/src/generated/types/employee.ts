@@ -7,10 +7,12 @@
  */
 import type { EmployeeRole } from './employeeRole';
 import type { EmployeeStatus } from './employeeStatus';
+import type { PreferredLanguage } from './preferredLanguage';
 
 export interface Employee {
   id: number;
   firstName: string;
+  preferredLanguage: PreferredLanguage;
   lastName: string;
   email: string;
   /** @nullable */

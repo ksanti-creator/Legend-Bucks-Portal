@@ -19,10 +19,10 @@ export function generateToken(length = 32): string {
   return crypto.randomBytes(length).toString("hex");
 }
 
-export async function createMagicToken(employeeId: number): Promise<string> {
+export async function createMagicToken(employeeId: number, preferredLanguage?: Employee["preferredLanguage"]): Promise<string> {
   const token = generateToken();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
-  await db.insert(magicTokensTable).values({ employeeId, token, expiresAt });
+  await db.insert(magicTokensTable).values({ employeeId, token, expiresAt, preferredLanguage });
   return token;
 }
 

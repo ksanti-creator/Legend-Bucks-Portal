@@ -208,6 +208,29 @@ paths:
         "401":
           description: Unauthenticated
 
+  /auth/me/preferences:
+    patch:
+      operationId: updateLanguagePreferences
+      tags: [auth]
+      summary: Update only the authenticated employee's preferred language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LanguagePreferences"
+      responses:
+        "200":
+          description: Saved language preference
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguagePreferences"
+        "400":
+          description: Invalid language or unexpected fields
+        "401":
+          description: Unauthenticated
+
   /auth/me/notifications:
     patch:
       operationId: updateNotificationPreferences
@@ -1767,7 +1790,7 @@ components:
 
     CurrentUser:
       type: object
-      required: [id, firstName, lastName, email, role, status, notifyBucksReceived, notifyRedemptionUpdates, notifyNewRedemptionRequests]
+      required: [id, firstName, lastName, email, role, status, preferredLanguage, notifyBucksReceived, notifyRedemptionUpdates, notifyNewRedemptionRequests]
       properties:
         id:
           type: integer
@@ -1797,12 +1820,26 @@ components:
         notifyBucksReceived:
           type: boolean
           description: Receive an email when awarded Legend Bucks
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
         notifyRedemptionUpdates:
           type: boolean
           description: Receive emails about reward redemption status
         notifyNewRedemptionRequests:
           type: boolean
           description: Receive an email when a new redemption request needs your attention (admins/managers)
+
+    PreferredLanguage:
+      type: string
+      enum: [en, fr-CA]
+
+    LanguagePreferences:
+      type: object
+      additionalProperties: false
+      required: [preferredLanguage]
+      properties:
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
 
     NotificationPreferences:
       type: object
@@ -1817,7 +1854,7 @@ components:
 
     AuthSession:
       type: object
-      required: [id, firstName, lastName, email, role, status, token]
+      required: [id, firstName, lastName, email, role, status, token, preferredLanguage]
       properties:
         id:
           type: integer
@@ -1847,6 +1884,8 @@ components:
         token:
           type: string
           description: Session token to store client-side and send as Bearer auth
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
 
     Department:
       type: object
@@ -1901,12 +1940,14 @@ components:
 
     Employee:
       type: object
-      required: [id, firstName, lastName, email, role, status, createdAt]
+      required: [id, firstName, lastName, email, role, status, createdAt, preferredLanguage]
       properties:
         id:
           type: integer
         firstName:
           type: string
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
         lastName:
           type: string
         email:
@@ -1985,6 +2026,9 @@ components:
         email:
           type: string
           format: email
+        preferredLanguage:
+          $ref: "#/components/schemas/PreferredLanguage"
+          description: Language for this sign-in email; saved only after successful token verification. Omit to use the employee's saved language.
 
     MagicLinkResponse:
       type: object

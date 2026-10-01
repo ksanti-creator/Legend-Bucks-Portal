@@ -24,6 +24,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
 import { Target, Plus, Coins, CalendarDays, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -35,15 +36,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-const createGoalSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().optional(),
-  departmentId: z.string().min(1, "Department is required"),
-  targetAmount: z.coerce.number().min(100, "Target must be at least 100"),
-  endsAt: z.string().optional().nullable(),
-});
-
 export default function Goals() {
+  const { t, number, date, error } = useI18n();
+  const createGoalSchema = z.object({
+    name: z.string().min(3, t("Name must be at least 3 characters")),
+    description: z.string().optional(),
+    departmentId: z.string().min(1, t("Department is required")),
+    targetAmount: z.coerce.number().min(100, t("Target must be at least 100")),
+    endsAt: z.string().optional().nullable(),
+  });
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
   const isManager = user?.role === "manager";
@@ -101,12 +102,12 @@ export default function Goals() {
       {
         onSuccess: () => {
           setOpenCreate(false);
-          toast({ title: "Goal created successfully" });
+          toast({ title: t("Goal created successfully") });
           queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
           form.reset();
         },
         onError: () => {
-          toast({ title: "Failed to create goal", variant: "destructive" });
+          toast({ title: t("Failed to create goal"), variant: "destructive" });
         }
       }
     );
@@ -116,12 +117,12 @@ export default function Goals() {
     if (!contributeGoalId) return;
     
     if (contributionAmount <= 0) {
-      toast({ title: "Invalid amount", variant: "destructive" });
+      toast({ title: t("Invalid amount"), variant: "destructive" });
       return;
     }
 
     if (contributionAmount > (user?.balance || 0)) {
-      toast({ title: "Insufficient balance", variant: "destructive" });
+      toast({ title: t("Insufficient balance"), variant: "destructive" });
       return;
     }
 
@@ -130,12 +131,12 @@ export default function Goals() {
       {
         onSuccess: () => {
           setContributeGoalId(null);
-          toast({ title: "Contribution successful", description: `You contributed ${contributionAmount} LB to the goal.` });
+          toast({ title: t("Contribution successful"), description: t("You contributed {amount} LB to the goal.", { amount: number(contributionAmount) }) });
           queryClient.invalidateQueries({ queryKey: ["/api/goals"] });
           queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         },
         onError: (err: any) => {
-          toast({ title: "Failed to contribute", description: err.message, variant: "destructive" });
+          toast({ title: t("Failed to contribute"), description: error(err.message), variant: "destructive" });
         }
       }
     );
@@ -145,8 +146,8 @@ export default function Goals() {
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight">Team Goals</h1>
-          <p className="text-muted-foreground mt-1">Pool your Legend Bucks together for collective rewards.</p>
+          <h1 className="text-3xl font-display font-bold tracking-tight">{t("Team Goals")}</h1>
+          <p className="text-muted-foreground mt-1">{t("Pool your Legend Bucks together for collective rewards.")}</p>
         </div>
         
         {canCreate && (
@@ -154,16 +155,16 @@ export default function Goals() {
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Goal
+                {t("Create Goal")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create Team Goal</DialogTitle>
+                <DialogTitle>{t("Create Team Goal")}</DialogTitle>
                 <DialogDescription>
                   {isManager
-                    ? "Set up a collective goal for your department that employees can contribute their bucks towards."
-                    : "Set up a collective goal that employees can contribute their bucks towards."}
+                    ? t("Set up a collective goal for your department that employees can contribute their bucks towards.")
+                    : t("Set up a collective goal that employees can contribute their bucks towards.")}
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -173,9 +174,9 @@ export default function Goals() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Goal Name</FormLabel>
+                        <FormLabel>{t("Goal Name")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Pizza Party for Production Team" {...field} />
+                          <Input placeholder={t("e.g. Pizza Party for Production Team")} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -187,9 +188,9 @@ export default function Goals() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Description</FormLabel>
+                        <FormLabel>{t("Description")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="What are we working towards?" {...field} />
+                          <Input placeholder={t("What are we working towards?")} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -202,7 +203,7 @@ export default function Goals() {
                       name="departmentId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Target Department</FormLabel>
+                          <FormLabel>{t("Target Department")}</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             value={field.value || undefined}
@@ -210,7 +211,7 @@ export default function Goals() {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a department" />
+                                <SelectValue placeholder={t("Select a department")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -231,7 +232,7 @@ export default function Goals() {
                       name="targetAmount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Target Amount (LB)</FormLabel>
+                          <FormLabel>{t("Target Amount (LB)")}</FormLabel>
                           <FormControl>
                             <Input type="number" min="100" {...field} />
                           </FormControl>
@@ -246,7 +247,7 @@ export default function Goals() {
                     name="endsAt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>End Date (Optional)</FormLabel>
+                        <FormLabel>{t("End Date (Optional)")}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} value={field.value || ""} />
                         </FormControl>
@@ -256,10 +257,10 @@ export default function Goals() {
                   />
                   
                   <DialogFooter className="pt-4">
-                    <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>Cancel</Button>
+                    <Button type="button" variant="outline" onClick={() => setOpenCreate(false)}>{t("Cancel")}</Button>
                     <Button type="submit" disabled={createMut.isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                       {createMut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create Goal
+                      {t("Create Goal")}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -278,8 +279,8 @@ export default function Goals() {
       ) : goals?.length === 0 ? (
         <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed">
           <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium text-foreground mb-1">No active goals</h3>
-          <p className="text-muted-foreground">Check back later for new team goals.</p>
+          <h3 className="text-lg font-medium text-foreground mb-1">{t("No active goals")}</h3>
+          <p className="text-muted-foreground">{t("Check back later for new team goals.")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -290,12 +291,12 @@ export default function Goals() {
                   {goal.department ? (
                     <Badge variant="outline" className="text-xs">{goal.department}</Badge>
                   ) : (
-                    <Badge variant="outline" className="text-xs">Company-wide</Badge>
+                    <Badge variant="outline" className="text-xs">{t("Company-wide")}</Badge>
                   )}
                   {goal.endsAt && (
                     <span className="text-xs text-muted-foreground flex items-center">
                       <CalendarDays className="h-3 w-3 mr-1" />
-                      {new Date(goal.endsAt).toLocaleDateString()}
+                      {date(goal.endsAt)}
                     </span>
                   )}
                 </div>
@@ -306,11 +307,11 @@ export default function Goals() {
               <CardContent className="pb-4 flex-1">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="font-bold text-primary">{goal.currentAmount.toLocaleString()} LB</span>
-                    <span className="text-muted-foreground">Target: {goal.targetAmount.toLocaleString()} LB</span>
+                    <span className="font-bold text-primary">{number(goal.currentAmount)} LB</span>
+                    <span className="text-muted-foreground">{t("Target: {amount} LB", { amount: number(goal.targetAmount) })}</span>
                   </div>
                   <Progress value={goal.progressPercent || 0} className="h-3" />
-                  <p className="text-right text-xs text-muted-foreground">{goal.progressPercent}% Complete</p>
+                  <p className="text-right text-xs text-muted-foreground">{t("{percent}% Complete", { percent: number(goal.progressPercent ?? 0) })}</p>
                 </div>
               </CardContent>
               
@@ -323,20 +324,20 @@ export default function Goals() {
                       disabled={goal.progressPercent! >= 100 || !goal.active}
                       onClick={() => setContributeGoalId(goal.id)}
                     >
-                      {goal.progressPercent! >= 100 ? "Goal Met!" : !goal.active ? "Closed" : "Contribute Bucks"}
+                      {goal.progressPercent! >= 100 ? t("Goal Met!") : !goal.active ? t("Closed") : t("Contribute Bucks")}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Contribute to {goal.name}</DialogTitle>
+                      <DialogTitle>{t("Contribute to {name}", { name: goal.name })}</DialogTitle>
                       <DialogDescription>
-                        Help your team reach their goal! Your current balance is <strong>{user?.balance?.toLocaleString()} LB</strong>.
+                        {t("Help your team reach their goal! Your current balance is")} <strong>{number(user?.balance ?? 0)} LB</strong>.
                       </DialogDescription>
                     </DialogHeader>
                     
                     <div className="py-6 space-y-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Contribution Amount (LB)</label>
+                        <label className="text-sm font-medium">{t("Contribution Amount (LB)")}</label>
                         <div className="relative">
                           <Coins className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input 
@@ -361,20 +362,20 @@ export default function Goals() {
                             onClick={() => setContributionAmount(amt)}
                             disabled={(user?.balance || 0) < amt}
                           >
-                            +{amt}
+                            +{number(amt)}
                           </Button>
                         ))}
                       </div>
                     </div>
                     
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setContributeGoalId(null)}>Cancel</Button>
+                      <Button variant="outline" onClick={() => setContributeGoalId(null)}>{t("Cancel")}</Button>
                       <Button 
                         onClick={handleContribute} 
                         disabled={contributeMut.isPending || contributionAmount <= 0 || contributionAmount > (user?.balance || 0)}
                       >
                         {contributeMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Confirm Contribution
+                        {t("Confirm Contribution")}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

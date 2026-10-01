@@ -109,9 +109,9 @@ describe("Payroll approval for Time Off redemptions", () => {
     expect(res.body.status).toBe("pending_payroll");
     const [member] = await db.select().from(employeesTable).where(eq(employeesTable.id, memberId));
     expect(sendTimeOffPayrollEmail).toHaveBeenCalledWith(
-      `${member.firstName} ${member.lastName}`, member.email, expect.any(String), null, r.id,
+      `${member.firstName} ${member.lastName}`, member.email, expect.any(String), null, r.id, expect.stringMatching(/^(en|fr-CA)$/),
     );
-    expect(sendTimeOffApprovedEmail).toHaveBeenCalledWith(member.email, member.firstName, expect.any(String));
+    expect(sendTimeOffApprovedEmail).toHaveBeenCalledWith(member.email, member.firstName, expect.any(String), member.preferredLanguage);
     expect((await request(app).patch(`/api/redemptions/${r.id}/approve`).set(bearer(managerToken))).status).toBe(400);
     expect(sendTimeOffPayrollEmail).toHaveBeenCalledTimes(1);
     expect(sendTimeOffApprovedEmail).toHaveBeenCalledTimes(1);

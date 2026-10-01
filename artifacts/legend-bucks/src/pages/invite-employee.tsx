@@ -14,20 +14,24 @@ import { Mail, ArrowLeft, Loader2, Upload, UserPlus } from "lucide-react";
 import { Link } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BulkInviteUpload from "@/components/bulk-invite-upload";
+import { useI18n } from "@/lib/i18n";
 
-const inviteSchema = z.object({
-  email: z.string().email("Valid email required"),
-  firstName: z.string().min(2, "First name required"),
-  lastName: z.string().min(2, "Last name required"),
-  role: z.enum(["admin", "manager", "team_member"]),
+const createInviteSchema = (t: (source: string) => string) => z.object({
+  email: z.string().email(t("Valid email required")),
+  firstName: z.string().min(2, t("First name required")),
+  lastName: z.string().min(2, t("Last name required")),
+  role: z.enum(["admin", "manager", "team_member"], { errorMap: () => ({ message: t("Select a valid role") }) }),
   departmentId: z.coerce.number().optional().nullable(),
   locationId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
-  awardBudgetYearly: z.number().min(1).optional().nullable(),
-  startingBalance: z.number().int().min(1).optional().nullable(),
+  awardBudgetYearly: z.number({ invalid_type_error: t("Enter a valid number") }).min(1, t("Amount must be at least 1")).optional().nullable(),
+  startingBalance: z.number({ invalid_type_error: t("Enter a valid number") }).int(t("Enter a whole number")).min(1, t("Amount must be at least 1")).optional().nullable(),
 });
+type InviteValues = z.infer<ReturnType<typeof createInviteSchema>>;
 
 export default function InviteEmployee() {
+  const { t } = useI18n();
+  const inviteSchema = createInviteSchema(t);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { data: user } = useGetMe();
@@ -38,7 +42,7 @@ export default function InviteEmployee() {
 
   const inviteMut = useInviteEmployee();
 
-  const form = useForm<z.infer<typeof inviteSchema>>({
+  const form = useForm<InviteValues>({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       email: "",
@@ -73,24 +77,24 @@ export default function InviteEmployee() {
   }, [canAward]);
 
   if (user?.role !== "admin" && user?.role !== "manager") {
-    return <div className="p-8 text-center text-destructive">Unauthorized. Admins and managers only.</div>;
+    return <div className="p-8 text-center text-destructive">{t("Unauthorized. Admins and managers only.")}</div>;
   }
 
-  const onSubmit = (data: z.infer<typeof inviteSchema>) => {
+  const onSubmit = (data: InviteValues) => {
     inviteMut.mutate(
       { data },
       {
         onSuccess: () => {
           toast({
-            title: "Employee invited",
-            description: `An invitation has been sent to ${data.email}.`,
+            title: t("Employee invited"),
+            description: t("An invitation has been sent to {email}.", { email: data.email }),
           });
           setLocation("/employees");
         },
         onError: () => {
           toast({
-            title: "Failed to invite employee",
-            description: "There was an error creating the invitation.",
+            title: t("Failed to invite employee"),
+            description: t("There was an error creating the invitation."),
             variant: "destructive",
           });
         },
@@ -103,7 +107,7 @@ export default function InviteEmployee() {
       <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
         <Link href="/employees">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Directory
+          {t("Back to Directory")}
         </Link>
       </Button>
 
@@ -112,20 +116,20 @@ export default function InviteEmployee() {
           <TabsList className="mb-4">
             <TabsTrigger value="single">
               <UserPlus className="h-4 w-4 mr-2" />
-              Single Invite
+              {t("Single Invite")}
             </TabsTrigger>
             <TabsTrigger value="bulk">
               <Upload className="h-4 w-4 mr-2" />
-              Bulk Upload
+              {t("Bulk Upload")}
             </TabsTrigger>
           </TabsList>
         )}
         <TabsContent value="single">
       <Card className="border-none shadow-md">
         <CardHeader className="border-b bg-muted/20">
-          <CardTitle className="text-2xl font-display">Invite New Employee</CardTitle>
+          <CardTitle className="text-2xl font-display">{t("Invite New Employee")}</CardTitle>
           <CardDescription>
-            Add a new team member to Legend Bucks. They will receive an email to log in.
+            {t("Add a new team member to Legend Bucks. They will receive an email to log in.")}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
@@ -137,9 +141,9 @@ export default function InviteEmployee() {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel>{t("First Name")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="John" {...field} />
+                        <Input placeholder={t("John")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -151,9 +155,9 @@ export default function InviteEmployee() {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Name</FormLabel>
+                      <FormLabel>{t("Last Name")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Doe" {...field} />
+                        <Input placeholder={t("Doe")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,7 +170,7 @@ export default function InviteEmployee() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email Address</FormLabel>
+                    <FormLabel>{t("Email Address")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -184,18 +188,18 @@ export default function InviteEmployee() {
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>{t("Role")}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
+                            <SelectValue placeholder={t("Select a role")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="team_member">Team Member</SelectItem>
-                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="team_member">{t("Team Member")}</SelectItem>
+                          <SelectItem value="manager">{t("Manager")}</SelectItem>
                           {user?.role === "admin" && (
-                            <SelectItem value="admin">Administrator</SelectItem>
+                            <SelectItem value="admin">{t("Administrator")}</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -209,18 +213,18 @@ export default function InviteEmployee() {
                   name="managerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Manager (Optional)</FormLabel>
+                      <FormLabel>{t("Manager (Optional)")}</FormLabel>
                       <Select 
                         onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} 
                         defaultValue={field.value?.toString() || "none"}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a manager" />
+                            <SelectValue placeholder={t("Select a manager")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t("None")}</SelectItem>
                           {managers.map(mgr => (
                             <SelectItem key={mgr.id} value={mgr.id.toString()}>
                               {mgr.firstName} {mgr.lastName}
@@ -240,18 +244,18 @@ export default function InviteEmployee() {
                   name="departmentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Department (Optional)</FormLabel>
+                      <FormLabel>{t("Department (Optional)")}</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))}
                         value={field.value ? field.value.toString() : "none"}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a department" />
+                            <SelectValue placeholder={t("Select a department")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t("None")}</SelectItem>
                           {departments?.map((dept) => (
                             <SelectItem key={dept.id} value={dept.id.toString()}>
                               {dept.name}
@@ -269,18 +273,18 @@ export default function InviteEmployee() {
                   name="locationId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location (Optional)</FormLabel>
+                      <FormLabel>{t("Location (Optional)")}</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))}
                         value={field.value ? field.value.toString() : "none"}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a location" />
+                            <SelectValue placeholder={t("Select a location")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t("None")}</SelectItem>
                           {locations?.map((loc) => (
                             <SelectItem key={loc.id} value={loc.id.toString()}>
                               {loc.name}
@@ -300,7 +304,7 @@ export default function InviteEmployee() {
                   name="startingBalance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Starting Balance (Optional)</FormLabel>
+                      <FormLabel>{t("Starting Balance (Optional)")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -313,7 +317,7 @@ export default function InviteEmployee() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Legend Bucks to credit right away — for example, physical bucks they turned in. Recorded in the ledger as "Starting balance – turned in physical bucks". Leave empty for none.
+                        {t('Legend Bucks to credit right away — for example, physical bucks they turned in. Recorded in the ledger as "Starting balance – turned in physical bucks". Leave empty for none.')}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -327,12 +331,12 @@ export default function InviteEmployee() {
                   name="awardBudgetYearly"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Yearly Award Budget</FormLabel>
+                      <FormLabel>{t("Yearly Award Budget")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="1"
-                          placeholder="No budget"
+                          placeholder={t("No budget")}
                           value={field.value ?? ""}
                           onChange={(e) =>
                             field.onChange(e.target.value === "" ? null : Number(e.target.value))
@@ -340,7 +344,7 @@ export default function InviteEmployee() {
                         />
                       </FormControl>
                       <FormDescription>
-                        The total Legend Bucks this person can award to others per calendar year. Pre-filled with a default for admins and managers — adjust it as needed, or clear it so they can't award until you set a budget.
+                        {t("The total Legend Bucks this person can award to others per calendar year. Pre-filled with a default for admins and managers — adjust it as needed, or clear it so they can't award until you set a budget.")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -350,11 +354,11 @@ export default function InviteEmployee() {
 
               <div className="flex justify-end pt-4 border-t border-border">
                 <Button type="button" variant="outline" className="mr-3" onClick={() => setLocation("/employees")}>
-                  Cancel
+                  {t("Cancel")}
                 </Button>
                 <Button type="submit" disabled={inviteMut.isPending} className="bg-primary hover:bg-primary/90 text-primary-foreground min-w-[120px]">
                   {inviteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
-                  Send Invite
+                  {t("Send Invite")}
                 </Button>
               </div>
             </form>

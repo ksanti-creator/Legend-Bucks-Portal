@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Gift, Coins, Settings } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/lib/i18n";
 
 import giftCardImg from "@assets/Untitled_design_(70)_1788380591097.png";
 import ptoImg from "@assets/generated_images/pto.png";
@@ -23,6 +24,7 @@ const fallbackImages: Record<string, string> = {
 };
 
 export default function Rewards() {
+  const { t, number, currency, label } = useI18n();
   const { data: user } = useGetMe();
   const [category, setCategory] = useState<string>("all");
   
@@ -36,21 +38,21 @@ export default function Rewards() {
     <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight">Rewards Catalog</h1>
-          <p className="text-muted-foreground mt-1">Redeem your Legend Bucks for gear, time off, and more.</p>
+          <h1 className="text-3xl font-display font-bold tracking-tight">{t("Rewards Catalog")}</h1>
+          <p className="text-muted-foreground mt-1">{t("Redeem your Legend Bucks for gear, time off, and more.")}</p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold font-display shadow-inner">
-            <span className="text-sm font-sans font-medium opacity-80 mr-2 uppercase tracking-wide">Balance:</span> 
-            {user?.balance?.toLocaleString()} LB
+            <span className="text-sm font-sans font-medium opacity-80 mr-2 uppercase tracking-wide">{t("Balance:")}</span> 
+            {number(user?.balance ?? 0)} LB
           </div>
           
           {user?.role === "admin" && (
             <Button variant="outline" asChild>
               <Link href="/rewards/manage">
                 <Settings className="h-4 w-4 mr-2" />
-                Manage Catalog
+                {t("Manage Catalog")}
               </Link>
             </Button>
           )}
@@ -64,7 +66,7 @@ export default function Rewards() {
               value="all" 
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full px-4 py-2 border bg-muted/50"
             >
-              All Rewards
+              {t("All Rewards")}
             </TabsTrigger>
             {categories.map(cat => (
               <TabsTrigger 
@@ -72,7 +74,7 @@ export default function Rewards() {
                 value={cat}
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-full px-4 py-2 border bg-muted/50 capitalize"
               >
-                {cat}
+                {label(cat)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -98,8 +100,8 @@ export default function Rewards() {
       ) : filteredRewards?.length === 0 ? (
         <div className="text-center py-20 bg-muted/20 rounded-xl border border-dashed">
           <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium text-foreground mb-1">No rewards found</h3>
-          <p className="text-muted-foreground">Check back later for new items.</p>
+          <h3 className="text-lg font-medium text-foreground mb-1">{t("No rewards found")}</h3>
+          <p className="text-muted-foreground">{t("Check back later for new items.")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -123,7 +125,7 @@ export default function Rewards() {
                       if (soldOut) {
                         return (
                           <Badge variant="secondary" className="absolute top-3 right-3 shadow-sm">
-                            Out of Stock
+                            {t("Out of Stock")}
                           </Badge>
                         );
                       }
@@ -132,7 +134,7 @@ export default function Rewards() {
                       if (outSizes.length > 0 || lowSizes.length > 0) {
                         return (
                           <Badge variant="destructive" className="absolute top-3 right-3 shadow-sm">
-                            Low stock in some sizes
+                            {t("Low stock in some sizes")}
                           </Badge>
                         );
                       }
@@ -141,14 +143,14 @@ export default function Rewards() {
                     if (reward.quantity != null && reward.quantity <= 0) {
                       return (
                         <Badge variant="secondary" className="absolute top-3 right-3 shadow-sm">
-                          Out of Stock
+                          {t("Out of Stock")}
                         </Badge>
                       );
                     }
                     if (reward.quantity != null && reward.quantity <= 5) {
                       return (
                         <Badge variant="destructive" className="absolute top-3 right-3 shadow-sm">
-                          Only {reward.quantity} left
+                          {t("Only {count} left", { count: number(reward.quantity) })}
                         </Badge>
                       );
                     }
@@ -161,7 +163,7 @@ export default function Rewards() {
                     <h3 className="font-display font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
                       {reward.name}
                     </h3>
-                    {reward.isCustomGiftCard && <Badge>Custom Value</Badge>}
+                    {reward.isCustomGiftCard && <Badge>{t("Custom Value")}</Badge>}
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
                     {reward.description}
@@ -171,8 +173,8 @@ export default function Rewards() {
                     <div className="flex items-center text-primary font-bold font-display">
                       <Coins className="h-4 w-4 mr-1.5" />
                        {reward.isCustomGiftCard
-                         ? `Custom amount · ${reward.giftCardIncrementLb ?? 100} LB = $${((reward.giftCardIncrementLb ?? 100) / 10).toFixed(0)}`
-                         : `${reward.buckCost.toLocaleString()} LB`}
+                          ? t("Custom amount · {amount} LB = {value}", { amount: number(reward.giftCardIncrementLb ?? 100), value: currency((reward.giftCardIncrementLb ?? 100) / 10) })
+                          : `${number(reward.buckCost)} LB`}
                     </div>
                   </div>
                 </CardContent>

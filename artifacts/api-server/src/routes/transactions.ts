@@ -227,6 +227,7 @@ router.post("/transactions", requireAuth, async (req, res): Promise<void> => {
         `${user.firstName} ${user.lastName}`,
         amount,
         note ?? null,
+        recipient.preferredLanguage,
       );
       req.log.info({ toEmployeeId }, "Bucks-received email sent");
     } catch (err) {
@@ -297,6 +298,7 @@ router.post("/transactions/adjustments", requireAuth, async (req, res): Promise<
         `${user.firstName} ${user.lastName}`,
         amount,
         note,
+        employee.preferredLanguage,
       );
       req.log.info({ employeeId }, "Adjustment credit email sent");
     } catch (err) {

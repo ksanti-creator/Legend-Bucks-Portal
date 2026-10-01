@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { HardHat } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 export default function PlaceholderPage({ title }: { title: string }) {
+  const { t } = useI18n();
   return (
     <div className="h-[80vh] flex flex-col items-center justify-center text-center animate-in fade-in">
       <Card className="border-none shadow-none bg-transparent">
@@ -9,10 +11,9 @@ export default function PlaceholderPage({ title }: { title: string }) {
           <div className="inline-flex items-center justify-center p-4 bg-muted text-muted-foreground rounded-full mb-6">
             <HardHat className="h-12 w-12" />
           </div>
-          <h1 className="text-3xl font-display font-bold mb-2">{title}</h1>
+          <h1 className="text-3xl font-display font-bold mb-2">{t(title)}</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
-            This module is currently under construction in the workshop. 
-            Check back later for updates.
+            {t("This module is currently under construction in the workshop. Check back later for updates.")}
           </p>
         </CardContent>
       </Card>

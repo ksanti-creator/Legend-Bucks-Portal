@@ -50,6 +50,7 @@ async function buildEmployeeResponse(
     firstName: emp.firstName,
     lastName: emp.lastName,
     email: emp.email,
+    preferredLanguage: emp.preferredLanguage,
     department,
     location,
     departmentId: emp.departmentId ?? null,

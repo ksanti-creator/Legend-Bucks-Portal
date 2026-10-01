@@ -31,7 +31,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
+import { formatTransactionNote } from "@/lib/transaction-note";
 import { 
   ArrowLeft, 
   Mail, 
@@ -55,6 +57,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function EmployeeDetail() {
+  const { t, number, date, label, error } = useI18n();
   const params = useParams();
   const id = parseInt(params.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -84,18 +87,18 @@ export default function EmployeeDetail() {
   const handleAdjust = () => {
     const amount = parseInt(adjustAmount, 10);
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast({ title: "Enter a positive amount", variant: "destructive" });
+      toast({ title: t("Enter a positive amount"), variant: "destructive" });
       return;
     }
     if (!adjustNote.trim()) {
-      toast({ title: "A note is required", description: "Explain why the balance is being adjusted.", variant: "destructive" });
+      toast({ title: t("A note is required"), description: t("Explain why the balance is being adjusted."), variant: "destructive" });
       return;
     }
     adjustMut.mutate(
       { data: { employeeId: id, direction: adjustDirection, amount, note: adjustNote.trim() } },
       {
         onSuccess: () => {
-          toast({ title: "Balance adjusted", description: `${adjustDirection === "credit" ? "Credited" : "Debited"} ${amount} Legend Bucks.` });
+          toast({ title: t("Balance adjusted"), description: t(adjustDirection === "credit" ? "Credited {amount} Legend Bucks." : "Debited {amount} Legend Bucks.", { amount: number(amount) }) });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeBalanceQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getListTransactionsQueryKey({ employeeId: id }) });
@@ -105,7 +108,7 @@ export default function EmployeeDetail() {
           setAdjustDirection("credit");
         },
         onError: (err: any) =>
-          toast({ title: "Failed to adjust balance", description: err?.message, variant: "destructive" }),
+          toast({ title: t("Failed to adjust balance"), description: error(err?.message), variant: "destructive" }),
       },
     );
   };
@@ -122,18 +125,18 @@ export default function EmployeeDetail() {
   const handleCorrectStartingBalance = () => {
     const amount = parseInt(correctedAmount, 10);
     if (!Number.isFinite(amount) || amount < 0 || String(amount) !== correctedAmount.trim()) {
-      toast({ title: "Enter a valid amount", description: "The corrected starting balance must be a whole number of 0 or more.", variant: "destructive" });
+      toast({ title: t("Enter a valid amount"), description: t("The corrected starting balance must be a whole number of 0 or more."), variant: "destructive" });
       return;
     }
     if (startingBalance?.effectiveAmount != null && amount === startingBalance.effectiveAmount) {
-      toast({ title: "Nothing to correct", description: `The starting balance is already ${amount} Legend Bucks.` });
+      toast({ title: t("Nothing to correct"), description: t("The starting balance is already {amount} Legend Bucks.", { amount: number(amount) }) });
       return;
     }
     correctMut.mutate(
       { data: { employeeId: id, correctedAmount: amount } },
       {
         onSuccess: () => {
-          toast({ title: "Starting balance corrected", description: `Recorded the offsetting entry — starting balance is now ${amount} Legend Bucks.` });
+          toast({ title: t("Starting balance corrected"), description: t("Recorded the offsetting entry — starting balance is now {amount} Legend Bucks.", { amount: number(amount) }) });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeBalanceQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeStartingBalanceQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getListTransactionsQueryKey({ employeeId: id }) });
@@ -141,7 +144,7 @@ export default function EmployeeDetail() {
           setCorrectedAmount("");
         },
         onError: (err: any) =>
-          toast({ title: "Failed to correct starting balance", description: err?.message, variant: "destructive" }),
+          toast({ title: t("Failed to correct starting balance"), description: error(err?.message), variant: "destructive" }),
       },
     );
   };
@@ -187,12 +190,12 @@ export default function EmployeeDetail() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Employee updated" });
+          toast({ title: t("Employee updated") });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getGetEmployeeAwardBudgetQueryKey(id) });
           setEditOpen(false);
         },
-        onError: () => toast({ title: "Failed to update employee", variant: "destructive" }),
+        onError: () => toast({ title: t("Failed to update employee"), variant: "destructive" }),
       },
     );
   };
@@ -201,19 +204,19 @@ export default function EmployeeDetail() {
     setIsDeactivating(true);
     deactivateMut.mutate({ id }, {
       onSuccess: () => {
-        toast({ title: "Employee deactivated" });
+        toast({ title: t("Employee deactivated") });
         queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
         setIsDeactivating(false);
       },
       onError: () => {
-        toast({ title: "Failed to deactivate", variant: "destructive" });
+        toast({ title: t("Failed to deactivate"), variant: "destructive" });
         setIsDeactivating(false);
       }
     });
   };
 
   if (isLoadingEmp || !employee) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-8">{t("Loading...")}</div>;
   }
 
   return (
@@ -221,7 +224,7 @@ export default function EmployeeDetail() {
       <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
         <Link href="/employees">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Directory
+          {t("Back to Directory")}
         </Link>
       </Button>
 
@@ -240,14 +243,14 @@ export default function EmployeeDetail() {
               {employee.firstName} {employee.lastName}
             </h2>
             <p className="text-muted-foreground capitalize mb-3">
-              {employee.role.replace('_', ' ')}
+              {label(employee.role)}
             </p>
             
             <Badge variant={
               employee.status === "active" ? "success" : 
               employee.status === "invited" ? "warning" : "secondary"
             } className="capitalize mb-6">
-              {employee.status}
+              {label(employee.status)}
             </Badge>
 
             <div className="space-y-3 text-sm text-left border-t pt-6 border-border">
@@ -270,12 +273,12 @@ export default function EmployeeDetail() {
               {employee.managerName && (
                 <div className="flex items-center text-muted-foreground">
                   <Award className="h-4 w-4 mr-3 shrink-0" />
-                  <span>Manager: {employee.managerName}</span>
+                  <span>{t("Manager: {name}", { name: employee.managerName })}</span>
                 </div>
               )}
               <div className="flex items-center text-muted-foreground">
                 <CalendarDays className="h-4 w-4 mr-3 shrink-0" />
-                <span>Joined {new Date(employee.createdAt).toLocaleDateString()}</span>
+                <span>{t("Joined {date}", { date: date(employee.createdAt) })}</span>
               </div>
             </div>
 
@@ -283,7 +286,7 @@ export default function EmployeeDetail() {
               <Button className="w-full mt-6 bg-primary hover:bg-primary/90" asChild>
                 <Link href={`/send?to=${employee.id}`}>
                   <Send className="h-4 w-4 mr-2" />
-                  Send Bucks
+                  {t("Send Bucks")}
                 </Link>
               </Button>
             )}
@@ -293,60 +296,59 @@ export default function EmployeeDetail() {
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full mt-3">
                     <Coins className="h-4 w-4 mr-2" />
-                    Adjust Balance
+                    {t("Adjust Balance")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Adjust Balance</DialogTitle>
+                    <DialogTitle>{t("Adjust Balance")}</DialogTitle>
                     <DialogDescription>
-                      Credit or debit {employee.firstName}'s balance directly — for example, a starting
-                      balance when they turn in physical Legend Bucks. This doesn't use your award budget.
+                      {t("Credit or debit {name}'s balance directly — for example, a starting balance when they turn in physical Legend Bucks. This doesn't use your award budget.", { name: employee.firstName })}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                      <Label>Direction</Label>
+                      <Label>{t("Direction")}</Label>
                       <Select value={adjustDirection} onValueChange={(v) => setAdjustDirection(v as "credit" | "debit")}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="credit">Credit (add bucks)</SelectItem>
-                          <SelectItem value="debit">Debit (remove bucks)</SelectItem>
+                          <SelectItem value="credit">{t("Credit (add bucks)")}</SelectItem>
+                          <SelectItem value="debit">{t("Debit (remove bucks)")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Amount</Label>
+                      <Label>{t("Amount")}</Label>
                       <Input
                         type="number"
                         min="1"
-                        placeholder="e.g. 250"
+                        placeholder={t("e.g. {amount}", { amount: number(250) })}
                         value={adjustAmount}
                         onChange={(e) => setAdjustAmount(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Note (required)</Label>
+                      <Label>{t("Note (required)")}</Label>
                       <Input
-                        placeholder="e.g. Starting balance – turned in physical bucks"
+                        placeholder={t("e.g. Starting balance – turned in physical bucks")}
                         value={adjustNote}
                         onChange={(e) => setAdjustNote(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Shown in the ledger along with your name.
+                        {t("Shown in the ledger along with your name.")}
                       </p>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setAdjustOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setAdjustOpen(false)}>{t("Cancel")}</Button>
                     <Button onClick={handleAdjust} disabled={adjustMut.isPending} className="bg-primary hover:bg-primary/90">
                       {adjustMut.isPending
-                        ? "Saving..."
+                        ? t("Saving...")
                         : adjustDirection === "credit"
-                          ? "Credit Bucks"
-                          : "Debit Bucks"}
+                          ? t("Credit Bucks")
+                          : t("Debit Bucks")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -358,28 +360,27 @@ export default function EmployeeDetail() {
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full mt-3">
                     <Coins className="h-4 w-4 mr-2" />
-                    Correct Starting Balance
+                    {t("Correct Starting Balance")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Correct Starting Balance</DialogTitle>
+                    <DialogTitle>{t("Correct Starting Balance")}</DialogTitle>
                     <DialogDescription>
-                      {employee.firstName}'s starting balance is currently recorded as{" "}
-                      {startingBalance.effectiveAmount?.toLocaleString()} Legend Bucks
+                      {t("{name}'s starting balance is currently recorded as {amount} Legend Bucks", { name: employee.firstName, amount: startingBalance.effectiveAmount != null ? number(startingBalance.effectiveAmount) : "" })}
                       {startingBalance.correctionCount > 0
-                        ? ` (originally ${startingBalance.originalAmount?.toLocaleString()}, after ${startingBalance.correctionCount} correction${startingBalance.correctionCount === 1 ? "" : "s"})`
+                        ? t(startingBalance.correctionCount === 1 ? " (originally {amount}, after {count} correction)" : " (originally {amount}, after {count} corrections)", { amount: startingBalance.originalAmount != null ? number(startingBalance.originalAmount) : "", count: number(startingBalance.correctionCount) })
                         : ""}
-                      . Enter what it should have been and the offsetting entry is recorded automatically.
+                      {t(". Enter what it should have been and the offsetting entry is recorded automatically.")}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                      <Label>Correct starting balance</Label>
+                      <Label>{t("Correct starting balance")}</Label>
                       <Input
                         type="number"
                         min="0"
-                        placeholder={`e.g. ${startingBalance.effectiveAmount ?? 250}`}
+                        placeholder={t("e.g. {amount}", { amount: number(startingBalance.effectiveAmount ?? 250) })}
                         value={correctedAmount}
                         onChange={(e) => setCorrectedAmount(e.target.value)}
                       />
@@ -388,21 +389,20 @@ export default function EmployeeDetail() {
                         if (!Number.isFinite(amount) || amount < 0 || startingBalance.effectiveAmount == null) return null;
                         const delta = amount - startingBalance.effectiveAmount;
                         if (delta === 0) {
-                          return <p className="text-xs text-muted-foreground">No change — this matches the recorded starting balance.</p>;
+                          return <p className="text-xs text-muted-foreground">{t("No change — this matches the recorded starting balance.")}</p>;
                         }
                         return (
                           <p className="text-xs text-muted-foreground">
-                            This will {delta > 0 ? "credit" : "debit"} {Math.abs(delta).toLocaleString()} Legend Bucks
-                            {" "}and appear in the ledger with your name.
+                            {t(delta > 0 ? "This will credit {amount} Legend Bucks and appear in the ledger with your name." : "This will debit {amount} Legend Bucks and appear in the ledger with your name.", { amount: number(Math.abs(delta)) })}
                           </p>
                         );
                       })()}
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setCorrectOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setCorrectOpen(false)}>{t("Cancel")}</Button>
                     <Button onClick={handleCorrectStartingBalance} disabled={correctMut.isPending} className="bg-primary hover:bg-primary/90">
-                      {correctMut.isPending ? "Saving..." : "Record Correction"}
+                      {correctMut.isPending ? t("Saving...") : t("Record Correction")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -413,25 +413,25 @@ export default function EmployeeDetail() {
               <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full mt-3" onClick={openEdit}>
-                    Edit Details
+                    {t("Edit Details")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Edit Employee</DialogTitle>
+                    <DialogTitle>{t("Edit Employee")}</DialogTitle>
                     <DialogDescription>
-                      Update {employee.firstName}'s department, location, and manager.
+                      {t("Update {name}'s department, location, and manager.", { name: employee.firstName })}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                      <Label>Department</Label>
+                      <Label>{t("Department")}</Label>
                       <Select value={editDept} onValueChange={setEditDept}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a department" />
+                          <SelectValue placeholder={t("Select a department")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t("None")}</SelectItem>
                           {departments?.map((d) => (
                             <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
                           ))}
@@ -439,13 +439,13 @@ export default function EmployeeDetail() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Location</Label>
+                      <Label>{t("Location")}</Label>
                       <Select value={editLoc} onValueChange={setEditLoc}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a location" />
+                          <SelectValue placeholder={t("Select a location")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t("None")}</SelectItem>
                           {locations?.map((l) => (
                             <SelectItem key={l.id} value={l.id.toString()}>{l.name}</SelectItem>
                           ))}
@@ -453,13 +453,13 @@ export default function EmployeeDetail() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Manager</Label>
+                      <Label>{t("Manager")}</Label>
                       <Select value={editManager} onValueChange={setEditManager}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a manager" />
+                          <SelectValue placeholder={t("Select a manager")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t("None")}</SelectItem>
                           {managers.map((m) => (
                             <SelectItem key={m.id} value={m.id.toString()}>
                               {m.firstName} {m.lastName}
@@ -470,24 +470,24 @@ export default function EmployeeDetail() {
                     </div>
                     {employeeCanAward && (
                       <div className="space-y-2">
-                        <Label>Yearly Award Budget</Label>
+                        <Label>{t("Yearly Award Budget")}</Label>
                         <Input
                           type="number"
                           min="1"
-                          placeholder="No budget"
+                          placeholder={t("No budget")}
                           value={editBudget}
                           onChange={(e) => setEditBudget(e.target.value)}
                         />
                         <p className="text-xs text-muted-foreground">
-                          Total Legend Bucks this person can award to others per year. Leave blank so they can't award until a budget is set.
+                          {t("Total Legend Bucks this person can award to others per year. Leave blank so they can't award until a budget is set.")}
                         </p>
                       </div>
                     )}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setEditOpen(false)}>{t("Cancel")}</Button>
                     <Button onClick={handleSaveEdit} disabled={updateMut.isPending} className="bg-primary hover:bg-primary/90">
-                      {updateMut.isPending ? "Saving..." : "Save Changes"}
+                      {updateMut.isPending ? t("Saving...") : t("Save Changes")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -498,21 +498,20 @@ export default function EmployeeDetail() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full mt-3 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
-                    Deactivate Employee
+                    {t("Deactivate Employee")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Deactivate Employee</DialogTitle>
+                    <DialogTitle>{t("Deactivate Employee")}</DialogTitle>
                     <DialogDescription>
-                      Are you sure you want to deactivate {employee.firstName} {employee.lastName}? 
-                      They will no longer be able to log in or receive Legend Bucks.
+                      {t("Are you sure you want to deactivate {name}? They will no longer be able to log in or receive Legend Bucks.", { name: `${employee.firstName} ${employee.lastName}` })}
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsDeactivating(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setIsDeactivating(false)}>{t("Cancel")}</Button>
                     <Button variant="destructive" onClick={handleDeactivate} disabled={isDeactivating}>
-                      {isDeactivating ? "Deactivating..." : "Deactivate"}
+                      {isDeactivating ? t("Deactivating...") : t("Deactivate")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -528,22 +527,22 @@ export default function EmployeeDetail() {
               <div className="absolute top-5 right-5 flex h-11 w-11 items-center justify-center rounded-full bg-white/15">
                 <Coins className="h-5 w-5 text-primary-foreground" />
               </div>
-              <p className="text-sm font-medium text-primary-foreground/80 pr-12">Current Balance</p>
+              <p className="text-sm font-medium text-primary-foreground/80 pr-12">{t("Current Balance")}</p>
               <p className="text-3xl font-display font-bold mt-2 leading-none">
-                {isLoadingBal ? "..." : balance?.balance.toLocaleString()}
+                {isLoadingBal ? "..." : balance && number(balance.balance)}
               </p>
             </Card>
             <StatCard
-              label="Total Received"
+              label={t("Total Received")}
               icon={Award}
               tint="green"
-              value={isLoadingBal ? "..." : balance?.totalReceived.toLocaleString()}
+              value={isLoadingBal ? "..." : balance && number(balance.totalReceived)}
             />
             <StatCard
-              label="Total Spent"
+              label={t("Total Spent")}
               icon={AlertTriangle}
               tint="slate"
-              value={isLoadingBal ? "..." : balance?.totalSpent.toLocaleString()}
+              value={isLoadingBal ? "..." : balance && number(balance.totalSpent)}
             />
           </div>
 
@@ -551,17 +550,17 @@ export default function EmployeeDetail() {
             <Card className="border-none shadow-sm panel-sand">
               <CardContent className="p-6 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Yearly Award Budget</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("Yearly Award Budget")}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Legend Bucks this person can award to others this year.
+                    {t("Legend Bucks this person can award to others this year.")}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-display font-bold text-foreground">
-                    {budgetInfo.remaining?.toLocaleString()} <span className="text-base text-muted-foreground">/ {budgetInfo.budget.toLocaleString()} LB</span>
+                    {budgetInfo.remaining != null && number(budgetInfo.remaining)} <span className="text-base text-muted-foreground">/ {t("{amount} LB", { amount: number(budgetInfo.budget) })}</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {budgetInfo.usedThisYear.toLocaleString()} LB awarded so far this year
+                    {t("{amount} LB awarded so far this year", { amount: number(budgetInfo.usedThisYear) })}
                   </p>
                 </div>
               </CardContent>
@@ -570,19 +569,19 @@ export default function EmployeeDetail() {
 
           <Card className="border-none shadow-sm h-[500px] flex flex-col">
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-lg">Transaction History</CardTitle>
+              <CardTitle className="text-lg">{t("Transaction History")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0 flex-1 overflow-auto">
               {isLoadingTx ? (
-                <div className="p-6 text-center text-muted-foreground">Loading...</div>
+                <div className="p-6 text-center text-muted-foreground">{t("Loading...")}</div>
               ) : transactions && transactions.items.length > 0 ? (
                 <Table>
                   <TableHeader className="bg-muted/30 sticky top-0 backdrop-blur-sm">
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>{t("Date")}</TableHead>
+                      <TableHead>{t("Type")}</TableHead>
+                      <TableHead>{t("Details")}</TableHead>
+                      <TableHead className="text-right">{t("Amount")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -595,21 +594,21 @@ export default function EmployeeDetail() {
                       return (
                         <TableRow key={tx.id}>
                           <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                            {formatDateTime(tx.createdAt)}
+                            {date(tx.createdAt, { dateStyle: "medium", timeStyle: "short" })}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize text-xs font-normal bg-background">
-                              {tx.type.replace('_', ' ')}
+                              {label(tx.type)}
                             </Badge>
                           </TableCell>
                           <TableCell className="max-w-[250px] truncate">
-                            {tx.type === 'award' && tx.fromEmployeeId ? `From ${tx.fromEmployeeName}` : ''}
-                            {tx.type === 'award' && tx.toEmployeeId && tx.fromEmployeeId === id ? `To ${tx.toEmployeeName}` : ''}
-                            {tx.type === 'adjustment' && tx.createdByName ? `Recorded by ${tx.createdByName}` : ''}
-                            {tx.note ? ` - ${tx.note}` : ''}
+                            {tx.type === 'award' && tx.fromEmployeeId ? t("From {name}", { name: tx.fromEmployeeName ?? "" }) : ''}
+                            {tx.type === 'award' && tx.toEmployeeId && tx.fromEmployeeId === id ? t("To {name}", { name: tx.toEmployeeName ?? "" }) : ''}
+                            {tx.type === 'adjustment' && tx.createdByName ? t("Recorded by {name}", { name: tx.createdByName }) : ''}
+                            {tx.note ? ` - ${formatTransactionNote(tx, { t, number })}` : ''}
                           </TableCell>
                           <TableCell className={`text-right font-medium ${isPositive ? 'text-green-600' : 'text-foreground'}`}>
-                            {isPositive ? '+' : '-'}{Math.abs(tx.amount)}
+                            {isPositive ? '+' : '-'}{number(Math.abs(tx.amount))}
                           </TableCell>
                         </TableRow>
                       );
@@ -618,7 +617,7 @@ export default function EmployeeDetail() {
                 </Table>
               ) : (
                 <div className="p-12 text-center text-muted-foreground">
-                  No transactions yet.
+                  {t("No transactions yet.")}
                 </div>
               )}
             </CardContent>

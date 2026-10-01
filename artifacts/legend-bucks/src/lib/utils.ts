@@ -1,12 +1,13 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getLocale } from "@/lib/locale";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 export function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  return new Date(dateString).toLocaleDateString(getLocale(), {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -14,7 +15,7 @@ export function formatDate(dateString: string) {
 }
 
 export function formatDateTime(dateString: string) {
-  return new Date(dateString).toLocaleString("en-US", {
+  return new Date(dateString).toLocaleString(getLocale(), {
     month: "short",
     day: "numeric",
     year: "numeric",

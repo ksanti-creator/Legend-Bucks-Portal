@@ -7,6 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/lib/i18n";
 import {
   HelpCircle,
   Loader2,
@@ -255,6 +256,7 @@ const ROLE_META: Record<
 };
 
 export default function Help() {
+  const { t, label } = useI18n();
   const { data: user, isLoading } = useGetMe();
 
   if (isLoading) {
@@ -278,9 +280,9 @@ export default function Help() {
         <div className="inline-flex items-center justify-center p-4 bg-primary/10 text-primary rounded-full mb-4">
           <HelpCircle className="h-8 w-8" />
         </div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Help &amp; How-To</h1>
+        <h1 className="text-3xl font-display font-bold tracking-tight">{t("Help & How-To")}</h1>
         <p className="text-muted-foreground mt-2">
-          Step-by-step guides for the things you can do in Legend Bucks.
+          {t("Step-by-step guides for the things you can do in Legend Bucks.")}
         </p>
       </div>
 
@@ -292,12 +294,12 @@ export default function Help() {
             </div>
             <div>
               <CardTitle className="flex items-center gap-2">
-                Your guides
+                {t("Your guides")}
                 <Badge variant="secondary" className="capitalize">
-                  {meta?.label ?? role.replace("_", " ")}
+                  {meta ? t(meta.label) : label(role)}
                 </Badge>
               </CardTitle>
-              <CardDescription>{meta?.blurb}</CardDescription>
+              <CardDescription>{meta?.blurb ? t(meta.blurb) : null}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -307,14 +309,14 @@ export default function Help() {
               {flows.map((flow, i) => (
                 <AccordionItem key={flow.title} value={`item-${i}`}>
                   <AccordionTrigger className="text-left">
-                    <span className="font-semibold">{flow.title}</span>
+                    <span className="font-semibold">{t(flow.title)}</span>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-muted-foreground mb-3">{flow.summary}</p>
+                    <p className="text-muted-foreground mb-3">{t(flow.summary)}</p>
                     <ol className="list-decimal list-inside space-y-2 text-sm">
                       {flow.steps.map((step, s) => (
                         <li key={s} className="leading-relaxed">
-                          {step}
+                          {t(step)}
                         </li>
                       ))}
                     </ol>
@@ -323,13 +325,13 @@ export default function Help() {
               ))}
             </Accordion>
           ) : (
-            <p className="text-muted-foreground text-sm">No guides available.</p>
+            <p className="text-muted-foreground text-sm">{t("No guides available.")}</p>
           )}
         </CardContent>
       </Card>
 
       <p className="text-center text-xs text-muted-foreground">
-        Still stuck? Reach out to your program admin for help.
+        {t("Still stuck? Reach out to your program admin for help.")}
       </p>
     </div>
   );

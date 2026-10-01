@@ -3,6 +3,7 @@ import { useRequestUploadUrl } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, X, ImageIcon, ArrowLeft, ArrowRight } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_PHOTOS = 6;
@@ -14,6 +15,7 @@ interface ImageUploadProps {
 }
 
 export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
+  const { t, error } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
@@ -22,16 +24,16 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   async function handleFile(file: File) {
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "Unsupported file",
-        description: "Please choose an image file.",
+        title: t("Unsupported file"),
+        description: t("Please choose an image file."),
         variant: "destructive",
       });
       return;
     }
     if (file.size > MAX_BYTES) {
       toast({
-        title: "File too large",
-        description: "Images must be 5 MB or smaller.",
+        title: t("File too large"),
+        description: t("Images must be 5 MB or smaller."),
         variant: "destructive",
       });
       return;
@@ -58,9 +60,9 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       onChange(`/api/storage${objectPath}`);
     } catch (err) {
       toast({
-        title: "Upload failed",
+        title: t("Upload failed"),
         description:
-          err instanceof Error ? err.message : "Could not upload the image.",
+          err instanceof Error ? error(err) : t("Could not upload the image."),
         variant: "destructive",
       });
     } finally {
@@ -76,7 +78,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
           {value ? (
             <img
               src={value}
-              alt="Reward"
+              alt={t("Reward")}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -97,7 +99,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              {value ? "Replace image" : "Upload image"}
+              {value ? t("Replace image") : t("Upload image")}
             </Button>
             {value && !uploading && (
               <Button
@@ -108,11 +110,11 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
                 onClick={() => onChange("")}
               >
                 <X className="mr-1 h-4 w-4" />
-                Remove
+                {t("Remove")}
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">PNG or JPG, up to 5 MB.</p>
+          <p className="text-xs text-muted-foreground">{t("PNG or JPG, up to 5 MB.")}</p>
         </div>
       </div>
       <input
@@ -140,6 +142,7 @@ interface MultiImageUploadProps {
  * catalog cards; photos can be reordered with the arrow buttons.
  */
 export function MultiImageUpload({ value, onChange, disabled }: MultiImageUploadProps) {
+  const { t, error, number } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
@@ -150,11 +153,11 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
 
   async function uploadOne(file: File): Promise<string | null> {
     if (!file.type.startsWith("image/")) {
-      toast({ title: "Unsupported file", description: `${file.name} is not an image.`, variant: "destructive" });
+      toast({ title: t("Unsupported file"), description: t("{name} is not an image.", { name: file.name }), variant: "destructive" });
       return null;
     }
     if (file.size > MAX_BYTES) {
-      toast({ title: "File too large", description: `${file.name} is over 5 MB.`, variant: "destructive" });
+      toast({ title: t("File too large"), description: t("{name} is over 5 MB.", { name: file.name }), variant: "destructive" });
       return null;
     }
     const { uploadURL, objectPath } = await requestUrl.mutateAsync({
@@ -174,7 +177,7 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
     if (room <= 0) return;
     const toUpload = files.slice(0, room);
     if (files.length > room) {
-      toast({ title: `Photo limit is ${MAX_PHOTOS}`, description: `Only the first ${room} file(s) were added.` });
+      toast({ title: t("Photo limit is {count}", { count: number(MAX_PHOTOS) }), description: t("Only the first {count} file(s) were added.", { count: number(room) }) });
     }
     setUploading(true);
     try {
@@ -186,8 +189,8 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
       if (added.length) onChange([...photos, ...added]);
     } catch (err) {
       toast({
-        title: "Upload failed",
-        description: err instanceof Error ? err.message : "Could not upload the image.",
+        title: t("Upload failed"),
+        description: err instanceof Error ? error(err) : t("Could not upload the image."),
         variant: "destructive",
       });
     } finally {
@@ -214,10 +217,10 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
         <div className="grid grid-cols-3 gap-2">
           {photos.map((url, i) => (
             <div key={`${url}-${i}`} className="group relative aspect-square overflow-hidden rounded-md border bg-muted">
-              <img src={url} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" />
+              <img src={url} alt={t("Photo {count}", { count: number(i + 1) })} className="h-full w-full object-cover" />
               {i === 0 && (
                 <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground shadow">
-                  Cover
+                  {t("Cover")}
                 </span>
               )}
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/50 p-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -226,7 +229,7 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
                   className="h-6 w-6 text-white hover:bg-white/20 hover:text-white"
                   disabled={disabled || i === 0}
                   onClick={() => move(i, -1)}
-                  aria-label="Move photo earlier"
+                  aria-label={t("Move photo earlier")}
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                 </Button>
@@ -235,7 +238,7 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
                   className="h-6 w-6 text-white hover:bg-white/20 hover:text-white"
                   disabled={disabled || i === photos.length - 1}
                   onClick={() => move(i, 1)}
-                  aria-label="Move photo later"
+                  aria-label={t("Move photo later")}
                 >
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
@@ -244,7 +247,7 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
                   className="h-6 w-6 text-white hover:bg-white/20 hover:text-white"
                   disabled={disabled}
                   onClick={() => remove(i)}
-                  aria-label="Remove photo"
+                  aria-label={t("Remove photo")}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -266,10 +269,10 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
           ) : (
             <Upload className="mr-2 h-4 w-4" />
           )}
-          {atCap ? `Limit of ${MAX_PHOTOS} reached` : photos.length ? "Add photos" : "Upload photos"}
+          {atCap ? t("Limit of {count} reached", { count: number(MAX_PHOTOS) }) : photos.length ? t("Add photos") : t("Upload photos")}
         </Button>
         <p className="text-xs text-muted-foreground">
-          PNG or JPG, up to 5 MB each. First photo is the cover.
+          {t("PNG or JPG, up to 5 MB each. First photo is the cover.")}
         </p>
       </div>
       <input

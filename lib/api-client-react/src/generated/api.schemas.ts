@@ -177,6 +177,14 @@ export const CurrentUserStatus = {
   invited: 'invited',
 } as const;
 
+export type PreferredLanguage = typeof PreferredLanguage[keyof typeof PreferredLanguage];
+
+
+export const PreferredLanguage = {
+  en: 'en',
+  'fr-CA': 'fr-CA',
+} as const;
+
 export interface CurrentUser {
   id: number;
   firstName: string;
@@ -196,10 +204,15 @@ export interface CurrentUser {
   balance?: number;
   /** Receive an email when awarded Legend Bucks */
   notifyBucksReceived: boolean;
+  preferredLanguage: PreferredLanguage;
   /** Receive emails about reward redemption status */
   notifyRedemptionUpdates: boolean;
   /** Receive an email when a new redemption request needs your attention (admins/managers) */
   notifyNewRedemptionRequests: boolean;
+}
+
+export interface LanguagePreferences {
+  preferredLanguage: PreferredLanguage;
 }
 
 export interface NotificationPreferences {
@@ -246,6 +259,7 @@ export interface AuthSession {
   balance?: number;
   /** Session token to store client-side and send as Bearer auth */
   token: string;
+  preferredLanguage: PreferredLanguage;
 }
 
 export interface Department {
@@ -299,6 +313,7 @@ export const EmployeeStatus = {
 export interface Employee {
   id: number;
   firstName: string;
+  preferredLanguage: PreferredLanguage;
   lastName: string;
   email: string;
   /** @nullable */
@@ -371,6 +386,8 @@ export interface BalanceSummary {
 
 export interface MagicLinkRequest {
   email: string;
+  /** Language for this sign-in email; saved only after successful token verification. Omit to use the employee's saved language. */
+  preferredLanguage?: PreferredLanguage;
 }
 
 export interface MagicLinkResponse {

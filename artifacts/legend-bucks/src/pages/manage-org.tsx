@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Loader2, ArrowLeft, Pencil, Trash2, Check, X, Building2, MapPin } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface OrgUnit {
   id: number;
@@ -61,6 +62,7 @@ function OrgSection({
   onRename,
   onDelete,
 }: OrgSectionProps) {
+  const { t, number } = useI18n();
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
@@ -87,14 +89,15 @@ function OrgSection({
       <CardHeader className="border-b bg-muted/20">
         <CardTitle className="text-lg flex items-center gap-2">
           {icon}
-          {title}
+          {t(title)}
         </CardTitle>
-        <CardDescription>Create, rename, or remove {title.toLowerCase()}.</CardDescription>
+        <CardDescription>{t(singular === "Department" ? "Create, rename, or remove departments." : "Create, rename, or remove locations.")}</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex gap-2 p-4 border-b">
           <Input
-            placeholder={`New ${singular.toLowerCase()} name`}
+            placeholder={t(singular === "Department" ? "New department name" : "New location name")}
+            aria-label={t(singular === "Department" ? "New department name" : "New location name")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -104,24 +107,24 @@ function OrgSection({
               }
             }}
           />
-          <Button onClick={handleCreate} disabled={isMutating || !newName.trim()} className="shrink-0">
+          <Button aria-label={t("Add")} onClick={handleCreate} disabled={isMutating || !newName.trim()} className="shrink-0">
             {isMutating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            <span className="ml-1 hidden sm:inline">Add</span>
+            <span className="ml-1 hidden sm:inline">{t("Add")}</span>
           </Button>
         </div>
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
-              <TableHead>Name</TableHead>
-              <TableHead>Employees</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t("Name")}</TableHead>
+              <TableHead>{t("Employees")}</TableHead>
+              <TableHead className="text-right">{t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                  Loading...
+                  {t("Loading...")}
                 </TableCell>
               </TableRow>
             ) : items && items.length > 0 ? (
@@ -130,6 +133,7 @@ function OrgSection({
                   <TableCell className="font-medium">
                     {editingId === item.id ? (
                       <Input
+                        aria-label={t("Name")}
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         onKeyDown={(e) => {
@@ -147,13 +151,14 @@ function OrgSection({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{item.employeeCount}</Badge>
+                    <Badge variant="secondary">{number(item.employeeCount)}</Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       {editingId === item.id ? (
                         <>
                           <Button
+                            aria-label={t("Save Changes")}
                             variant="ghost"
                             size="icon"
                             onClick={() => saveEdit(item.id)}
@@ -161,16 +166,17 @@ function OrgSection({
                           >
                             <Check className="h-4 w-4 text-green-600" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setEditingId(null)}>
+                          <Button aria-label={t("Cancel")} variant="ghost" size="icon" onClick={() => setEditingId(null)}>
                             <X className="h-4 w-4" />
                           </Button>
                         </>
                       ) : (
                         <>
-                          <Button variant="ghost" size="icon" onClick={() => startEdit(item)}>
+                          <Button aria-label={t("Rename {name}", { name: item.name })} variant="ghost" size="icon" onClick={() => startEdit(item)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
+                            aria-label={t("Delete {name}", { name: item.name })}
                             variant="ghost"
                             size="icon"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -187,7 +193,7 @@ function OrgSection({
             ) : (
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                  No {title.toLowerCase()} yet. Add one above.
+                  {t(singular === "Department" ? "No departments yet. Add one above." : "No locations yet. Add one above.")}
                 </TableCell>
               </TableRow>
             )}
@@ -199,6 +205,7 @@ function OrgSection({
 }
 
 export default function ManageOrg() {
+  const { t, number, error } = useI18n();
   const { data: user } = useGetMe();
   const isAdmin = user?.role === "admin";
   const { toast } = useToast();
@@ -222,7 +229,7 @@ export default function ManageOrg() {
   const [reassignTo, setReassignTo] = useState<string>("none");
 
   if (!isAdmin && user) {
-    return <div className="p-8 text-center text-destructive">Unauthorized. Admins only.</div>;
+    return <div className="p-8 text-center text-destructive">{t("Unauthorized. Admins only.")}</div>;
   }
 
   const invalidate = (key: string) => {
@@ -233,11 +240,11 @@ export default function ManageOrg() {
 
   const errMessage = (err: any, fallback: string) => {
     const msg = err?.response?.data?.error || err?.data?.error || err?.message;
-    return typeof msg === "string" ? msg : fallback;
+    return typeof msg === "string" ? error(msg) : t(fallback);
   };
 
   const keyFor = (kind: Kind) => (kind === "department" ? "/api/departments" : "/api/locations");
-  const labelFor = (kind: Kind) => (kind === "department" ? "Department" : "Location");
+  const deletedLabelFor = (kind: Kind) => t(kind === "department" ? "Department deleted" : "Location deleted");
 
   // Delete a unit that has no employees assigned.
   const performDelete = (item: OrgUnit, kind: Kind) => {
@@ -246,7 +253,7 @@ export default function ManageOrg() {
       { id: item.id },
       {
         onSuccess: () => {
-          toast({ title: `${labelFor(kind)} deleted` });
+          toast({ title: deletedLabelFor(kind) });
           invalidate(keyFor(kind));
         },
         onError: (err) =>
@@ -262,7 +269,7 @@ export default function ManageOrg() {
       setReassignState({ item, kind });
       return;
     }
-    if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+    if (!confirm(t('Delete "{name}"? This cannot be undone.', { name: item.name }))) return;
     performDelete(item, kind);
   };
 
@@ -291,7 +298,7 @@ export default function ManageOrg() {
             { id: item.id },
             {
               onSuccess: () => {
-                toast({ title: `${labelFor(kind)} deleted` });
+                toast({ title: deletedLabelFor(kind) });
                 invalidate(keyFor(kind));
                 setReassignState(null);
               },
@@ -311,14 +318,14 @@ export default function ManageOrg() {
       <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
         <Link href="/employees">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Directory
+          {t("Back to Directory")}
         </Link>
       </Button>
 
       <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Departments &amp; Locations</h1>
+        <h1 className="text-3xl font-display font-bold tracking-tight">{t("Departments & Locations")}</h1>
         <p className="text-muted-foreground mt-1">
-          Manage the canonical lists employees are assigned to.
+          {t("Manage the canonical lists employees are assigned to.")}
         </p>
       </div>
 
@@ -335,7 +342,7 @@ export default function ManageOrg() {
               { data: { name } },
               {
                 onSuccess: () => {
-                  toast({ title: "Department added" });
+                  toast({ title: t("Department added") });
                   invalidate("/api/departments");
                   done();
                 },
@@ -349,7 +356,7 @@ export default function ManageOrg() {
               { id, data: { name } },
               {
                 onSuccess: () => {
-                  toast({ title: "Department renamed" });
+                  toast({ title: t("Department renamed") });
                   invalidate("/api/departments");
                   done();
                 },
@@ -373,7 +380,7 @@ export default function ManageOrg() {
               { data: { name } },
               {
                 onSuccess: () => {
-                  toast({ title: "Location added" });
+                  toast({ title: t("Location added") });
                   invalidate("/api/locations");
                   done();
                 },
@@ -387,7 +394,7 @@ export default function ManageOrg() {
               { id, data: { name } },
               {
                 onSuccess: () => {
-                  toast({ title: "Location renamed" });
+                  toast({ title: t("Location renamed") });
                   invalidate("/api/locations");
                   done();
                 },
@@ -403,25 +410,23 @@ export default function ManageOrg() {
       <Dialog open={reassignState !== null} onOpenChange={(open) => !open && setReassignState(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reassign employees before deleting</DialogTitle>
+            <DialogTitle>{t("Reassign employees before deleting")}</DialogTitle>
             <DialogDescription>
               {reassignState && (
                 <>
-                  <span className="font-medium text-foreground">{reassignState.item.name}</span> still has{" "}
-                  {reassignState.item.employeeCount} employee(s). Choose where to move them, then it will be
-                  deleted.
+                  {t("{name} still has {count} employee(s). Choose where to move them, then it will be deleted.", { name: reassignState.item.name, count: number(reassignState.item.employeeCount) })}
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label>Move employees to</Label>
+            <Label>{t("Move employees to")}</Label>
             <Select value={reassignTo} onValueChange={setReassignTo}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a destination" />
+                <SelectValue placeholder={t("Select a destination")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No {reassignState?.kind ?? "assignment"} (leave blank)</SelectItem>
+                <SelectItem value="none">{t(reassignState?.kind === "department" ? "No department (leave blank)" : reassignState?.kind === "location" ? "No location (leave blank)" : "No assignment (leave blank)")}</SelectItem>
                 {reassignOptions.map((u) => (
                   <SelectItem key={u.id} value={u.id.toString()}>
                     {u.name}
@@ -432,14 +437,14 @@ export default function ManageOrg() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReassignState(null)} disabled={reassignPending}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               onClick={handleReassignAndDelete}
               disabled={reassignPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {reassignPending ? "Working..." : "Reassign & Delete"}
+              {reassignPending ? t("Working...") : t("Reassign & Delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

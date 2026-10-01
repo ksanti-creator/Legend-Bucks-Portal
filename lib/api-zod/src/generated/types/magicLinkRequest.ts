@@ -5,7 +5,10 @@
  * Legend Bucks rewards platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { PreferredLanguage } from './preferredLanguage';
 
 export interface MagicLinkRequest {
   email: string;
+  /** Language for this sign-in email; saved only after successful token verification. Omit to use the employee's saved language. */
+  preferredLanguage?: PreferredLanguage;
 }

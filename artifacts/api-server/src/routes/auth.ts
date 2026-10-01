@@ -14,6 +14,8 @@ import {
   InviteEmployeeResponse,
   UpdateNotificationPreferencesBody,
   UpdateNotificationPreferencesResponse,
+  UpdateLanguagePreferencesBody,
+  UpdateLanguagePreferencesResponse,
 } from "@workspace/api-zod";
 import {
   createMagicToken,
@@ -47,12 +49,27 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
       location,
       managerId: user.managerId,
       status: user.status,
+      preferredLanguage: user.preferredLanguage,
       balance,
       notifyBucksReceived: user.notifyBucksReceived,
       notifyRedemptionUpdates: user.notifyRedemptionUpdates,
       notifyNewRedemptionRequests: user.notifyNewRedemptionRequests,
     }),
   );
+});
+
+// No target id is accepted: the authenticated employee alone owns this setting.
+router.patch("/auth/me/preferences", requireAuth, async (req, res): Promise<void> => {
+  const user = getCurrentUser(req);
+  const body = UpdateLanguagePreferencesBody.strict().safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: body.error.message });
+    return;
+  }
+  const [updated] = await db.update(employeesTable)
+    .set({ preferredLanguage: body.data.preferredLanguage })
+    .where(eq(employeesTable.id, user.id)).returning();
+  res.json(UpdateLanguagePreferencesResponse.parse({ preferredLanguage: updated.preferredLanguage }));
 });
 
 // Any authenticated user can manage their own email notification preferences.
@@ -102,11 +119,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const token = await createMagicToken(employee.id);
+  const token = await createMagicToken(employee.id, parsed.data.preferredLanguage);
 
   // Send the magic link email; also surface the token in dev for easy testing
   try {
-    await sendMagicLinkEmail(employee.email, employee.firstName, token);
+    await sendMagicLinkEmail(employee.email, employee.firstName, token, parsed.data.preferredLanguage ?? employee.preferredLanguage);
     req.log.info({ employeeId: employee.id }, "Magic link email sent");
   } catch (err) {
     req.log.error({ err, employeeId: employee.id }, "Failed to send magic link email");
@@ -146,6 +163,16 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
     return;
   }
 
+  // The email request is unauthenticated, so never overwrite a saved preference
+  // there. Only possession of the valid single-use token authorizes this save.
+  const [magicToken] = await db.select().from(magicTokensTable)
+    .where(eq(magicTokensTable.token, parsed.data.token)).limit(1);
+  if (magicToken?.preferredLanguage) {
+    await db.update(employeesTable).set({ preferredLanguage: magicToken.preferredLanguage })
+      .where(eq(employeesTable.id, employee.id));
+    employee.preferredLanguage = magicToken.preferredLanguage;
+  }
+
   // Mark invited users as active on first login
   if (employee.status === "invited") {
     await db
@@ -180,6 +207,7 @@ router.post("/auth/verify", async (req, res): Promise<void> => {
       location,
       managerId: employee.managerId,
       status: employee.status,
+      preferredLanguage: employee.preferredLanguage,
       balance,
       // Also returned in the body so the client can store it and authenticate
       // via Authorization: Bearer — required inside the Replit preview iframe
@@ -277,7 +305,7 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
   const token = await createMagicToken(employee.id);
   const inviterName = `${user.firstName} ${user.lastName}`;
   try {
-    await sendInviteEmail(employee.email, employee.firstName, inviterName, token);
+    await sendInviteEmail(employee.email, employee.firstName, inviterName, token, employee.preferredLanguage);
     req.log.info({ employeeId: employee.id }, "Invite email sent");
   } catch (err) {
     req.log.error({ err, employeeId: employee.id }, "Failed to send invite email");
@@ -299,6 +327,7 @@ router.post("/auth/invite", requireAuth, async (req, res): Promise<void> => {
       status: employee.status,
       balance: null,
       createdAt: employee.createdAt.toISOString(),
+      preferredLanguage: employee.preferredLanguage,
     }),
   );
 });
@@ -431,7 +460,7 @@ router.post("/auth/bulk-invite", requireAuth, async (req, res): Promise<void> =>
       // still log in via magic link. Same behavior as the single invite.
       try {
         const token = await createMagicToken(employee.id);
-        await sendInviteEmail(employee.email, employee.firstName, inviterName, token);
+        await sendInviteEmail(employee.email, employee.firstName, inviterName, token, employee.preferredLanguage);
       } catch (err) {
         req.log.error({ err, employeeId: employee.id }, "Failed to send bulk invite email");
       }

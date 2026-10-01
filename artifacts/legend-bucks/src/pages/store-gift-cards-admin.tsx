@@ -21,15 +21,17 @@ import { Loader2, Plus, Trash2, Undo2, AlertTriangle, ChevronLeft, ChevronRight,
 import { useToast } from "@/hooks/use-toast";
 import { StoreModeBanner } from "@/components/store-card/StoreModeBanner";
 import { AbandonDraftDialog } from "@/components/store-card/AbandonDraftDialog";
+import { useI18n } from "@/lib/i18n";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  apiErrorInfo, clearPendingReversal, formatCad, isUncertain, loadPendingReversal, savePendingReversal,
+  apiErrorInfo, clearPendingReversal, isUncertain, loadPendingReversal, savePendingReversal,
   type PendingReversal,
 } from "@/lib/store-card";
 
 type Reversal = StoreCardSpend & { reversalRef: string; reversedAt: string };
 
 function StoresSection() {
+  const { t, error } = useI18n();
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: stores, isLoading, isError, refetch } = useListStores();
@@ -37,41 +39,41 @@ function StoresSection() {
   const create = useCreateStore();
   const [name, setName] = useState("");
   const [locationId, setLocationId] = useState("");
-  const locName = (id: number) => locations?.find((l) => l.id === id)?.name ?? `Location #${id}`;
+  const locName = (id: number) => locations?.find((l) => l.id === id)?.name ?? t("Location #{id}", { id });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !locationId) return;
     create.mutate({ data: { name: name.trim(), locationId: Number(locationId) } }, {
-      onSuccess: () => { setName(""); setLocationId(""); toast({ title: "Store created" }); qc.invalidateQueries({ queryKey: getListStoresQueryKey() }); },
-      onError: (err) => toast({ title: "Could not create store", description: apiErrorInfo(err).message || undefined, variant: "destructive" }),
+      onSuccess: () => { setName(""); setLocationId(""); toast({ title: t("Store created") }); qc.invalidateQueries({ queryKey: getListStoresQueryKey() }); },
+      onError: (err) => toast({ title: t("Could not create store"), description: error(err), variant: "destructive" }),
     });
   };
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-lg">Stores</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-lg">{t("Stores")}</CardTitle></CardHeader>
       <CardContent className="space-y-5">
         <form onSubmit={submit} className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
-          <div className="space-y-1.5"><Label htmlFor="store-name">Store name</Label><Input id="store-name" maxLength={100} value={name} onChange={(e) => setName(e.target.value)} data-testid="input-store-name" /></div>
+          <div className="space-y-1.5"><Label htmlFor="store-name">{t("Store name")}</Label><Input id="store-name" maxLength={100} value={name} onChange={(e) => setName(e.target.value)} data-testid="input-store-name" /></div>
           <div className="space-y-1.5">
-            <Label htmlFor="store-location">Location</Label>
+            <Label htmlFor="store-location">{t("Location")}</Label>
             <Select value={locationId} onValueChange={setLocationId}>
-              <SelectTrigger id="store-location" data-testid="select-store-location"><SelectValue placeholder="Select location" /></SelectTrigger>
+              <SelectTrigger id="store-location" data-testid="select-store-location"><SelectValue placeholder={t("Select location")} /></SelectTrigger>
               <SelectContent>{locations?.map((l) => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <Button type="submit" disabled={create.isPending || !name.trim() || !locationId} data-testid="button-create-store">
-            {create.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}Add store
+            {create.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}{t("Add store")}
           </Button>
         </form>
         {isLoading ? <div className="h-16 rounded-lg bg-muted animate-pulse" />
-          : isError ? <div className="flex items-center justify-between text-sm">Could not load stores.<Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button></div>
-          : !stores?.length ? <p className="text-sm text-muted-foreground">No stores yet. Add one to start granting access.</p>
+          : isError ? <div className="flex items-center justify-between text-sm">{t("Could not load stores.")}<Button variant="outline" size="sm" onClick={() => refetch()}>{t("Retry")}</Button></div>
+          : !stores?.length ? <p className="text-sm text-muted-foreground">{t("No stores yet. Add one to start granting access.")}</p>
           : <ul className="divide-y rounded-lg border">{stores.map((s) => (
               <li key={s.id} className="flex items-center justify-between p-3 text-sm" data-testid={`row-store-${s.id}`}>
                 <div><div className="font-medium">{s.name}</div><div className="text-muted-foreground">{locName(s.locationId)}</div></div>
-                <Badge variant={s.active ? "success" : "secondary"}>{s.active ? "Active" : "Inactive"}</Badge>
+                <Badge variant={s.active ? "success" : "secondary"}>{s.active ? t("Active") : t("Inactive")}</Badge>
               </li>))}</ul>}
       </CardContent>
     </Card>
@@ -79,6 +81,7 @@ function StoresSection() {
 }
 
 function AccessSection() {
+  const { t, error } = useI18n();
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: stores } = useListStores();
@@ -93,73 +96,73 @@ function AccessSection() {
   const store = stores?.find((s) => String(s.id) === storeId);
   // Only employees assigned to the store's location are eligible.
   const eligible = useMemo(() => (employees ?? []).filter((e) => store && e.locationId === store.locationId), [employees, store]);
-  const empName = (id: number) => { const e = employees?.find((x) => x.id === id); return e ? `${e.firstName} ${e.lastName}` : `Employee #${id}`; };
-  const storeName = (id: number) => stores?.find((s) => s.id === id)?.name ?? `Store #${id}`;
+  const empName = (id: number) => { const e = employees?.find((x) => x.id === id); return e ? `${e.firstName} ${e.lastName}` : t("Employee #{id}", { id }); };
+  const storeName = (id: number) => stores?.find((s) => s.id === id)?.name ?? t("Store #{id}", { id });
   const invalidate = () => qc.invalidateQueries({ queryKey: getListStoreAccessQueryKey() });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!storeId || !employeeId) return;
     grant.mutate({ data: { storeId: Number(storeId), employeeId: Number(employeeId) } }, {
-      onSuccess: () => { setEmployeeId(""); toast({ title: "Access granted" }); invalidate(); },
-      onError: (err) => toast({ title: "Could not grant access", description: apiErrorInfo(err).message || undefined, variant: "destructive" }),
+      onSuccess: () => { setEmployeeId(""); toast({ title: t("Access granted") }); invalidate(); },
+      onError: (err) => toast({ title: t("Could not grant access"), description: error(err), variant: "destructive" }),
     });
   };
 
   const doRevoke = () => {
     if (!revoking) return;
     revoke.mutate(revoking, {
-      onSuccess: () => { toast({ title: "Access revoked" }); invalidate(); setRevoking(null); },
-      onError: () => { toast({ title: "Could not revoke access", variant: "destructive" }); setRevoking(null); },
+      onSuccess: () => { toast({ title: t("Access revoked") }); invalidate(); setRevoking(null); },
+      onError: () => { toast({ title: t("Could not revoke access"), variant: "destructive" }); setRevoking(null); },
     });
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Store verification access</CardTitle>
-        <p className="text-sm text-muted-foreground">Access is granted per employee and store. Portal role, including manager and admin, does not grant it.</p>
+        <CardTitle className="text-lg">{t("Store verification access")}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t("Access is granted per employee and store. Portal role, including manager and admin, does not grant it.")}</p>
       </CardHeader>
       <CardContent className="space-y-5">
         <form onSubmit={submit} className="grid sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
           <div className="space-y-1.5">
-            <Label htmlFor="grant-store">Store</Label>
+            <Label htmlFor="grant-store">{t("Store")}</Label>
             <Select value={storeId} onValueChange={(v) => { setStoreId(v); setEmployeeId(""); }}>
-              <SelectTrigger id="grant-store" data-testid="select-grant-store"><SelectValue placeholder="Select store" /></SelectTrigger>
+              <SelectTrigger id="grant-store" data-testid="select-grant-store"><SelectValue placeholder={t("Select store")} /></SelectTrigger>
               <SelectContent>{stores?.filter((s) => s.active).map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="grant-employee">Employee at store location</Label>
+            <Label htmlFor="grant-employee">{t("Employee at store location")}</Label>
             <Select value={employeeId} onValueChange={setEmployeeId} disabled={!store}>
-              <SelectTrigger id="grant-employee" data-testid="select-grant-employee"><SelectValue placeholder={store && !eligible.length ? "No employees at this location" : "Select employee"} /></SelectTrigger>
+              <SelectTrigger id="grant-employee" data-testid="select-grant-employee"><SelectValue placeholder={store && !eligible.length ? t("No employees at this location") : t("Select employee")} /></SelectTrigger>
               <SelectContent>{eligible.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.firstName} {e.lastName}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <Button type="submit" disabled={grant.isPending || !storeId || !employeeId} data-testid="button-grant-access">
-            {grant.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Grant
+            {grant.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{t("Grant")}
           </Button>
         </form>
         {isLoading ? <div className="h-16 rounded-lg bg-muted animate-pulse" />
-          : isError ? <div className="flex items-center justify-between text-sm">Could not load access grants.<Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button></div>
-          : !access?.length ? <p className="text-sm text-muted-foreground">No one has store access.</p>
+          : isError ? <div className="flex items-center justify-between text-sm">{t("Could not load access grants.")}<Button variant="outline" size="sm" onClick={() => refetch()}>{t("Retry")}</Button></div>
+          : !access?.length ? <p className="text-sm text-muted-foreground">{t("No one has store access.")}</p>
           : <ul className="divide-y rounded-lg border">{access.map((a) => (
               <li key={`${a.storeId}-${a.employeeId}`} className="flex items-center justify-between gap-3 p-3 text-sm" data-testid={`row-access-${a.storeId}-${a.employeeId}`}>
                 <div><div className="font-medium">{empName(a.employeeId)}</div><div className="text-muted-foreground">{storeName(a.storeId)}</div></div>
-                <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => setRevoking(a)} aria-label={`Revoke ${empName(a.employeeId)} at ${storeName(a.storeId)}`} data-testid={`button-revoke-${a.storeId}-${a.employeeId}`}>
-                  <Trash2 className="h-4 w-4 mr-1.5" />Revoke
+                <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => setRevoking(a)} aria-label={t("Revoke {name} at {store}", { name: empName(a.employeeId), store: storeName(a.storeId) })} data-testid={`button-revoke-${a.storeId}-${a.employeeId}`}>
+                  <Trash2 className="h-4 w-4 mr-1.5" />{t("Revoke")}
                 </Button>
               </li>))}</ul>}
       </CardContent>
       <AlertDialog open={!!revoking} onOpenChange={(o) => !o && setRevoking(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revoke store access?</AlertDialogTitle>
-            <AlertDialogDescription>{revoking && `${empName(revoking.employeeId)} will no longer be able to verify or spend cards at ${storeName(revoking.storeId)}.`}</AlertDialogDescription>
+            <AlertDialogTitle>{t("Revoke store access?")}</AlertDialogTitle>
+            <AlertDialogDescription>{revoking && t("{name} will no longer be able to verify or spend cards at {store}.", { name: empName(revoking.employeeId), store: storeName(revoking.storeId) })}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doRevoke} data-testid="button-confirm-revoke">Revoke</AlertDialogAction>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={doRevoke} data-testid="button-confirm-revoke">{t("Revoke")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -168,6 +171,8 @@ function AccessSection() {
 }
 
 function ReversalSection({ selectedRef }: { selectedRef: { ref: string; n: number } | null }) {
+  const { t, currency, error: localizeError } = useI18n();
+  const formatCad = (cents: number) => currency(cents / 100);
   const qc = useQueryClient();
   const reverse = useReverseStoreGiftCardSpend();
   const [pending, setPending] = useState<PendingReversal | null>(() => loadPendingReversal());
@@ -192,11 +197,11 @@ function ReversalSection({ selectedRef }: { selectedRef: { ref: string; n: numbe
       onError: (err) => {
         if (isUncertain(err)) {
           const next = { ...p, uncertain: true }; savePendingReversal(next); setPending(next);
-          setError("No confirmation from the server. Retry sends the identical reversal and cannot apply it twice.");
+          setError(t("No confirmation from the server. Retry sends the identical reversal and cannot apply it twice."));
         } else {
           clearPendingReversal(); setPending(null);
           const { status, message } = apiErrorInfo(err);
-          setError(status === 404 ? "Transaction not found." : status === 409 ? message || "Already reversed or conflicting request." : message || "Reversal failed.");
+          setError(status === 404 ? t("Transaction not found.") : status === 409 ? message ? localizeError(err) : t("Already reversed or conflicting request.") : message ? localizeError(err) : t("Reversal failed."));
         }
       },
     });
@@ -211,51 +216,51 @@ function ReversalSection({ selectedRef }: { selectedRef: { ref: string; n: numbe
     <Card id="reverse-spend">
       {pending && (
         <AbandonDraftDialog
-          open={abandonOpen} onOpenChange={setAbandonOpen} expected={pending.transactionRef} refLabel="Transaction ref"
-          checkText={`I refreshed the reconciliation list below and there is no reversal row with original ref ${pending.transactionRef}.`}
+          open={abandonOpen} onOpenChange={setAbandonOpen} expected={pending.transactionRef} refLabel={t("Transaction ref")}
+          checkText={t("I refreshed the reconciliation list below and there is no reversal row with original ref {ref}.", { ref: pending.transactionRef })}
           onConfirm={() => { clearPendingReversal(); setPending(null); setError(null); }}
         />
       )}
       <CardHeader>
-        <CardTitle className="text-lg">Reverse a store spend</CardTitle>
-        <p className="text-sm text-muted-foreground">Restores the card balance only. Legend Bucks are never credited back.</p>
+        <CardTitle className="text-lg">{t("Reverse a store spend")}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t("Restores the card balance only. Legend Bucks are never credited back.")}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {done && (
           <div role="status" className="rounded-lg border border-green-600/40 bg-green-50/60 p-4 text-sm grid grid-cols-2 gap-2" data-testid="card-reversal-result">
-            <div><span className="text-muted-foreground">Reversal ref</span><div className="font-mono font-semibold">{done.reversalRef}</div></div>
-            <div><span className="text-muted-foreground">Original ref</span><div className="font-mono">{done.transactionRef}</div></div>
-            <div><span className="text-muted-foreground">Card</span><div className="font-mono">{done.maskedCode}</div></div>
-            <div><span className="text-muted-foreground">Amount restored</span><div>{formatCad(done.amountCents)}</div></div>
+            <div><span className="text-muted-foreground">{t("Reversal ref")}</span><div className="font-mono font-semibold">{done.reversalRef}</div></div>
+            <div><span className="text-muted-foreground">{t("Original ref")}</span><div className="font-mono">{done.transactionRef}</div></div>
+            <div><span className="text-muted-foreground">{t("Card")}</span><div className="font-mono">{done.maskedCode}</div></div>
+            <div><span className="text-muted-foreground">{t("Amount restored")}</span><div>{formatCad(done.amountCents)}</div></div>
           </div>
         )}
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (ref.trim() && reason.trim()) setConfirmOpen(true); }}>
-          <div className="space-y-1.5"><Label htmlFor="rev-ref">Original transaction ref</Label><Input id="rev-ref" className="font-mono" value={ref} onChange={(e) => setRef(e.target.value)} disabled={locked} data-testid="input-reversal-ref" /></div>
-          <div className="space-y-1.5"><Label htmlFor="rev-reason">Reason</Label><Textarea id="rev-reason" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} disabled={locked} data-testid="input-reversal-reason" /></div>
+          <div className="space-y-1.5"><Label htmlFor="rev-ref">{t("Original transaction ref")}</Label><Input id="rev-ref" className="font-mono" value={ref} onChange={(e) => setRef(e.target.value)} disabled={locked} data-testid="input-reversal-ref" /></div>
+          <div className="space-y-1.5"><Label htmlFor="rev-reason">{t("Reason")}</Label><Textarea id="rev-reason" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} disabled={locked} data-testid="input-reversal-reason" /></div>
           {error && <p role="alert" className="text-sm text-destructive flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />{error}</p>}
           {locked ? (
             <div className="flex flex-wrap gap-2">
               <Button type="button" onClick={() => submit(pending)} disabled={reverse.isPending} data-testid="button-retry-reversal">
-                {reverse.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Retry same reversal
+                {reverse.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{t("Retry same reversal")}
               </Button>
               {!reverse.isPending && pending.uncertain && (
-                <Button type="button" variant="ghost" onClick={() => setAbandonOpen(true)} data-testid="button-abandon-reversal">Abandon</Button>
+                <Button type="button" variant="ghost" onClick={() => setAbandonOpen(true)} data-testid="button-abandon-reversal">{t("Abandon")}</Button>
               )}
             </div>
           ) : (
-            <Button type="submit" variant="destructive" disabled={!ref.trim() || !reason.trim()} data-testid="button-review-reversal"><Undo2 className="h-4 w-4 mr-2" />Review reversal</Button>
+            <Button type="submit" variant="destructive" disabled={!ref.trim() || !reason.trim()} data-testid="button-review-reversal"><Undo2 className="h-4 w-4 mr-2" />{t("Review reversal")}</Button>
           )}
         </form>
       </CardContent>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm reversal</AlertDialogTitle>
-            <AlertDialogDescription>Reverse transaction <span className="font-mono">{ref.trim()}</span>. Reason: {reason.trim()}. This is audited.</AlertDialogDescription>
+            <AlertDialogTitle>{t("Confirm reversal")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("Reverse transaction {ref}. Reason: {reason}. This is audited.", { ref: ref.trim(), reason: reason.trim() })}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Back</AlertDialogCancel>
-            <AlertDialogAction onClick={start} data-testid="button-confirm-reversal">Reverse spend</AlertDialogAction>
+            <AlertDialogCancel>{t("Back")}</AlertDialogCancel>
+            <AlertDialogAction onClick={start} data-testid="button-confirm-reversal">{t("Reverse spend")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -266,41 +271,43 @@ function ReversalSection({ selectedRef }: { selectedRef: { ref: string; n: numbe
 const PAGE = 50;
 
 function TransactionsSection({ onSelect }: { onSelect: (ref: string) => void }) {
+  const { t, number, currency, date } = useI18n();
+  const formatCad = (cents: number) => currency(cents / 100);
   const [page, setPage] = useState(0);
   const params = { limit: PAGE, offset: page * PAGE };
   const { data: rows, isLoading, isError, refetch, isFetching } = useListStoreGiftCardTransactions(params, {
     query: { queryKey: getListStoreGiftCardTransactionsQueryKey(params) },
   });
   const reversed = useMemo(() => new Set((rows ?? []).filter((r) => r.kind === "reversal" && r.originalTransactionRef).map((r) => r.originalTransactionRef as string)), [rows]);
-  const fmt = (d: string) => new Date(d).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
+  const fmt = (d: string) => date(d, { dateStyle: "medium", timeStyle: "short" });
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
-          <CardTitle className="text-lg">Reconciliation</CardTitle>
-          <p className="text-sm text-muted-foreground">Audited spends and reversals, newest first.</p>
+          <CardTitle className="text-lg">{t("Reconciliation")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("Audited spends and reversals, newest first.")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh-transactions">
-          <RefreshCw className={`h-4 w-4 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />Refresh
+          <RefreshCw className={`h-4 w-4 mr-1.5 ${isFetching ? "animate-spin" : ""}`} />{t("Refresh")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLoading ? (
           <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-10 rounded bg-muted animate-pulse" />)}</div>
         ) : isError ? (
-          <div className="flex items-center justify-between text-sm">Could not load transactions.<Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button></div>
+          <div className="flex items-center justify-between text-sm">{t("Could not load transactions.")}<Button variant="outline" size="sm" onClick={() => refetch()}>{t("Retry")}</Button></div>
         ) : !rows?.length ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">{page === 0 ? "No store transactions recorded yet." : "No more transactions."}</p>
+          <p className="text-sm text-muted-foreground py-6 text-center">{page === 0 ? t("No store transactions recorded yet.") : t("No more transactions.")}</p>
         ) : (
           <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Time</TableHead><TableHead>Ref</TableHead><TableHead>Type</TableHead><TableHead>Card</TableHead>
-                  <TableHead>Store</TableHead><TableHead>Employee</TableHead><TableHead>Receipt / reason</TableHead>
-                  <TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Before</TableHead><TableHead className="text-right">After</TableHead>
-                  <TableHead><span className="sr-only">Actions</span></TableHead>
+                  <TableHead>{t("Time")}</TableHead><TableHead>{t("Ref")}</TableHead><TableHead>{t("Type")}</TableHead><TableHead>{t("Card")}</TableHead>
+                  <TableHead>{t("Store")}</TableHead><TableHead>{t("Employee")}</TableHead><TableHead>{t("Receipt / reason")}</TableHead>
+                  <TableHead className="text-right">{t("Amount")}</TableHead><TableHead className="text-right">{t("Before")}</TableHead><TableHead className="text-right">{t("After")}</TableHead>
+                  <TableHead><span className="sr-only">{t("Actions")}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -310,8 +317,8 @@ function TransactionsSection({ onSelect }: { onSelect: (ref: string) => void }) 
                     <TableCell className="font-mono text-xs whitespace-nowrap">{r.transactionRef}</TableCell>
                     <TableCell>
                       {r.kind === "reversal" ? (
-                        <div><Badge variant="secondary">Reversal</Badge><div className="font-mono text-[11px] text-muted-foreground mt-1">of {r.originalTransactionRef}</div></div>
-                      ) : reversed.has(r.transactionRef) ? <Badge variant="outline">Spend (reversed)</Badge> : <Badge>Spend</Badge>}
+                        <div><Badge variant="secondary">{t("Reversal")}</Badge><div className="font-mono text-[11px] text-muted-foreground mt-1">{t("of {ref}", { ref: r.originalTransactionRef ?? "" })}</div></div>
+                      ) : reversed.has(r.transactionRef) ? <Badge variant="outline">{t("Spend (reversed)")}</Badge> : <Badge>{t("Spend")}</Badge>}
                     </TableCell>
                     <TableCell className="font-mono text-xs">{r.maskedCode}</TableCell>
                     <TableCell className="text-sm">{r.storeName}</TableCell>
@@ -324,8 +331,8 @@ function TransactionsSection({ onSelect }: { onSelect: (ref: string) => void }) 
                     <TableCell className="text-right tabular-nums whitespace-nowrap font-medium">{formatCad(r.newBalanceCents)}</TableCell>
                     <TableCell>
                       {r.kind === "spend" && !reversed.has(r.transactionRef) && (
-                        <Button variant="ghost" size="sm" onClick={() => onSelect(r.transactionRef)} aria-label={`Reverse ${r.transactionRef}`} data-testid={`button-select-reverse-${r.transactionRef}`}>
-                          <Undo2 className="h-4 w-4 mr-1" />Reverse
+                        <Button variant="ghost" size="sm" onClick={() => onSelect(r.transactionRef)} aria-label={t("Reverse {ref}", { ref: r.transactionRef })} data-testid={`button-select-reverse-${r.transactionRef}`}>
+                          <Undo2 className="h-4 w-4 mr-1" />{t("Reverse")}
                         </Button>
                       )}
                     </TableCell>
@@ -336,10 +343,10 @@ function TransactionsSection({ onSelect }: { onSelect: (ref: string) => void }) 
           </div>
         )}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Page {page + 1}</span>
+          <span className="text-muted-foreground">{t("Page {page}", { page: number(page + 1) })}</span>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 0 || isFetching} onClick={() => setPage((p) => p - 1)} data-testid="button-prev-page"><ChevronLeft className="h-4 w-4" />Previous</Button>
-            <Button variant="outline" size="sm" disabled={(rows?.length ?? 0) < PAGE || isFetching} onClick={() => setPage((p) => p + 1)} data-testid="button-next-page">Next<ChevronRight className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" disabled={page === 0 || isFetching} onClick={() => setPage((p) => p - 1)} data-testid="button-prev-page"><ChevronLeft className="h-4 w-4" />{t("Previous")}</Button>
+            <Button variant="outline" size="sm" disabled={(rows?.length ?? 0) < PAGE || isFetching} onClick={() => setPage((p) => p + 1)} data-testid="button-next-page">{t("Next")}<ChevronRight className="h-4 w-4" /></Button>
           </div>
         </div>
       </CardContent>
@@ -348,16 +355,17 @@ function TransactionsSection({ onSelect }: { onSelect: (ref: string) => void }) 
 }
 
 export default function StoreGiftCardsAdmin() {
+  const { t } = useI18n();
   const [selectedRef, setSelectedRef] = useState<{ ref: string; n: number } | null>(null);
   const { data: user } = useGetMe();
   if (user && user.role !== "admin") {
-    return <div className="max-w-xl mx-auto text-center py-20"><h1 className="text-2xl font-display font-bold">Admins only</h1><p className="text-muted-foreground mt-2">You do not have access to store gift card administration.</p></div>;
+    return <div className="max-w-xl mx-auto text-center py-20"><h1 className="text-2xl font-display font-bold">{t("Admins only")}</h1><p className="text-muted-foreground mt-2">{t("You do not have access to store gift card administration.")}</p></div>;
   }
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Store Gift Card Admin</h1>
-        <p className="text-muted-foreground mt-1">Stores, verification access and corrections. Admin role does not include spend access.</p>
+        <h1 className="text-3xl font-display font-bold tracking-tight">{t("Store Gift Card Admin")}</h1>
+        <p className="text-muted-foreground mt-1">{t("Stores, verification access and corrections. Admin role does not include spend access.")}</p>
       </div>
       <StoreModeBanner />
       <div className="grid lg:grid-cols-2 gap-6 items-start">

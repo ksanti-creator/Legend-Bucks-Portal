@@ -6,6 +6,8 @@ export const magicTokensTable = pgTable("magic_tokens", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id").notNull(),
   token: text("token").notNull().unique(),
+  // A pre-login selection is saved to the employee only after token verification.
+  preferredLanguage: text("preferred_language", { enum: ["en", "fr-CA"] }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

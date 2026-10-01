@@ -10,6 +10,7 @@ import {
 } from "react-hook-form"
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
+import { useI18n } from "@/lib/i18n"
 
 const Form = FormProvider
 
@@ -143,6 +144,7 @@ const FormMessage = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField()
+  const { error: translateError } = useI18n()
   const body = error ? String(error?.message) : children
 
   if (!body) {
@@ -155,7 +157,7 @@ const FormMessage = React.forwardRef<
       id={formMessageId}
       className={cn("text-[0.8rem] font-medium text-destructive", className)}
       {...props}
-    />
+    >{typeof body === "string" ? translateError(body) : body}</p>
   )
 })
 FormMessage.displayName = "FormMessage"

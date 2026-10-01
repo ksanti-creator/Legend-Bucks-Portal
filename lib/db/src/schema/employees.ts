@@ -17,6 +17,7 @@ export const employeesTable = pgTable("employees", {
   managerId: integer("manager_id"),
   role: roleEnum("role").notNull().default("team_member"),
   status: statusEnum("status").notNull().default("invited"),
+  preferredLanguage: text("preferred_language", { enum: ["en", "fr-CA"] }).notNull().default("en"),
   // Optional yearly award budget (in bucks) this user (a manager/admin) may
   // draw down when awarding bucks to others within a UTC calendar year.
   // null = no budget set = cannot award. Resets each year, no carryover.

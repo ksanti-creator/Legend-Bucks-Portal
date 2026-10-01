@@ -1,6 +1,9 @@
 import crypto from "node:crypto";
 import QRCode from "qrcode";
 import { sendGiftCardRecipientEmail } from "./email";
+import type { PreferredLanguage } from "./email";
+import { db, employeesTable } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -57,7 +60,12 @@ export async function emailGiftCard(input: {
   code: string;
   cadValueCents: number;
   catalogImageUrl: string | null;
+  purchaserPreferredLanguage: PreferredLanguage;
 }): Promise<void> {
+  // An employee recipient's saved choice wins; external recipients inherit
+  // the purchaser's saved language, never the administrator issuing the card.
+  const [recipient] = await db.select().from(employeesTable)
+    .where(sql`lower(${employeesTable.email}) = ${input.recipientEmail.toLowerCase()}`).limit(1);
   const qrDataUrl = await QRCode.toDataURL(input.code, { errorCorrectionLevel: "M", margin: 1, width: 240 });
   await sendGiftCardRecipientEmail(
     input.recipientEmail,
@@ -66,5 +74,6 @@ export async function emailGiftCard(input: {
     input.cadValueCents,
     qrDataUrl,
     input.catalogImageUrl,
+    recipient?.preferredLanguage ?? input.purchaserPreferredLanguage,
   );
 }

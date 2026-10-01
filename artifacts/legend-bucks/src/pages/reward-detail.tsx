@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
 import { ArrowLeft, Gift, Coins, AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Dialog,
@@ -34,6 +35,7 @@ const fallbackImages: Record<string, string> = {
 };
 
 export default function RewardDetail() {
+  const { t, number, currency, label, error } = useI18n();
   const params = useParams();
   const id = parseInt(params.id || "0", 10);
   const [, setLocation] = useLocation();
@@ -85,21 +87,21 @@ export default function RewardDetail() {
         onSuccess: () => {
           setOpen(false);
           toast({
-            title: reward.isCustomGiftCard ? "Gift Card Purchase Submitted!" : "Reward Redeemed!",
+            title: reward.isCustomGiftCard ? t("Gift Card Purchase Submitted!") : t("Reward Redeemed!"),
             description: reward.approvalRequired 
-              ? "Your request has been submitted for approval." 
+              ? t("Your request has been submitted for approval.") 
               : reward.isCustomGiftCard
-                ? "Your gift card purchase was successful."
-                : "Your reward has been redeemed successfully.",
+                ? t("Your gift card purchase was successful.")
+                : t("Your reward has been redeemed successfully."),
           });
           queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] }); // Update balance
           setLocation("/dashboard");
         },
         onError: (err: any) => {
           toast({
-            title: reward.isCustomGiftCard ? "Purchase failed" : "Redemption failed",
+            title: reward.isCustomGiftCard ? t("Purchase failed") : t("Redemption failed"),
             description:
-              err?.response?.data?.error || `There was an error processing your ${reward.isCustomGiftCard ? "purchase" : "redemption"}.`,
+              error(err?.response?.data?.error || err?.message || (reward.isCustomGiftCard ? "There was an error processing your purchase." : "There was an error processing your redemption.")),
             variant: "destructive",
           });
         }
@@ -112,7 +114,7 @@ export default function RewardDetail() {
       <Button variant="ghost" size="sm" asChild className="-ml-3 text-muted-foreground">
         <Link href="/rewards">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Catalog
+          {t("Back to Catalog")}
         </Link>
       </Button>
 
@@ -141,7 +143,7 @@ export default function RewardDetail() {
                       <>
                         <button
                           type="button"
-                          aria-label="Previous photo"
+                          aria-label={t("Previous photo")}
                           onClick={() => setPhotoIndex((current - 1 + photos.length) % photos.length)}
                           className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60 transition-colors"
                         >
@@ -149,14 +151,14 @@ export default function RewardDetail() {
                         </button>
                         <button
                           type="button"
-                          aria-label="Next photo"
+                          aria-label={t("Next photo")}
                           onClick={() => setPhotoIndex((current + 1) % photos.length)}
                           className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60 transition-colors"
                         >
                           <ChevronRight className="h-5 w-5" />
                         </button>
                         <span className="absolute bottom-2 right-2 rounded bg-black/50 px-2 py-0.5 text-xs text-white">
-                          {current + 1} / {photos.length}
+                          {number(current + 1)} / {number(photos.length)}
                         </span>
                       </>
                     )}
@@ -167,7 +169,7 @@ export default function RewardDetail() {
                         <button
                           key={`${url}-${i}`}
                           type="button"
-                          aria-label={`Show photo ${i + 1}`}
+                          aria-label={t("Show photo {number}", { number: number(i + 1) })}
                           onClick={() => setPhotoIndex(i)}
                           className={`h-14 w-14 shrink-0 overflow-hidden rounded-md border-2 transition-colors ${
                             i === current ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"
@@ -187,8 +189,8 @@ export default function RewardDetail() {
           <div className="p-8 md:p-10 flex flex-col justify-center">
             {reward.category && (
               <div className="flex gap-2 mb-4">
-                <Badge variant="outline" className="w-fit text-xs tracking-wider uppercase">{reward.category}</Badge>
-                {reward.isCustomGiftCard && <Badge className="text-xs uppercase">Custom Value</Badge>}
+                <Badge variant="outline" className="w-fit text-xs tracking-wider uppercase">{label(reward.category)}</Badge>
+                {reward.isCustomGiftCard && <Badge className="text-xs uppercase">{t("Custom Value")}</Badge>}
               </div>
             )}
             
@@ -196,7 +198,7 @@ export default function RewardDetail() {
             
             <div className="flex items-center text-primary font-bold text-2xl mb-6">
               <Coins className="h-6 w-6 mr-2" />
-              {reward.isCustomGiftCard ? "Custom amount · 100 LB = $10" : `${reward.buckCost.toLocaleString()} LB`}
+              {reward.isCustomGiftCard ? t("Custom amount · {amount} LB = {value}", { amount: number(100), value: currency(10) }) : `${number(reward.buckCost)} LB`}
             </div>
 
             <div className="prose prose-sm dark:prose-invert text-muted-foreground mb-8">
@@ -206,7 +208,7 @@ export default function RewardDetail() {
             <div className="space-y-4 mb-8">
               {isSized && (
                 <div className="py-2 border-b border-border/50 text-sm">
-                  <div className="text-muted-foreground mb-2">Sizes</div>
+                  <div className="text-muted-foreground mb-2">{t("Sizes")}</div>
                   <div className="flex flex-wrap gap-2">
                     {sizes.map((s) => {
                       const out = s.quantity === 0;
@@ -220,9 +222,9 @@ export default function RewardDetail() {
                         >
                           {s.label}
                           {out ? (
-                            <span className="no-underline text-muted-foreground">(sold out)</span>
+                            <span className="no-underline text-muted-foreground">{t("(sold out)")}</span>
                           ) : low ? (
-                            <span className="text-destructive">({s.quantity} left)</span>
+                            <span className="text-destructive">{t("({count} left)", { count: number(s.quantity ?? 0) })}</span>
                           ) : null}
                         </span>
                       );
@@ -232,20 +234,20 @@ export default function RewardDetail() {
               )}
               {!isSized && reward.quantity !== null && (
                 <div className="flex justify-between py-2 border-b border-border/50 text-sm">
-                  <span className="text-muted-foreground">Availability</span>
-                  <span className="font-medium">{reward.quantity} remaining</span>
+                  <span className="text-muted-foreground">{t("Availability")}</span>
+                  <span className="font-medium">{t("{count} remaining", { count: number(reward.quantity ?? 0) })}</span>
                 </div>
               )}
               {reward.locationRestriction && (
                 <div className="flex justify-between py-2 border-b border-border/50 text-sm">
-                  <span className="text-muted-foreground">Location</span>
+                  <span className="text-muted-foreground">{t("Location")}</span>
                   <span className="font-medium">{reward.locationRestriction}</span>
                 </div>
               )}
               {reward.approvalRequired && (
                 <div className="flex items-center gap-2 py-2 text-sm text-emerald-700">
                   <AlertCircle className="h-4 w-4" />
-                  <span>Requires manager approval</span>
+                  <span>{t("Requires manager approval")}</span>
                 </div>
               )}
             </div>
@@ -257,43 +259,44 @@ export default function RewardDetail() {
                   className="w-full text-base font-semibold"
                   disabled={!canRedeem}
                 >
-                  {!isAvailable ? "Out of Stock" : 
-                   !reward.isCustomGiftCard && !canAfford ? `Need ${(reward.buckCost - (user.balance || 0)).toLocaleString()} more LB` :
-                    reward.isCustomGiftCard ? "Purchase" : "Redeem Now"}
+                  {!isAvailable ? t("Out of Stock") : 
+                   !reward.isCustomGiftCard && !canAfford ? t("Need {amount} more LB", { amount: number(reward.buckCost - (user.balance || 0)) }) :
+                    reward.isCustomGiftCard ? t("Purchase") : t("Redeem Now")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{reward.isCustomGiftCard ? "Confirm Purchase" : "Confirm Redemption"}</DialogTitle>
+                  <DialogTitle>{reward.isCustomGiftCard ? t("Confirm Purchase") : t("Confirm Redemption")}</DialogTitle>
                   <DialogDescription>
                     {reward.isCustomGiftCard
-                      ? `Choose how many Legend Bucks to convert. Available balance: ${(user.balance || 0).toLocaleString()} LB.`
-                      : <>You are about to spend {reward.buckCost} LB on "{reward.name}".
-                        Your new balance will be {((user.balance || 0) - reward.buckCost).toLocaleString()} LB.</>}
+                      ? t("Choose how many Legend Bucks to convert. Available balance: {balance} LB.", { balance: number(user.balance || 0) })
+                      : t('You are about to spend {cost} LB on "{name}". Your new balance will be {balance} LB.', { cost: number(reward.buckCost), name: reward.name, balance: number((user.balance || 0) - reward.buckCost) })}
                   </DialogDescription>
                 </DialogHeader>
 
                 {reward.isCustomGiftCard && (
                   <div className="space-y-4 my-3">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Legend Bucks to convert</label>
+                      <label className="block text-sm font-medium mb-2">{t("Legend Bucks to convert")}</label>
                       <Input type="number" min={minimum} step={increment} value={giftCardAmount}
                         onChange={(e) => setGiftCardAmount(Number(e.target.value))} />
                       <p className="mt-2 text-sm font-medium text-primary">
-                        {Number.isFinite(giftCardAmount) ? `${giftCardAmount.toLocaleString()} LB = $${(giftCardAmount / 10).toFixed(2)} CAD` : "Enter an amount"}
+                        {Number.isFinite(giftCardAmount) ? `${number(giftCardAmount)} LB = ${currency(giftCardAmount / 10)}` : t("Enter an amount")}
                       </p>
-                      {!customAmountValid && <p className="text-xs text-destructive">Use a whole multiple of {increment} LB, at least {minimum} LB{reward.giftCardMaximumLb ? ` and no more than ${reward.giftCardMaximumLb} LB` : ""}.</p>}
-                      {customAmountValid && !canAfford && <p className="text-xs text-destructive">Amount exceeds your available balance.</p>}
+                      {!customAmountValid && <p className="text-xs text-destructive">{reward.giftCardMaximumLb
+                        ? t("Use a whole multiple of {increment} LB, at least {minimum} LB and no more than {maximum} LB.", { increment: number(increment), minimum: number(minimum), maximum: number(reward.giftCardMaximumLb) })
+                        : t("Use a whole multiple of {increment} LB, at least {minimum} LB.", { increment: number(increment), minimum: number(minimum) })}</p>}
+                      {customAmountValid && !canAfford && <p className="text-xs text-destructive">{t("Amount exceeds your available balance.")}</p>}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      After approval, the gift card will be sent to your account email: <strong>{user.email}</strong>. Gift cards cannot be exchanged for cash.
+                      {t("After approval, the gift card will be sent to your account email:")} <strong>{user.email}</strong>. {t("Gift cards cannot be exchanged for cash.")}
                     </p>
                   </div>
                 )}
                 
                 {isSized && (
                   <div className="my-4">
-                    <label className="block text-sm font-medium mb-2">Pick a size</label>
+                    <label className="block text-sm font-medium mb-2">{t("Pick a size")}</label>
                     <div className="flex flex-wrap gap-2">
                       {sizes.map((s) => {
                         const out = s.quantity === 0;
@@ -314,35 +317,35 @@ export default function RewardDetail() {
                           >
                             {s.label}
                             {!out && s.quantity !== null && s.quantity <= 5 && (
-                              <span className={`ml-1 text-xs ${selected ? "" : "text-destructive"}`}>({s.quantity} left)</span>
+                              <span className={`ml-1 text-xs ${selected ? "" : "text-destructive"}`}>{t("({count} left)", { count: number(s.quantity) })}</span>
                             )}
                           </button>
                         );
                       })}
                     </div>
                     {needsSize && (
-                      <p className="text-xs text-muted-foreground mt-2">Select a size to continue.</p>
+                      <p className="text-xs text-muted-foreground mt-2">{t("Select a size to continue.")}</p>
                     )}
                   </div>
                 )}
 
                 {!reward.isCustomGiftCard && <div className="my-4">
-                  <label className="block text-sm font-medium mb-2">Note (Optional)</label>
+                  <label className="block text-sm font-medium mb-2">{t("Note (Optional)")}</label>
                   <Textarea 
-                    placeholder="E.g. Size Large, prefer black color" 
+                    placeholder={t("E.g. Size Large, prefer black color")} 
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-2">
-                    Add any details needed for fulfillment (sizes, dates, etc.)
+                    {t("Add any details needed for fulfillment (sizes, dates, etc.)")}
                   </p>
                 </div>}
 
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setOpen(false)}>{t("Cancel")}</Button>
                   <Button onClick={handleRedeem} disabled={redeemMut.isPending || needsSize || (reward.isCustomGiftCard && (!customAmountValid || !canAfford))} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     {redeemMut.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Confirm Purchase
+                    {t("Confirm Purchase")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

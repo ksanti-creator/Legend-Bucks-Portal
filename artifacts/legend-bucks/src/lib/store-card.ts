@@ -1,5 +1,6 @@
 // Shared helpers for the in-store gift card tool.
 // Never store or log full card codes. Only non-secret pending data is persisted.
+import { getLocale } from "@/lib/locale";
 
 const DOLLARS_RE = /^(\d{1,6})(?:\.(\d{1,2}))?$/;
 
@@ -12,7 +13,7 @@ export function dollarsToCents(input: string): number | null {
 }
 
 export function formatCad(cents: number): string {
-  return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(cents / 100);
+  return new Intl.NumberFormat(getLocale(), { style: "currency", currency: "CAD" }).format(cents / 100);
 }
 
 export function apiErrorInfo(err: unknown): { status?: number; message: string } {

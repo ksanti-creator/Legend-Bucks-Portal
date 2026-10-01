@@ -7,6 +7,7 @@
  */
 import type { AuthSessionRole } from './authSessionRole';
 import type { AuthSessionStatus } from './authSessionStatus';
+import type { PreferredLanguage } from './preferredLanguage';
 
 export interface AuthSession {
   id: number;
@@ -27,4 +28,5 @@ export interface AuthSession {
   balance?: number;
   /** Session token to store client-side and send as Bearer auth */
   token: string;
+  preferredLanguage: PreferredLanguage;
 }
