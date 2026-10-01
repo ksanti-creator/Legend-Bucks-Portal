@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "sandbox:seed": "tsx ./src/bootstrap-sandbox.ts",
+    "sandbox:repair-reward-sizes": "tsx ./src/repair-sandbox-reward-sizes.ts",
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

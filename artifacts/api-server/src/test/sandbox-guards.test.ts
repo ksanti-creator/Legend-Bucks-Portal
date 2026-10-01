@@ -38,6 +38,25 @@ describe("sandbox safety gates", () => {
     expect(sandboxEnabled({ NODE_ENV: "development" })).toBe(false);
   });
 
+  it.skipIf(!sandboxEnabled())("keeps the reward-size cascade inside the sandbox", async () => {
+    const result = await pool.query(
+      `SELECT pn.nspname AS parent_schema, p.relname AS parent_table,
+              k.confdeltype AS delete_action, pg_get_constraintdef(k.oid) AS definition
+       FROM pg_constraint k
+       JOIN pg_class p ON p.oid=k.confrelid
+       JOIN pg_namespace pn ON pn.oid=p.relnamespace
+       WHERE k.conrelid='legend_bucks_sandbox.reward_sizes'::regclass
+         AND k.conname='reward_sizes_reward_id_rewards_id_fk' AND k.contype='f'`,
+    );
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      parent_schema: "legend_bucks_sandbox",
+      parent_table: "rewards",
+      delete_action: "c",
+    });
+    expect(result.rows[0].definition).toMatch(/^FOREIGN KEY \(reward_id\) REFERENCES rewards\(id\) ON DELETE CASCADE/);
+  });
+
   it("never reaches storage for public or private asset reads and writes", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("LEGEND_BUCKS_SANDBOX", "true");

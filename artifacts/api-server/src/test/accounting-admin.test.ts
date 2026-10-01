@@ -144,7 +144,7 @@ describe("Accounting admin — read/export access", () => {
   });
 });
 
-describe("Accounting admin — blocked from every write/admin action", () => {
+describe("Accounting admin — blocked from spending and non-payroll admin actions", () => {
   it("cannot send/award bucks (403)", async () => {
     const res = await request(app)
       .post("/api/transactions")
@@ -205,10 +205,19 @@ describe("Accounting admin — blocked from every write/admin action", () => {
     expect(res.status).toBe(403);
   });
 
-  it("cannot approve, reject, or fulfil a redemption (403)", async () => {
+  it("cannot approve or reject an ordinary redemption (403)", async () => {
     expect((await request(app).patch(`/api/redemptions/${seededRedemptionId}/approve`).set(bearer(accountingToken))).status).toBe(403);
     expect((await request(app).patch(`/api/redemptions/${seededRedemptionId}/reject`).set(bearer(accountingToken)).send({})).status).toBe(403);
-    expect((await request(app).patch(`/api/redemptions/${seededRedemptionId}/fulfill`).set(bearer(accountingToken))).status).toBe(403);
+  });
+
+  it("cannot fulfill a requested ordinary redemption (403), without changing it", async () => {
+    const [before] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, seededRedemptionId));
+    expect(before.status).toBe("requested");
+    const res = await request(app).patch(`/api/redemptions/${seededRedemptionId}/fulfill`).set(bearer(accountingToken));
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("Accounting admins can only fulfill Time Off redemptions");
+    const [after] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, seededRedemptionId));
+    expect(after).toEqual(before);
   });
 });
 

@@ -174,7 +174,7 @@ router.get("/redemptions", requireAuth, async (req, res): Promise<void> => {
 router.post("/redemptions", requireAuth, async (req, res): Promise<void> => {
   const user = getCurrentUser(req);
   // Redeeming spends the employee's own bucks (a ledger write). Only roles on
-  // the spend allow-list may do it; read-only roles like accounting_admin can't.
+  // the spend allow-list may do it; accounting_admin can't spend their own bucks.
   if (!canSpendBucks(user.role)) {
     res.status(403).json({ error: "You are not allowed to redeem rewards" });
     return;
@@ -775,7 +775,7 @@ router.patch("/redemptions/:id/cancel", requireAuth, async (req, res): Promise<v
 
   // Cancelling refunds bucks (a ledger write). An admin can cancel anyone's;
   // otherwise only the owner may cancel their own — and only if their role is on
-  // the spend allow-list, so read-only roles (accounting_admin) never can, even
+  // the spend allow-list, so accounting_admin never can, even
   // for a redemption somehow attributed to them. Managers can't cancel others'.
   const isAdmin = user.role === "admin";
   const isSelf = redemption.employeeId === user.id && canSpendBucks(user.role);
@@ -831,13 +831,19 @@ router.patch("/redemptions/:id/fulfill", requireAuth, async (req, res): Promise<
   }
 
   const [redemption] = await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, params.data.id)).limit(1);
-  if (!redemption || redemption.status !== "approved") {
+  if (!redemption) {
     res.status(400).json({ error: "Only approved redemptions can be fulfilled" });
     return;
   }
   const [fulfillReward] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, redemption.rewardId)).limit(1);
+  // Check resource permissions before status so accounting cannot action
+  // non-Time-Off redemptions, regardless of their current approval state.
   if (user.role === "accounting_admin" && !requiresPayrollApproval(fulfillReward)) {
     res.status(403).json({ error: "Accounting admins can only fulfill Time Off redemptions" });
+    return;
+  }
+  if (redemption.status !== "approved") {
+    res.status(400).json({ error: "Only approved redemptions can be fulfilled" });
     return;
   }
   if (fulfillReward?.isCustomGiftCard || redemption.giftCardLbAmount !== null) {

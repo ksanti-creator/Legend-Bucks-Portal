@@ -24,3 +24,4 @@ export const db = drizzle(pool, { schema });
 
 export * from "./schema";
 export { sandboxEnabled, SANDBOX_SCHEMA } from "./sandbox";
+export { repairSandboxRewardSizes } from "./sandbox-reward-sizes";

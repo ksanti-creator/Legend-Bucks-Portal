@@ -17,3 +17,4 @@
 - [Object storage image serving](legend-bucks-object-storage.md) — image serve endpoint is public (img tags can't send Bearer) but MUST stay confined to the uploads/ namespace or it leaks the whole private dir.
 - [Gift card code format](gift-card-code-format.md) — use seven base-32 groups (140-bit entropy); the user chose security over the shorter four-group format.
 - [Sandbox publishing isolation](sandbox-publishing.md) — explicitly disable sandbox in production; absent overrides did not prevent a publish-time sandbox guard failure.
+- [Sandbox constraint parity](sandbox-constraint-parity.md) — table clones omit foreign keys; investigate schema parity before compensating in application code.

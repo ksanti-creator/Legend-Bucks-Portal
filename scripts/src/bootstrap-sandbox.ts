@@ -1,4 +1,4 @@
-import { pool, sandboxEnabled, SANDBOX_SCHEMA } from "@workspace/db";
+import { pool, sandboxEnabled, SANDBOX_SCHEMA, repairSandboxRewardSizes } from "@workspace/db";
 
 // Manual, development-only bootstrap. Never run during server startup or publish.
 if (!sandboxEnabled()) throw new Error("Sandbox bootstrap requires LEGEND_BUCKS_SANDBOX=true and NODE_ENV=development");
@@ -26,7 +26,7 @@ try {
     );
     if (!present.rowCount) throw new Error(`Missing public table structure: ${table}`);
     // LIKE ALL copies columns, defaults, constraints and indexes, but NOT foreign keys
-    // or rows. FK omission keeps every relation independent of public IDs.
+    // or rows. Required FKs must be recreated with sandbox-local targets below.
     await client.query(`CREATE TABLE IF NOT EXISTS ${ident(SANDBOX_SCHEMA)}.${ident(table)} (LIKE public.${ident(table)} INCLUDING ALL)`);
     const serials = await client.query<{ column_name: string }>(
       `SELECT a.attname AS column_name
@@ -43,6 +43,7 @@ try {
       await client.query(`ALTER TABLE ${ident(SANDBOX_SCHEMA)}.${ident(table)} ALTER COLUMN ${ident(column_name)} SET DEFAULT nextval('${SANDBOX_SCHEMA}.${sequence}'::regclass)`);
     }
   }
+  await repairSandboxRewardSizes(client);
   // Existing sandbox clones predate the checkout checks; LIKE IF NOT EXISTS
   // will not merge new constraints into an already cloned table.
   const checks = [

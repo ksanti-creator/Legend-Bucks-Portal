@@ -56,6 +56,8 @@ afterAll(async () => {
   await db.delete(transactionsTable).where(eq(transactionsTable.toEmployeeId, memberId));
   await db.delete(transactionsTable).where(eq(transactionsTable.fromEmployeeId, memberId));
   if (rewardIds.length) {
+    // Cleanup stays fixture-owned even when testing a broken/missing cascade.
+    await db.delete(rewardSizesTable).where(inArray(rewardSizesTable.rewardId, rewardIds));
     await db.delete(rewardsTable).where(inArray(rewardsTable.id, rewardIds));
   }
   await fx.cleanup();
@@ -223,9 +225,22 @@ describe("Reward sizes", () => {
   });
 
   it("deleting a reward cascades its size rows", async () => {
-    const reward = await createSizedReward([{ label: "S", quantity: 1 }]);
+    const reward = await createSizedReward([{ label: "S", quantity: 1 }, { label: "M", quantity: null }]);
+    const untouched = await createSizedReward([{ label: "S", quantity: 7 }]);
     await request(app).delete(`/api/rewards/${reward.id}`).set(bearer(adminToken)).expect(204);
     const rows = await db.select().from(rewardSizesTable).where(eq(rewardSizesTable.rewardId, reward.id));
     expect(rows).toEqual([]);
+    expect(await getSizes(untouched.id)).toEqual([{ label: "S", quantity: 7 }]);
+    await request(app).delete(`/api/rewards/${reward.id}`).set(bearer(adminToken)).expect(404);
+  });
+
+  it("cascades on direct database deletion, not just through the API", async () => {
+    const reward = await createSizedReward([{ label: "L", quantity: 2 }, { label: "XL", quantity: 3 }]);
+    await db.delete(rewardsTable).where(eq(rewardsTable.id, reward.id));
+    expect(await db.select().from(rewardSizesTable).where(eq(rewardSizesTable.rewardId, reward.id))).toEqual([]);
+    // NOT VALID may preserve pre-existing orphans, but must reject new ones.
+    await expect(
+      db.insert(rewardSizesTable).values({ rewardId: reward.id, label: "L", quantity: 1 }),
+    ).rejects.toThrow();
   });
 });

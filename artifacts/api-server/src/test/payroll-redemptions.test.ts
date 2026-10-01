@@ -9,11 +9,12 @@ vi.mock("../lib/email", async (importOriginal) => ({
   sendRedemptionApprovedEmail: vi.fn().mockResolvedValue(undefined),
   sendRedemptionRejectedEmail: vi.fn().mockResolvedValue(undefined),
   sendRedemptionFulfilledEmail: vi.fn().mockResolvedValue(undefined),
+  sendGiftCardRecipientEmail: vi.fn().mockResolvedValue(undefined),
 }));
-import { sendTimeOffPayrollEmail, sendTimeOffApprovedEmail, sendRedemptionFulfilledEmail } from "../lib/email";
+import { sendTimeOffPayrollEmail, sendTimeOffApprovedEmail, sendRedemptionFulfilledEmail, sendGiftCardRecipientEmail } from "../lib/email";
 import request from "supertest";
 import app from "../app";
-import { db, transactionsTable, rewardsTable, rewardSizesTable, redemptionsTable, employeesTable } from "@workspace/db";
+import { db, transactionsTable, rewardsTable, rewardSizesTable, redemptionsTable, employeesTable, giftCardIssuesTable } from "@workspace/db";
 import { inArray, eq, and } from "drizzle-orm";
 import { Fixtures, bearer, uniq } from "./helpers";
 
@@ -82,7 +83,14 @@ beforeAll(async () => {
   timeOffNoApprovalRewardId = await mkReward({ category: "Time Off", approvalRequired: false });
   sizedTimeOffRewardId = await mkReward({ category: "Time Off" });
   gearRewardId = await mkReward({ category: "Gear" });
-  giftCardRewardId = await mkReward({ category: "Gift Cards", isCustomGiftCard: true });
+  giftCardRewardId = await mkReward({
+    category: "Gift Card",
+    buckCost: 100,
+    isCustomGiftCard: true,
+    giftCardIncrementLb: 100,
+    giftCardMinimumLb: 100,
+    giftCardMaximumLb: null,
+  });
 
   await db.insert(rewardSizesTable).values({ rewardId: sizedTimeOffRewardId, label: "M", quantity: 2, sortOrder: 0 });
 });
@@ -219,19 +227,107 @@ describe("Payroll approval for Time Off redemptions", () => {
     expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, r.id)))[0].status).toBe("fulfilled");
   });
 
-  it("accounting cannot fulfill approved non-Time-Off or gift cards; admins retain non-Time-Off fulfillment", async () => {
+  it.each(["requested", "approved"] as const)("accounting cannot fulfill %s non-Time-Off redemptions (403), without side effects", async (status) => {
+    vi.mocked(sendRedemptionFulfilledEmail).mockClear();
+    const r = await seedRedemption(gearRewardId, status);
+    const ledgerBefore = await db.select().from(transactionsTable).where(eq(transactionsTable.redemptionId, r.id));
+    const [rewardBefore] = await db.select().from(rewardsTable).where(eq(rewardsTable.id, r.rewardId));
+
+    const res = await request(app).patch(`/api/redemptions/${r.id}/fulfill`).set(bearer(acctToken));
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("Accounting admins can only fulfill Time Off redemptions");
+    expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, r.id)))[0]).toEqual(r);
+    expect(await db.select().from(transactionsTable).where(eq(transactionsTable.redemptionId, r.id))).toEqual(ledgerBefore);
+    expect((await db.select().from(rewardsTable).where(eq(rewardsTable.id, r.rewardId)))[0]).toEqual(rewardBefore);
+    expect(sendRedemptionFulfilledEmail).not.toHaveBeenCalled();
+  });
+
+  it("admin cannot fulfill requested non-Time-Off redemptions (400)", async () => {
+    vi.mocked(sendRedemptionFulfilledEmail).mockClear();
+    const r = await seedRedemption(gearRewardId, "requested");
+    const res = await request(app).patch(`/api/redemptions/${r.id}/fulfill`).set(bearer(adminToken));
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Only approved redemptions can be fulfilled");
+    expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, r.id)))[0]).toEqual(r);
+    expect(await db.select().from(transactionsTable).where(eq(transactionsTable.redemptionId, r.id))).toEqual([]);
+    expect(sendRedemptionFulfilledEmail).not.toHaveBeenCalled();
+  });
+
+  it("admins retain approved non-Time-Off fulfillment; managers remain forbidden", async () => {
+    vi.mocked(sendRedemptionFulfilledEmail).mockClear();
     const gear = await seedRedemption(gearRewardId, "approved");
+    expect((await request(app).patch(`/api/redemptions/${gear.id}/fulfill`).set(bearer(managerToken))).status).toBe(403);
+    expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, gear.id)))[0]).toEqual(gear);
+    expect(sendRedemptionFulfilledEmail).not.toHaveBeenCalled();
+
+    const res = await request(app).patch(`/api/redemptions/${gear.id}/fulfill`).set(bearer(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("fulfilled");
+    expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, gear.id)))[0].status).toBe("fulfilled");
+    expect(sendRedemptionFulfilledEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("normal fulfillment rejects a canonical approved custom gift card without side effects", async () => {
+    vi.mocked(sendRedemptionFulfilledEmail).mockClear();
+    vi.mocked(sendGiftCardRecipientEmail).mockClear();
+    const [member] = await db.select().from(employeesTable).where(eq(employeesTable.id, memberId));
+    const [giftCard] = await db.insert(redemptionsTable).values({
+      employeeId: memberId,
+      rewardId: giftCardRewardId,
+      status: "approved",
+      buckCost: 100,
+      cadValueCents: 1000,
+      giftCardLbAmount: 100,
+      giftCardCadValueCents: 1000,
+      giftCardRecipientName: `${member.firstName} ${member.lastName}`.trim(),
+      giftCardRecipientEmail: member.email.toLowerCase(),
+      giftCardMessage: null,
+    }).returning();
+    redemptionIds.push(giftCard.id);
+    const ledgerBefore = await db.select().from(transactionsTable).where(eq(transactionsTable.redemptionId, giftCard.id));
+
+    for (const [token, status] of [[acctToken, 403], [adminToken, 400]] as const) {
+      const res = await request(app).patch(`/api/redemptions/${giftCard.id}/fulfill`).set(bearer(token));
+      expect(res.status).toBe(status);
+      expect(res.body.error).toBe(status === 403
+        ? "Accounting admins can only fulfill Time Off redemptions"
+        : "Use Issue & Email Gift Card for custom gift cards");
+      expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, giftCard.id)))[0]).toEqual(giftCard);
+      expect(await db.select().from(transactionsTable).where(eq(transactionsTable.redemptionId, giftCard.id))).toEqual(ledgerBefore);
+      expect(await db.select().from(giftCardIssuesTable).where(eq(giftCardIssuesTable.redemptionId, giftCard.id))).toEqual([]);
+    }
+    expect(sendRedemptionFulfilledEmail).not.toHaveBeenCalled();
+    expect(sendGiftCardRecipientEmail).not.toHaveBeenCalled();
+  });
+
+  it("custom gift card catalog and snapshot guards independently prevent normal fulfillment", async () => {
+    vi.mocked(sendRedemptionFulfilledEmail).mockClear();
     const giftCard = await seedRedemption(giftCardRewardId, "approved");
     const timeOffGiftCard = await seedRedemption(timeOffRewardId, "approved");
-    await db.update(redemptionsTable).set({ giftCardLbAmount: 10 }).where(eq(redemptionsTable.id, timeOffGiftCard.id));
+    const [snapshotGiftCard] = await db.update(redemptionsTable).set({ giftCardLbAmount: 100 })
+      .where(eq(redemptionsTable.id, timeOffGiftCard.id)).returning();
 
-    for (const [r, status] of [[gear, 403], [giftCard, 403], [timeOffGiftCard, 400]] as const) {
-      expect((await request(app).patch(`/api/redemptions/${r.id}/fulfill`).set(bearer(acctToken))).status).toBe(status);
-      expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, r.id)))[0].status).toBe("approved");
+    for (const [r, token, status] of [
+      [giftCard, acctToken, 403],
+      [giftCard, adminToken, 400],
+      [snapshotGiftCard, acctToken, 400],
+      [snapshotGiftCard, adminToken, 400],
+    ] as const) {
+      expect((await request(app).patch(`/api/redemptions/${r.id}/fulfill`).set(bearer(token))).status).toBe(status);
+      expect((await db.select().from(redemptionsTable).where(eq(redemptionsTable.id, r.id)))[0]).toEqual(r);
+      expect(await db.select().from(transactionsTable).where(eq(transactionsTable.redemptionId, r.id))).toEqual([]);
     }
-    expect((await request(app).patch(`/api/redemptions/${gear.id}/fulfill`).set(bearer(managerToken))).status).toBe(403);
-    expect((await request(app).patch(`/api/redemptions/${gear.id}/fulfill`).set(bearer(adminToken))).status).toBe(200);
-    expect((await request(app).patch(`/api/redemptions/${giftCard.id}/fulfill`).set(bearer(adminToken))).status).toBe(400);
+    expect(sendRedemptionFulfilledEmail).not.toHaveBeenCalled();
+  });
+
+  it("missing redemptions retain the existing fulfillment error (400)", async () => {
+    const r = await seedRedemption(gearRewardId, "requested");
+    await db.delete(redemptionsTable).where(eq(redemptionsTable.id, r.id));
+    for (const token of [adminToken, acctToken]) {
+      const res = await request(app).patch(`/api/redemptions/${r.id}/fulfill`).set(bearer(token));
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe("Only approved redemptions can be fulfilled");
+    }
   });
 
   it("admin can also payroll-approve", async () => {
