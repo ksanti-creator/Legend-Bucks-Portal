@@ -23,3 +23,11 @@ and parallel suites on a shared DB cause flaky counts.
 
 **How to apply:** reuse `src/test/helpers.ts` (Fixtures class) for any new suite —
 it seeds employees/departments/locations + sessions and cleans up by owned id.
+
+## Supervised production gift-card checks
+
+Never run the fixture-creating store gift-card automated suite against production. Live checks must use designated participants and a controlled card, with explicit approval of the amount, store, and Accounting reconciliation before any transaction.
+
+**Why:** The user requires supervised live testing, not sandbox fixtures or unapproved real-value activity.
+
+**How to apply:** Inspect deployment and access read-only first. Keep full card codes and login links out of chat/logs. Do not infer permission to change feature flags, publish, migrate, grant till access, or transact from a request to inspect readiness.
