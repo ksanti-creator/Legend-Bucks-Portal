@@ -31,3 +31,11 @@ Never run the fixture-creating store gift-card automated suite against productio
 **Why:** The user requires supervised live testing, not sandbox fixtures or unapproved real-value activity.
 
 **How to apply:** Inspect deployment and access read-only first. Keep full card codes and login links out of chat/logs. Do not infer permission to change feature flags, publish, migrate, grant till access, or transact from a request to inspect readiness.
+
+## Browser snapshots are not secret-safe
+
+Do not enter a real gift-card code into the testing browser, even in a password input.
+
+**Why:** The testing browser's automatic accessibility/layout snapshot serialized a password field's full value despite the screenshot masking it. Clearing the input cannot remove previously emitted observations.
+
+**How to apply:** Use human-operated entry for live bearer-value codes unless the browser tooling has independently verified secret-safe logging. If exposure occurs, stop, disclose it without repeating the code, and request authorization to invalidate the affected card. Do not assume a subagent instruction to redact can suppress automatic tool output.
