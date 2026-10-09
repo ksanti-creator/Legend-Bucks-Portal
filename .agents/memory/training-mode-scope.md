@@ -38,3 +38,16 @@ Never display connection strings or place them in code or chat.
 The owner subsequently chose manual Neon provisioning because no consent screen
 was available. Do not authorize the Neon integration. The owner will add the
 restricted credential directly to Replit Secrets; do not request it in chat.
+
+## Neon password initialization
+
+A restricted role created through SQL must have an initial password before
+instructing the owner to use Neon's Console password reset.
+
+**Why:** The Console rejected a passwordless SQL-created role with
+`cannot update password for role without password`.
+
+**How to apply:** Initialize a strong random password privately, without
+returning it in tool output, then let the owner reset it in Neon and transfer
+the resulting connection directly to Replit Secrets. Never use the elevated
+Console role-creation shortcut to work around this limitation.
