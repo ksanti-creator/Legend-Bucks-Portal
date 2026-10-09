@@ -31,6 +31,7 @@ VITE_LEGEND_BUCKS_SANDBOX = "true"
 
 [userenv.shared]
 GMAIL_FROM = "Legend Bucks <ksanti@legendboats.com>"
+TRAINING_MODE_ENABLED = "true"
 
 [userenv.production]
 APP_URL = "https://legend-bucks-portal.replit.app"
