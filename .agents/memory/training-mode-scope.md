@@ -34,3 +34,7 @@ that it cannot reach live Legend Bucks data before authorizing it.
 with permission isolation. Distinguish documented provider capabilities from
 the actual consent scopes, and verify the authorized identity's resource access.
 Never display connection strings or place them in code or chat.
+
+The owner subsequently chose manual Neon provisioning because no consent screen
+was available. Do not authorize the Neon integration. The owner will add the
+restricted credential directly to Replit Secrets; do not request it in chat.
