@@ -18,3 +18,19 @@ integrations and storage; use a simulated outbox. Display
 migration/backup review is separate; no production fixture tests or automatic
 seed. Preserve normal-mode permissions and do not treat training as real-tender
 or Accounting approval.
+
+## Training database authorization
+
+Use a dedicated training-only Neon account or project and a fresh empty
+database, never a production branch or copy. Preserve the live `DATABASE_URL`;
+keep the restricted training connection only in Secrets as
+`TRAINING_DATABASE_URL`. Keep `/training` disabled until isolation, role and
+spend tests pass.
+
+**Why:** The owner requires the integration's requested permissions and evidence
+that it cannot reach live Legend Bucks data before authorizing it.
+
+**How to apply:** Do not equate a project name or a promised usage restriction
+with permission isolation. Distinguish documented provider capabilities from
+the actual consent scopes, and verify the authorized identity's resource access.
+Never display connection strings or place them in code or chat.
