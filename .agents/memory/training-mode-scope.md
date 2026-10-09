@@ -51,3 +51,27 @@ instructing the owner to use Neon's Console password reset.
 returning it in tool output, then let the owner reset it in Neon and transfer
 the resulting connection directly to Replit Secrets. Never use the elevated
 Console role-creation shortcut to work around this limitation.
+
+## Training schema ownership
+
+Training-only schema definitions must not enter the normal database's migration
+discovery path. Initialize the fresh training database through a guarded,
+owner-run script; keep its runtime credential unable to create tables.
+
+**Why:** Publishing normal application changes must never create training
+metadata in the live database, or require elevating the training application.
+
+**How to apply:** Keep training provisioning separate from publish/startup
+hooks, preserve source-defined constraints rather than copying live tables,
+and reject initialization of a non-empty database.
+
+## Neon pooled-connection settings
+
+Use transaction-local `search_path` settings rather than passing them as
+connection startup options to the training endpoint.
+
+**Why:** Adding startup `-c search_path` produced PostgreSQL code `08P01`;
+the same connection succeeded with `SET LOCAL` inside a read-only transaction.
+
+**How to apply:** Keep session-sensitive operations within a transaction and
+avoid assumptions that settings survive transaction-pool connection reuse.

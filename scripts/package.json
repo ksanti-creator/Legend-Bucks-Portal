@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "training:verify": "tsx ./src/verify-training.ts",
+    "training:prepare-schema": "tsx ./src/create-training-setup.ts",
     "sandbox:seed": "tsx ./src/bootstrap-sandbox.ts",
     "sandbox:repair-reward-sizes": "tsx ./src/repair-sandbox-reward-sizes.ts",
     "hello": "tsx ./src/hello.ts",

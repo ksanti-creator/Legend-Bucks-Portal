@@ -1,0 +1,327 @@
+-- OWNER ACTION: run only in the NEW, EMPTY legend_bucks_training database.
+-- This creates structure from source code. It does not copy any live data.
+-- Do not register this file with live migrations, publish hooks or app startup.
+BEGIN;
+SET LOCAL search_path = public, pg_catalog;
+SELECT pg_advisory_xact_lock(768135091);
+DO $guard$
+BEGIN
+  IF current_database() <> 'legend_bucks_training'
+     OR current_user <> 'legend_bucks_training_owner' THEN
+    RAISE EXCEPTION 'Refusing setup: wrong database or owner.';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_tables
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+  ) THEN
+    RAISE EXCEPTION 'Refusing setup: database is not empty. Nothing will be erased.';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_roles
+    WHERE rolname = 'legend_training_app' AND rolcanlogin
+      AND NOT (rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)
+  ) OR pg_has_role('legend_training_app', 'neon_superuser', 'MEMBER') THEN
+    RAISE EXCEPTION 'Refusing setup: restricted training login is missing or elevated.';
+  END IF;
+END
+$guard$;
+
+CREATE TYPE "public"."employee_role" AS ENUM('admin', 'manager', 'team_member', 'accounting_admin');
+CREATE TYPE "public"."employee_status" AS ENUM('active', 'inactive', 'invited');
+CREATE TYPE "public"."transaction_type" AS ENUM('award', 'redemption_debit', 'refund', 'contribution', 'adjustment');
+CREATE TYPE "public"."redemption_status" AS ENUM('requested', 'approved', 'pending_payroll', 'rejected', 'fulfilled', 'cancelled');
+CREATE TYPE "public"."gift_card_issue_status" AS ENUM('pending_issue', 'emailed', 'email_failed', 'voided', 'reissued');
+CREATE TABLE "training_audit" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"generation" uuid NOT NULL,
+	"actor" text NOT NULL,
+	"action" text NOT NULL,
+	"details" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "training_installation" (
+	"id" integer PRIMARY KEY NOT NULL,
+	"purpose" text NOT NULL,
+	"schema_version" integer NOT NULL,
+	"installed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "training_installation_singleton" CHECK ("training_installation"."id" = 1),
+	CONSTRAINT "training_installation_purpose" CHECK ("training_installation"."purpose" = 'legend-bucks-training-only'),
+	CONSTRAINT "training_installation_version" CHECK ("training_installation"."schema_version" = 1)
+);
+
+CREATE TABLE "training_outbox" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"recipient" text NOT NULL,
+	"subject" text NOT NULL,
+	"summary" text NOT NULL,
+	"gift_card_issue_id" integer,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "training_state" (
+	"id" integer PRIMARY KEY NOT NULL,
+	"generation" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"seed_version" integer DEFAULT 0 NOT NULL,
+	"seeded_at" timestamp with time zone,
+	CONSTRAINT "training_state_singleton" CHECK ("training_state"."id" = 1)
+);
+
+CREATE TABLE "departments" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "departments_name_unique" UNIQUE("name")
+);
+
+CREATE TABLE "locations" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "locations_name_unique" UNIQUE("name")
+);
+
+CREATE TABLE "employees" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"first_name" text NOT NULL,
+	"last_name" text NOT NULL,
+	"email" text NOT NULL,
+	"department_id" integer,
+	"location_id" integer,
+	"manager_id" integer,
+	"role" "employee_role" DEFAULT 'team_member' NOT NULL,
+	"status" "employee_status" DEFAULT 'invited' NOT NULL,
+	"preferred_language" text DEFAULT 'en' NOT NULL,
+	"award_budget_yearly" integer,
+	"notify_bucks_received" boolean DEFAULT true NOT NULL,
+	"notify_redemption_updates" boolean DEFAULT true NOT NULL,
+	"notify_new_redemption_requests" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "employees_email_unique" UNIQUE("email")
+);
+
+CREATE TABLE "magic_tokens" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"employee_id" integer NOT NULL,
+	"token" text NOT NULL,
+	"preferred_language" text,
+	"expires_at" timestamp with time zone NOT NULL,
+	"used_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "magic_tokens_token_unique" UNIQUE("token")
+);
+
+CREATE TABLE "sessions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"employee_id" integer NOT NULL,
+	"session_token" text NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "sessions_session_token_unique" UNIQUE("session_token")
+);
+
+CREATE TABLE "transactions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"type" "transaction_type" NOT NULL,
+	"amount" integer NOT NULL,
+	"from_employee_id" integer,
+	"to_employee_id" integer,
+	"note" text,
+	"redemption_id" integer,
+	"goal_id" integer,
+	"created_by_id" integer,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "rewards" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"category" text,
+	"buck_cost" integer NOT NULL,
+	"cad_value_cents" integer,
+	"product_code" text,
+	"serial_number" text,
+	"image_url" text,
+	"image_urls" text[] DEFAULT '{}' NOT NULL,
+	"quantity" integer,
+	"location_restriction" text,
+	"active" boolean DEFAULT true NOT NULL,
+	"approval_required" boolean DEFAULT false NOT NULL,
+	"is_custom_gift_card" boolean DEFAULT false NOT NULL,
+	"gift_card_increment_lb" integer,
+	"gift_card_minimum_lb" integer,
+	"gift_card_maximum_lb" integer,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "reward_sizes" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"reward_id" integer NOT NULL,
+	"label" text NOT NULL,
+	"quantity" integer,
+	"sort_order" integer DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE "redemptions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"employee_id" integer NOT NULL,
+	"reward_id" integer NOT NULL,
+	"status" "redemption_status" DEFAULT 'requested' NOT NULL,
+	"buck_cost" integer NOT NULL,
+	"cad_value_cents" integer,
+	"size_label" text,
+	"note" text,
+	"admin_note" text,
+	"gift_card_lb_amount" integer,
+	"gift_card_cad_value_cents" integer,
+	"gift_card_recipient_name" text,
+	"gift_card_recipient_email" text,
+	"gift_card_message" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "goal_contributions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"goal_id" integer NOT NULL,
+	"employee_id" integer NOT NULL,
+	"amount" integer NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "goals" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"department" text,
+	"department_id" integer,
+	"target_amount" integer NOT NULL,
+	"current_amount" integer DEFAULT 0 NOT NULL,
+	"active" boolean DEFAULT true NOT NULL,
+	"ends_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "app_settings" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value" text NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "gift_card_issues" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"redemption_id" integer NOT NULL,
+	"code_hash" text NOT NULL,
+	"code_last4" text NOT NULL,
+	"recipient_name" text NOT NULL,
+	"recipient_email" text NOT NULL,
+	"lb_amount" integer NOT NULL,
+	"cad_value_cents" integer NOT NULL,
+	"status" "gift_card_issue_status" DEFAULT 'pending_issue' NOT NULL,
+	"issued_by_employee_id" integer NOT NULL,
+	"issued_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"emailed_at" timestamp with time zone,
+	"voided_at" timestamp with time zone,
+	"void_reason" text,
+	"replacement_issue_id" integer,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "gift_card_issues_code_hash_unique" UNIQUE("code_hash")
+);
+
+CREATE TABLE "store_access" (
+	"store_id" integer NOT NULL,
+	"employee_id" integer NOT NULL
+);
+
+CREATE TABLE "store_card_ledger" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"transaction_ref" text NOT NULL,
+	"card_id" integer NOT NULL,
+	"store_id" integer NOT NULL,
+	"employee_id" integer NOT NULL,
+	"kind" text NOT NULL,
+	"amount_cents" integer NOT NULL,
+	"previous_balance_cents" integer NOT NULL,
+	"new_balance_cents" integer NOT NULL,
+	"receipt_ref" text,
+	"receipt_normalized" text,
+	"idempotency_key" text NOT NULL,
+	"original_spend_id" integer,
+	"reason" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "store_card_ledger_transaction_ref_unique" UNIQUE("transaction_ref"),
+	CONSTRAINT "store_card_positive_amount" CHECK ("store_card_ledger"."amount_cents" > 0 AND "store_card_ledger"."previous_balance_cents" >= 0 AND "store_card_ledger"."new_balance_cents" >= 0),
+	CONSTRAINT "store_card_kind_coherent" CHECK (("store_card_ledger"."kind" = 'spend' AND "store_card_ledger"."new_balance_cents" = "store_card_ledger"."previous_balance_cents" - "store_card_ledger"."amount_cents" AND "store_card_ledger"."receipt_normalized" IS NOT NULL AND "store_card_ledger"."receipt_ref" IS NOT NULL AND "store_card_ledger"."original_spend_id" IS NULL AND "store_card_ledger"."reason" IS NULL) OR ("store_card_ledger"."kind" = 'reversal' AND "store_card_ledger"."new_balance_cents" = "store_card_ledger"."previous_balance_cents" + "store_card_ledger"."amount_cents" AND "store_card_ledger"."receipt_ref" IS NULL AND "store_card_ledger"."receipt_normalized" IS NULL AND "store_card_ledger"."original_spend_id" IS NOT NULL AND "store_card_ledger"."reason" IS NOT NULL))
+);
+
+CREATE TABLE "store_card_lookup_tokens" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"token_hash" text NOT NULL,
+	"card_id" integer NOT NULL,
+	"store_id" integer NOT NULL,
+	"employee_id" integer NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "store_card_lookup_tokens_token_hash_unique" UNIQUE("token_hash")
+);
+
+CREATE TABLE "stores" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"location_id" integer NOT NULL,
+	"active" boolean DEFAULT true NOT NULL
+);
+
+ALTER TABLE "training_outbox" ADD CONSTRAINT "training_outbox_gift_card_issue_id_gift_card_issues_id_fk" FOREIGN KEY ("gift_card_issue_id") REFERENCES "public"."gift_card_issues"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "employees" ADD CONSTRAINT "employees_department_id_departments_id_fk" FOREIGN KEY ("department_id") REFERENCES "public"."departments"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "employees" ADD CONSTRAINT "employees_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "reward_sizes" ADD CONSTRAINT "reward_sizes_reward_id_rewards_id_fk" FOREIGN KEY ("reward_id") REFERENCES "public"."rewards"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "goals" ADD CONSTRAINT "goals_department_id_departments_id_fk" FOREIGN KEY ("department_id") REFERENCES "public"."departments"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "gift_card_issues" ADD CONSTRAINT "gift_card_issues_redemption_id_redemptions_id_fk" FOREIGN KEY ("redemption_id") REFERENCES "public"."redemptions"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "gift_card_issues" ADD CONSTRAINT "gift_card_issues_issued_by_employee_id_employees_id_fk" FOREIGN KEY ("issued_by_employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_access" ADD CONSTRAINT "store_access_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_access" ADD CONSTRAINT "store_access_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_ledger" ADD CONSTRAINT "store_card_ledger_card_id_gift_card_issues_id_fk" FOREIGN KEY ("card_id") REFERENCES "public"."gift_card_issues"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_ledger" ADD CONSTRAINT "store_card_ledger_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_ledger" ADD CONSTRAINT "store_card_ledger_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_ledger" ADD CONSTRAINT "store_card_ledger_original_spend_id_store_card_ledger_id_fk" FOREIGN KEY ("original_spend_id") REFERENCES "public"."store_card_ledger"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_lookup_tokens" ADD CONSTRAINT "store_card_lookup_tokens_card_id_gift_card_issues_id_fk" FOREIGN KEY ("card_id") REFERENCES "public"."gift_card_issues"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_lookup_tokens" ADD CONSTRAINT "store_card_lookup_tokens_store_id_stores_id_fk" FOREIGN KEY ("store_id") REFERENCES "public"."stores"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "store_card_lookup_tokens" ADD CONSTRAINT "store_card_lookup_tokens_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "stores" ADD CONSTRAINT "stores_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;
+CREATE UNIQUE INDEX "reward_sizes_reward_id_label_unique" ON "reward_sizes" USING btree ("reward_id","label");
+CREATE UNIQUE INDEX "gift_card_issues_one_current_per_redemption" ON "gift_card_issues" USING btree ("redemption_id") WHERE "gift_card_issues"."status" NOT IN ('voided', 'reissued');
+CREATE UNIQUE INDEX "store_access_employee_store" ON "store_access" USING btree ("store_id","employee_id");
+CREATE UNIQUE INDEX "store_card_receipt_unique" ON "store_card_ledger" USING btree ("store_id","receipt_normalized") WHERE "store_card_ledger"."kind" = 'spend';
+CREATE UNIQUE INDEX "store_card_idempotency_unique" ON "store_card_ledger" USING btree ("employee_id","store_id","idempotency_key");
+CREATE UNIQUE INDEX "store_card_reversal_unique" ON "store_card_ledger" USING btree ("original_spend_id") WHERE "store_card_ledger"."kind" = 'reversal';
+CREATE INDEX "store_card_history_card" ON "store_card_ledger" USING btree ("card_id");
+CREATE INDEX "store_card_lookup_expires" ON "store_card_lookup_tokens" USING btree ("expires_at");
+
+INSERT INTO public.training_installation (id, purpose, schema_version)
+VALUES (1, 'legend-bucks-training-only', 1);
+INSERT INTO public.training_state (id) VALUES (1);
+
+REVOKE ALL ON DATABASE legend_bucks_training FROM PUBLIC;
+GRANT CONNECT ON DATABASE legend_bucks_training TO legend_training_app;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+GRANT USAGE ON SCHEMA public TO legend_training_app;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM PUBLIC;
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO legend_training_app;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO legend_training_app;
+REVOKE INSERT, UPDATE, DELETE ON public.training_installation FROM legend_training_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO legend_training_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT USAGE ON SEQUENCES TO legend_training_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+COMMIT;

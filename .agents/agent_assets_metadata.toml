@@ -154,3 +154,17 @@ mtime_ms = 1791564514898
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/e8dc6056-ea8e-44fe-998d-98ac90a05dab/5d7401db-493f-4456-bc24-a3737d930fad"
 storage_version_token = "1791564528054417"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "0LJ1NDqUo9HGpx7ZDvT1R"
+uri = "file://docs/training/owner-setup.html"
+type = "html"
+title = "Training database — one-time owner setup"
+description = "Copyable, guarded SQL for the empty training database. No live data is copied, and Training Mode stays disabled."
+logical_id = "5afa8205-980c-405f-960e-2abd2a5889f9"
+content_hash = "sha256:1197337eed96e78481bc55db6270357636d3293bf8104c30903410cd6c0783e8"
+size = 18488
+mtime_ms = 1791568693863
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/5afa8205-980c-405f-960e-2abd2a5889f9/47d7355d-508e-4847-8f42-692dbf8459e6"
+storage_version_token = "1791568724749569"
+content_type = "text/html"
