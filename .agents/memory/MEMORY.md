@@ -18,3 +18,4 @@
 - [Gift card code format](gift-card-code-format.md) — use seven base-32 groups (140-bit entropy); the user chose security over the shorter four-group format.
 - [Sandbox publishing isolation](sandbox-publishing.md) — explicitly disable sandbox in production; absent overrides did not prevent a publish-time sandbox guard failure.
 - [Sandbox constraint parity](sandbox-constraint-parity.md) — table clones omit foreign keys; investigate schema parity before compensating in application code.
+- [In-project training scope](training-mode-scope.md) — training must share the existing portal, with isolated data/sessions and no live side effects; separate-demo ZIP superseded.

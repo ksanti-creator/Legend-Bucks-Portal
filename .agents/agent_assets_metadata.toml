@@ -140,3 +140,17 @@ mtime_ms = 1790688703544
 storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/ecaca4e3-d2be-41a8-a94e-ba0a95ce0598/0663e3fc-7ed0-490a-8605-aa6c71e03b60"
 storage_version_token = "1790688710061882"
 content_type = "text/html"
+
+[[outputs]]
+id = "1kIQt9db41oLf_tfEd8oI"
+uri = "file://docs/training-mode-assessment.md"
+type = "text"
+title = "Training Mode — isolation assessment and implementation proposal"
+description = "Inspected evidence, proposed files, isolation boundary, provisioning blocker, and required verification. This is a design assessment, not an implemented training mode."
+logical_id = "e8dc6056-ea8e-44fe-998d-98ac90a05dab"
+content_hash = "sha256:bc0b294c6f610fbb531886440457a02876003eda219041e68ca7881558a245a7"
+size = 10215
+mtime_ms = 1791564514898
+storage_uri = "gcs://replit-rams-assets-riker/rams/assets/repl:10ede099-f36a-45fd-ab95-9563f0cca0ce/e8dc6056-ea8e-44fe-998d-98ac90a05dab/5d7401db-493f-4456-bc24-a3737d930fad"
+storage_version_token = "1791564528054417"
+content_type = "text/markdown"
