@@ -22,6 +22,10 @@ import Settings from '@/pages/settings';
 import Help from '@/pages/help';
 import StoreGiftCards from '@/pages/store-gift-cards';
 import StoreGiftCardsAdmin from '@/pages/store-gift-cards-admin';
+import TrainingLaunch from '@/pages/training-launch';
+import TrainingOutbox from '@/pages/training-outbox';
+import { IS_TRAINING, TRAINING_PORTAL_BASE } from '@/lib/training';
+import { TrainingBanner, TrainingLoginRedirect } from '@/components/training/training-banner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,7 +49,8 @@ function NotFound() {
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
+      <Route path="/login" component={IS_TRAINING ? TrainingLoginRedirect : Login} />
+      {!IS_TRAINING && <Route path="/training" component={TrainingLaunch} />}
       
       <Route path="/" nest>
         <Shell>
@@ -67,6 +72,7 @@ function Router() {
             <Route path="/help" component={Help} />
             <Route path="/store-gift-cards/admin" component={StoreGiftCardsAdmin} />
             <Route path="/store-gift-cards" component={StoreGiftCards} />
+            {IS_TRAINING && <Route path="/training-outbox" component={TrainingOutbox} />}
             <Route component={NotFound} />
           </Switch>
         </Shell>
@@ -79,9 +85,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+      {IS_TRAINING && <TrainingBanner />}
+      <div className={IS_TRAINING ? 'pt-12' : undefined}>
+      <WouterRouter base={IS_TRAINING ? TRAINING_PORTAL_BASE : import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <Router />
       </WouterRouter>
+      </div>
       <Toaster />
       </I18nProvider>
     </QueryClientProvider>

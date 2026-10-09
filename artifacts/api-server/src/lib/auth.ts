@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { db, sessionsTable, magicTokensTable, employeesTable } from "@workspace/db";
+import { db, sessionsTable, magicTokensTable, employeesTable, isTraining, trainingGeneration } from "@workspace/db";
 import type { Employee } from "@workspace/db";
 import { eq, and, gt } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
@@ -50,13 +50,17 @@ export async function verifyMagicToken(token: string): Promise<number | null> {
 }
 
 export async function createSession(employeeId: number): Promise<string> {
-  const sessionToken = generateToken(48);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  const sessionToken = isTraining() ? `training_${trainingGeneration()}_${generateToken(48)}` : generateToken(48);
+  const expiresAt = new Date(Date.now() + (isTraining() ? 2 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000));
   await db.insert(sessionsTable).values({ employeeId, sessionToken, expiresAt });
   return sessionToken;
 }
 
 export async function getSessionEmployee(sessionToken: string) {
+  // Reject cross-mode tokens BEFORE touching either database.
+  if (isTraining()
+    ? !sessionToken.startsWith(`training_${trainingGeneration()}_`)
+    : sessionToken.startsWith("training_")) return null;
   const now = new Date();
   const [row] = await db
     .select({ session: sessionsTable, employee: employeesTable })
@@ -76,7 +80,7 @@ export function extractSessionToken(req: Request): string | undefined {
     const bearer = authHeader.slice("Bearer ".length).trim();
     if (bearer) return bearer;
   }
-  return req.cookies?.["session_token"];
+  return isTraining() ? undefined : req.cookies?.["session_token"];
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {

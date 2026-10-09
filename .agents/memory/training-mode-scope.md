@@ -75,3 +75,18 @@ the same connection succeeded with `SET LOCAL` inside a read-only transaction.
 
 **How to apply:** Keep session-sensitive operations within a transaction and
 avoid assumptions that settings survive transaction-pool connection reuse.
+
+## Training admission and reset boundaries
+
+Launching any dummy persona and resetting shared training data require an
+active normal-portal administrator. A dummy administrator session cannot
+authorize either operation against the normal portal.
+
+**Why:** Offering an unrestricted dummy admin login would expose shared training
+data/reset controls publicly; accepting training identities for admission would
+erase the separation from normal authorization.
+
+**How to apply:** Authenticate admission outside the training context, then
+use only the dedicated training connection for business workflows. Hold a
+shared transaction-scoped lock for each training request and an exclusive lock
+for reset; buffer success until commit so reset cannot race an acknowledged spend.

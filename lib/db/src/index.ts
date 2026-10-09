@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
 import { sandboxEnabled, SANDBOX_SCHEMA } from "./sandbox";
+import { isTraining, trainingDatabase } from "./training/context";
 
 const { Pool } = pg;
 
@@ -16,12 +17,29 @@ const sandbox = sandboxEnabled();
 if (sandbox && new URL(process.env.DATABASE_URL).searchParams.has("options")) {
   throw new Error("DATABASE_URL options are not permitted in sandbox mode");
 }
-export const pool = new Pool({
+const normalPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ...(sandbox ? { options: `-c search_path=${SANDBOX_SCHEMA}` } : {}),
 });
-export const db = drizzle(pool, { schema });
+const normalDb = drizzle(normalPool, { schema });
+// The context is set only by the verified training transaction boundary.
+// Existing handlers keep their real permissions and accounting logic.
+export const db = new Proxy(normalDb, {
+  get(target, property) {
+    const selected = trainingDatabase() ?? target;
+    const value = Reflect.get(selected, property, selected);
+    return typeof value === "function" ? value.bind(selected) : value;
+  },
+});
+export const pool = new Proxy(normalPool, {
+  get(target, property) {
+    if (isTraining()) throw new Error("Direct normal-pool access is forbidden in training");
+    const value = Reflect.get(target, property, target);
+    return typeof value === "function" ? value.bind(target) : value;
+  },
+});
 
 export * from "./schema";
 export { sandboxEnabled, SANDBOX_SCHEMA } from "./sandbox";
 export { repairSandboxRewardSizes } from "./sandbox-reward-sizes";
+export { isTraining, trainingGeneration } from "./training/context";

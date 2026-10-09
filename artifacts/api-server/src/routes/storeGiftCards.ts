@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { db, sandboxEnabled, storesTable, storeAccessTable, storeCardLedgerTable, storeCardLookupTokensTable, giftCardIssuesTable, employeesTable, locationsTable } from "@workspace/db";
+import { db, isTraining, sandboxEnabled, storesTable, storeAccessTable, storeCardLedgerTable, storeCardLookupTokensTable, giftCardIssuesTable, employeesTable, locationsTable } from "@workspace/db";
 import {
   GetStoreGiftCardStatusResponse, ListStoresResponse, CreateStoreBody, CreateStoreResponse,
   ListStoreAccessResponse, GrantStoreAccessBody, GrantStoreAccessResponse, RevokeStoreAccessParams,
@@ -17,7 +17,7 @@ const activeAdmin = (req: import("express").Request) => {
   const user = getCurrentUser(req);
   return user.role === "admin" && user.status === "active";
 };
-const enabled = () => sandboxEnabled() || process.env.STORE_GIFT_CARDS_ENABLED === "true";
+const enabled = () => isTraining() || sandboxEnabled() || process.env.STORE_GIFT_CARDS_ENABLED === "true";
 const codePattern = /LBGC[-\s]?(?:[A-HJ-NP-Z2-9]{4}[-\s]?){6}[A-HJ-NP-Z2-9]{4}/i;
 const forbiddenText = (value: string) => codePattern.test(value) || /LBGC/i.test(value);
 const validText = (value: string, limit: number) => value.trim().length > 0 && value.trim().length <= limit && !forbiddenText(value);
@@ -81,7 +81,7 @@ function isUniqueViolation(error: unknown): boolean {
   return false;
 }
 router.get("/store-gift-cards/status", requireAuth, async (_req, res): Promise<void> => {
-  res.json(GetStoreGiftCardStatusResponse.parse({ enabled: enabled(), sandbox: sandboxEnabled() }));
+  res.json(GetStoreGiftCardStatusResponse.parse({ enabled: enabled(), sandbox: isTraining() || sandboxEnabled() }));
 });
 router.get("/stores", requireAuth, async (req, res): Promise<void> => {
   if (!activeAdmin(req)) { res.sendStatus(403); return; }
@@ -169,7 +169,7 @@ router.get("/store-gift-cards/transactions", requireAuth, async (req, res): Prom
 });
 router.post("/store-gift-cards/lookup", requireAuth, async (req, res): Promise<void> => {
   const body = LookupStoreGiftCardBody.safeParse(req.body);
-  if (!body.success || !/^LBGC-(?:[A-HJ-NP-Z2-9]{4}-){6}[A-HJ-NP-Z2-9]{4}$/.test(body.data.code)) {
+  if (!body.success || !(isTraining() ? /^TRAINING-CARD-[1-9]\d*$/ : /^LBGC-(?:[A-HJ-NP-Z2-9]{4}-){6}[A-HJ-NP-Z2-9]{4}$/).test(body.data.code)) {
     res.status(400).json({ error: "Invalid card code" }); return;
   }
   if (!enabled()) { res.sendStatus(403); return; }
@@ -177,7 +177,9 @@ router.post("/store-gift-cards/lookup", requireAuth, async (req, res): Promise<v
     const result = await db.transaction(async (trx) => {
       if (!await access(trx, getCurrentUser(req).id, body.data.storeId)) throw new CheckoutError(403, "Store access required");
       const [matched] = await trx.select({ id: giftCardIssuesTable.id }).from(giftCardIssuesTable)
-        .where(eq(giftCardIssuesTable.codeHash, hashGiftCardCode(body.data.code))).limit(1);
+        .where(isTraining()
+          ? eq(giftCardIssuesTable.id, Number(body.data.code.slice("TRAINING-CARD-".length)))
+          : eq(giftCardIssuesTable.codeHash, hashGiftCardCode(body.data.code))).limit(1);
       const card = matched ? await lockedCard(trx, matched.id) : null;
       if (!card || !safeCard(card)) throw new CheckoutError(404, "Card not available");
       const lookupToken = randomUUID();

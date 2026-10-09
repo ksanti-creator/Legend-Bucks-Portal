@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import QRCode from "qrcode";
 import { sendGiftCardRecipientEmail } from "./email";
 import type { PreferredLanguage } from "./email";
-import { db, employeesTable } from "@workspace/db";
+import { db, employeesTable, giftCardIssuesTable, isTraining } from "@workspace/db";
+import { trainingOutboxTable } from "@workspace/db/training-schema";
 import { sql } from "drizzle-orm";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -62,6 +63,18 @@ export async function emailGiftCard(input: {
   catalogImageUrl: string | null;
   purchaserPreferredLanguage: PreferredLanguage;
 }): Promise<void> {
+  if (isTraining()) {
+    const [card] = await db.select({ id: giftCardIssuesTable.id }).from(giftCardIssuesTable)
+      .where(sql`${giftCardIssuesTable.codeHash} = ${hashGiftCardCode(input.code)}`).limit(1);
+    if (!card) throw new Error("Training issue missing");
+    await db.insert(trainingOutboxTable).values({
+      recipient: input.recipientEmail,
+      subject: "TRAINING — Gift card issued",
+      summary: `Simulated delivery. CAD ${(input.cadValueCents / 100).toFixed(2)}. Use TRAINING-CARD-${card.id} at the training till only. No real email or QR code was produced.`,
+      giftCardIssueId: card.id,
+    });
+    return;
+  }
   // An employee recipient's saved choice wins; external recipients inherit
   // the purchaser's saved language, never the administrator issuing the card.
   const [recipient] = await db.select().from(employeesTable)

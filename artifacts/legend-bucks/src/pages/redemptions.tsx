@@ -1,3 +1,4 @@
+import { trainingExport } from "@/lib/training";
 import { useState } from "react";
 import { useListRedemptions, useApproveRedemption, useRejectRedemption, useFulfillRedemption, usePayrollApproveRedemption, usePayrollRejectRedemption, useIssueGiftCard, useReissueGiftCard, useVoidGiftCard, useGetMe, getListRedemptionsQueryKey, exportRedemptions } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -49,11 +50,11 @@ export default function Redemptions() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const csv = await exportRedemptions();
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+      const out = trainingExport("redemptions.csv", await exportRedemptions());
+      const url = URL.createObjectURL(new Blob([out.csv], { type: "text/csv;charset=utf-8;" }));
       const link = document.createElement("a");
       link.href = url;
-      link.download = "redemptions.csv";
+      link.download = out.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

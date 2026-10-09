@@ -1,3 +1,4 @@
+import { trainingExport } from "@/lib/training";
 import { useState } from "react";
 import { useListTransactions, useGetMe, exportTransactions } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,12 +29,12 @@ export default function Transactions() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const csv = await exportTransactions();
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const out = trainingExport("transactions.csv", await exportTransactions());
+      const blob = new Blob([out.csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "transactions.csv";
+      link.download = out.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

@@ -30,6 +30,97 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /training/status:
+    get:
+      operationId: getTrainingStatus
+      tags: [training]
+      summary: Read fail-closed training availability; never enables training
+      responses:
+        "200":
+          description: Training readiness
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, available, seeded, reason]
+                properties:
+                  enabled: {type: boolean}
+                  available: {type: boolean}
+                  seeded: {type: boolean}
+                  reason: {type: string}
+  /training/personas:
+    get:
+      operationId: getTrainingPersonas
+      tags: [training]
+      summary: Active normal-mode admin only; list server-defined dummy identities
+      responses:
+        "200":
+          description: Available personas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [seeded, personas]
+                properties:
+                  seeded: {type: boolean}
+                  personas:
+                    type: array
+                    items:
+                      type: object
+                      required: [key, label, role]
+                      properties:
+                        key: {type: string}
+                        label: {type: string}
+                        role: {type: string}
+  /training/session:
+    post:
+      operationId: createTrainingSession
+      tags: [training]
+      summary: Active normal-mode admin only; issue a two-hour training-only session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingPersonaSelection"
+      responses:
+        "200":
+          description: Training bearer token; never log or place in a URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessionToken, persona]
+                properties:
+                  sessionToken: {type: string}
+                  persona:
+                    type: object
+                    required: [key, label, role]
+                    properties:
+                      key: {type: string}
+                      label: {type: string}
+                      role: {type: string}
+  /training/reset:
+    post:
+      operationId: resetTrainingData
+      tags: [training]
+      summary: Active normal-mode admin only; atomically reset dummy data and revoke training sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingResetConfirmation"
+      responses:
+        "200":
+          description: Dummy data reset; live data untouched
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [seeded]
+                properties:
+                  seeded: {type: boolean}
   /store-gift-cards/status:
     get:
       operationId: getStoreGiftCardStatus
@@ -1648,6 +1739,20 @@ paths:
 
 components:
   schemas:
+    TrainingPersonaSelection:
+      type: object
+      required: [persona]
+      properties:
+        persona:
+          type: string
+          enum: [admin, manager, employee, accounting, operator]
+    TrainingResetConfirmation:
+      type: object
+      required: [confirmation]
+      properties:
+        confirmation:
+          type: string
+          enum: ["RESET TRAINING DATA"]
     StoreGiftCardStatus:
       type: object
       required: [enabled, sandbox]

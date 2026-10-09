@@ -17,9 +17,12 @@ import {
   Coins,
   Menu,
   CreditCard,
-  ShieldCheck
+  ShieldCheck,
+  Mail
 } from "lucide-react";
 
+import { IS_TRAINING, goToTrainingLaunch } from "@/lib/training";
+import { TrainingSessionLost } from "@/components/training/training-banner";
 import { cn, getInitials } from "@/lib/utils";
 import { clearSessionToken } from "@/lib/auth-token";
 import { useI18n } from "@/lib/i18n";
@@ -124,7 +127,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    // Training never falls back to the live login; it shows its own recovery screen.
+    if (!isLoading && !user && !IS_TRAINING) {
       setLocation("/login");
     }
   }, [isLoading, user, setLocation]);
@@ -135,6 +139,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (!user && IS_TRAINING) {
+    return <TrainingSessionLost />;
   }
 
   if (!user) {
@@ -150,6 +158,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       onSettled: () => {
         clearSessionToken();
         queryClient.clear();
+        if (IS_TRAINING) { goToTrainingLaunch(); return; }
         setLocation("/login");
       },
     });
@@ -191,12 +200,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
     navItems.push({ href: "/store-gift-cards/admin", label: t("Store Card Admin"), icon: ShieldCheck });
   }
 
+  if (IS_TRAINING && (user.role === "admin" || user.role === "accounting_admin")) {
+    navItems.push({ href: "/training-outbox", label: t("Training Outbox"), icon: Mail });
+  }
+
   navItems.push({ href: "/help", label: t("Help"), icon: HelpCircle });
 
   return (
     <div className="flex min-h-screen app-gradient-bg text-foreground">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 border-r border-sidebar-border/80 flex-col bg-sidebar/90 backdrop-blur z-40">
+      <aside className={`hidden lg:flex fixed bottom-0 left-0 w-64 ${IS_TRAINING ? "top-12" : "top-0"} border-r border-sidebar-border/80 flex-col bg-sidebar/90 backdrop-blur z-40`}>
         <SidebarContent
           navItems={navItems}
           location={location}
@@ -208,12 +221,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className="shell-main relative isolate flex-1 min-w-0 lg:pl-64 flex flex-col min-h-[100dvh]">
         <ShellScenery />
-        {import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
+        {!IS_TRAINING && import.meta.env.DEV && import.meta.env.VITE_LEGEND_BUCKS_SANDBOX === "true" && (
           <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold text-amber-950">
             {t("SANDBOX PREVIEW — Dummy data only. Emails and real storage are disabled.")}
           </div>
         )}
-        <header className="min-h-16 py-2 border-b border-border/60 bg-background/75 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky top-0 z-20">
+        <header className={`min-h-16 py-2 border-b border-border/60 bg-background/75 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 sticky ${IS_TRAINING ? "top-12" : "top-0"} z-20`}>
           <div className="flex items-center gap-2 min-w-0">
             {/* Mobile nav trigger */}
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>

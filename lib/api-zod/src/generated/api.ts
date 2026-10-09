@@ -8,6 +8,59 @@
 import * as zod from 'zod';
 
 
+/**
+ * @summary Read fail-closed training availability; never enables training
+ */
+export const GetTrainingStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "available": zod.boolean(),
+  "seeded": zod.boolean(),
+  "reason": zod.string()
+})
+
+
+/**
+ * @summary Active normal-mode admin only; list server-defined dummy identities
+ */
+export const GetTrainingPersonasResponse = zod.object({
+  "seeded": zod.boolean(),
+  "personas": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "role": zod.string()
+}))
+})
+
+
+/**
+ * @summary Active normal-mode admin only; issue a two-hour training-only session
+ */
+export const CreateTrainingSessionBody = zod.object({
+  "persona": zod.enum(['admin', 'manager', 'employee', 'accounting', 'operator'])
+})
+
+export const CreateTrainingSessionResponse = zod.object({
+  "sessionToken": zod.string(),
+  "persona": zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "role": zod.string()
+})
+})
+
+
+/**
+ * @summary Active normal-mode admin only; atomically reset dummy data and revoke training sessions
+ */
+export const ResetTrainingDataBody = zod.object({
+  "confirmation": zod.enum(['RESET TRAINING DATA'])
+})
+
+export const ResetTrainingDataResponse = zod.object({
+  "seeded": zod.boolean()
+})
+
+
 export const GetStoreGiftCardStatusResponse = zod.object({
   "enabled": zod.boolean(),
   "sandbox": zod.boolean()

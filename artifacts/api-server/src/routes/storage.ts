@@ -4,7 +4,7 @@ import {
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { sandboxEnabled } from "@workspace/db";
+import { isTraining, sandboxEnabled } from "@workspace/db";
 
 import { requireAuth, getCurrentUser } from "../lib/auth";
 import {
@@ -16,7 +16,7 @@ const router: IRouter = Router();
 // Block ALL object access, including public images: real assets must not be visible
 // or writable from the isolated walkthrough.
 router.use("/storage", (_req, res, next) => {
-  if (sandboxEnabled()) {
+  if (isTraining() || sandboxEnabled()) {
     res.status(403).json({ error: "Storage is unavailable in the sandbox" });
     return;
   }

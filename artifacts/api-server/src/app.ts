@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import trainingRouter from "./routes/training";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -68,6 +69,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+app.use("/api/training", trainingRouter);
 app.use("/api", router);
 
 export default app;

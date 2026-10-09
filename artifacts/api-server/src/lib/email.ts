@@ -1,4 +1,5 @@
-import { sandboxEnabled } from "@workspace/db";
+import { db, isTraining, sandboxEnabled } from "@workspace/db";
+import { trainingOutboxTable } from "@workspace/db/training-schema";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 
 export type PreferredLanguage = "en" | "fr-CA";
@@ -31,6 +32,14 @@ export function encodeFromHeader(from: string): string {
 }
 
 async function sendGmail(to: string, subject: string, html: string): Promise<void> {
+  if (isTraining()) {
+    await db.insert(trainingOutboxTable).values({
+      recipient: /^[^@\s]+@example\.test$/i.test(to) ? to : "training.notifications@example.test",
+      subject: `TRAINING — ${subject.replace(/LBGC\S*/gi, "[REDACTED]").replace(/https?:\/\/\S+/gi, "[LINK OMITTED]")}`,
+      summary: "Simulated notification. No email was sent; login links and message bodies are intentionally omitted.",
+    });
+    return;
+  }
   if (sandboxEnabled()) {
     // Never log email contents, login tokens or connector credentials.
     console.info("[sandbox] Simulated email delivery; no message was sent.");

@@ -1,3 +1,4 @@
+import { IS_TRAINING } from "@/lib/training";
 import { useRef, useState } from "react";
 import { useRequestUploadUrl } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ interface ImageUploadProps {
   disabled?: boolean;
 }
 
-export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
+function LiveImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   const { t, error } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -141,7 +142,7 @@ interface MultiImageUploadProps {
  * Upload up to MAX_PHOTOS images. The first photo is the cover image shown on
  * catalog cards; photos can be reordered with the arrow buttons.
  */
-export function MultiImageUpload({ value, onChange, disabled }: MultiImageUploadProps) {
+function LiveMultiImageUpload({ value, onChange, disabled }: MultiImageUploadProps) {
   const { t, error, number } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -288,4 +289,22 @@ export function MultiImageUpload({ value, onChange, disabled }: MultiImageUpload
       />
     </div>
   );
+}
+
+function TrainingUploadDisabled() {
+  const { t } = useI18n();
+  return (
+    <div role="note" className="flex items-center gap-3 rounded-xl border border-dashed border-amber-500/70 bg-amber-50 p-4 text-sm text-amber-950" data-testid="text-training-upload-disabled">
+      <ImageIcon className="h-5 w-5 shrink-0" aria-hidden />
+      <span>{t("Photo uploads are turned off in training. Rewards save without images here.")}</span>
+    </div>
+  );
+}
+
+export function ImageUpload(props: ImageUploadProps) {
+  return IS_TRAINING ? <TrainingUploadDisabled /> : <LiveImageUpload {...props} />;
+}
+
+export function MultiImageUpload(props: MultiImageUploadProps) {
+  return IS_TRAINING ? <TrainingUploadDisabled /> : <LiveMultiImageUpload {...props} />;
 }

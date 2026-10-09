@@ -1,3 +1,5 @@
+import { IS_TRAINING } from "@/lib/training";
+import { TrainingCardChooser } from "@/components/training/training-card-chooser";
 import { useEffect, useRef, useState } from "react";
 import { useListMyStores, useLookupStoreGiftCard, useSpendStoreGiftCard } from "@workspace/api-client-react";
 import type { StoreCardSpend } from "@workspace/api-client-react";
@@ -245,6 +247,12 @@ export default function StoreGiftCards() {
                     </Button>
                   </form>
                   {lookupError && <p role="alert" className="mt-3 text-sm text-destructive" data-testid="text-lookup-error">{lookupError}</p>}
+                  {IS_TRAINING && (
+                    <TrainingCardChooser disabled={lookup.isPending || !storeId} onChoose={(alias) => {
+                      if (codeRef.current) codeRef.current.value = alias;
+                      codeRef.current?.form?.requestSubmit();
+                    }} />
+                  )}
                 </CardContent>
               </Card>
 

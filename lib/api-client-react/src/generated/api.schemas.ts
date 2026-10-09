@@ -5,6 +5,32 @@
  * Legend Bucks rewards platform API
  * OpenAPI spec version: 0.1.0
  */
+export type TrainingPersonaSelectionPersona = typeof TrainingPersonaSelectionPersona[keyof typeof TrainingPersonaSelectionPersona];
+
+
+export const TrainingPersonaSelectionPersona = {
+  admin: 'admin',
+  manager: 'manager',
+  employee: 'employee',
+  accounting: 'accounting',
+  operator: 'operator',
+} as const;
+
+export interface TrainingPersonaSelection {
+  persona: TrainingPersonaSelectionPersona;
+}
+
+export type TrainingResetConfirmationConfirmation = typeof TrainingResetConfirmationConfirmation[keyof typeof TrainingResetConfirmationConfirmation];
+
+
+export const TrainingResetConfirmationConfirmation = {
+  RESET_TRAINING_DATA: 'RESET TRAINING DATA',
+} as const;
+
+export interface TrainingResetConfirmation {
+  confirmation: TrainingResetConfirmationConfirmation;
+}
+
 export interface StoreGiftCardStatus {
   enabled: boolean;
   sandbox: boolean;
@@ -990,6 +1016,39 @@ export interface LeaderboardEntry {
   department?: string | null;
   bucksReceived: number;
 }
+
+export type GetTrainingStatus200 = {
+  enabled: boolean;
+  available: boolean;
+  seeded: boolean;
+  reason: string;
+};
+
+export type GetTrainingPersonas200PersonasItem = {
+  key: string;
+  label: string;
+  role: string;
+};
+
+export type GetTrainingPersonas200 = {
+  seeded: boolean;
+  personas: GetTrainingPersonas200PersonasItem[];
+};
+
+export type CreateTrainingSession200Persona = {
+  key: string;
+  label: string;
+  role: string;
+};
+
+export type CreateTrainingSession200 = {
+  sessionToken: string;
+  persona: CreateTrainingSession200Persona;
+};
+
+export type ResetTrainingData200 = {
+  seeded: boolean;
+};
 
 export type ListStoreGiftCardTransactionsParams = {
 /**

@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts",
-    "./training-preflight": "./src/training/verify.ts"
+    "./training-preflight": "./src/training/verify.ts",
+    "./training-runtime": "./src/training/runtime.ts",
+    "./training-schema": "./src/training/schema.ts"
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",

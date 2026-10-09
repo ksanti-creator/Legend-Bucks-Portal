@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "test": "vitest run",
+    "test:training": "LEGEND_BUCKS_SANDBOX=false TRAINING_TEST_ALLOW_RESET=true LOG_LEVEL=silent vitest run src/test/training-isolation.test.ts",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

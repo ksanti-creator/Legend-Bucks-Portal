@@ -28,6 +28,7 @@ import type {
   BulkInviteInput,
   BulkInviteResponse,
   CorrectStartingBalanceInput,
+  CreateTrainingSession200,
   CurrentUser,
   DashboardSummary,
   Department,
@@ -37,6 +38,8 @@ import type {
   ExportTransactionsParams,
   GetLeaderboardParams,
   GetRecentActivityParams,
+  GetTrainingPersonas200,
+  GetTrainingStatus200,
   GetTransactionSummaryParams,
   GiftCardIssue,
   GiftCardVoidInput,
@@ -66,6 +69,7 @@ import type {
   Redemption,
   RedemptionDecision,
   RedemptionInput,
+  ResetTrainingData200,
   Reward,
   RewardInput,
   RewardUpdate,
@@ -84,6 +88,8 @@ import type {
   StoreCardTransaction,
   StoreGiftCardStatus,
   StoreInput,
+  TrainingPersonaSelection,
+  TrainingResetConfirmation,
   Transaction,
   TransactionPage,
   TransactionSummary,
@@ -117,6 +123,300 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetTrainingStatusUrl = () => {
+
+
+
+
+  return `/api/training/status`
+}
+
+/**
+ * @summary Read fail-closed training availability; never enables training
+ */
+export const getTrainingStatus = async ( options?: RequestInit): Promise<GetTrainingStatus200> => {
+
+  return customFetch<GetTrainingStatus200>(getGetTrainingStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTrainingStatusQueryKey = () => {
+    return [
+    `/api/training/status`
+    ] as const;
+    }
+
+
+export const getGetTrainingStatusQueryOptions = <TData = Awaited<ReturnType<typeof getTrainingStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrainingStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTrainingStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrainingStatus>>> = ({ signal }) => getTrainingStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTrainingStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTrainingStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getTrainingStatus>>>
+export type GetTrainingStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read fail-closed training availability; never enables training
+ */
+
+export function useGetTrainingStatus<TData = Awaited<ReturnType<typeof getTrainingStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrainingStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTrainingStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTrainingPersonasUrl = () => {
+
+
+
+
+  return `/api/training/personas`
+}
+
+/**
+ * @summary Active normal-mode admin only; list server-defined dummy identities
+ */
+export const getTrainingPersonas = async ( options?: RequestInit): Promise<GetTrainingPersonas200> => {
+
+  return customFetch<GetTrainingPersonas200>(getGetTrainingPersonasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTrainingPersonasQueryKey = () => {
+    return [
+    `/api/training/personas`
+    ] as const;
+    }
+
+
+export const getGetTrainingPersonasQueryOptions = <TData = Awaited<ReturnType<typeof getTrainingPersonas>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrainingPersonas>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTrainingPersonasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrainingPersonas>>> = ({ signal }) => getTrainingPersonas({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTrainingPersonas>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTrainingPersonasQueryResult = NonNullable<Awaited<ReturnType<typeof getTrainingPersonas>>>
+export type GetTrainingPersonasQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Active normal-mode admin only; list server-defined dummy identities
+ */
+
+export function useGetTrainingPersonas<TData = Awaited<ReturnType<typeof getTrainingPersonas>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrainingPersonas>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTrainingPersonasQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateTrainingSessionUrl = () => {
+
+
+
+
+  return `/api/training/session`
+}
+
+/**
+ * @summary Active normal-mode admin only; issue a two-hour training-only session
+ */
+export const createTrainingSession = async (trainingPersonaSelection: TrainingPersonaSelection, options?: RequestInit): Promise<CreateTrainingSession200> => {
+
+  return customFetch<CreateTrainingSession200>(getCreateTrainingSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(trainingPersonaSelection)
+  }
+);}
+
+
+
+
+export const getCreateTrainingSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTrainingSession>>, TError,{data: BodyType<TrainingPersonaSelection>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTrainingSession>>, TError,{data: BodyType<TrainingPersonaSelection>}, TContext> => {
+
+const mutationKey = ['createTrainingSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTrainingSession>>, {data: BodyType<TrainingPersonaSelection>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTrainingSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTrainingSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createTrainingSession>>>
+    export type CreateTrainingSessionMutationBody = BodyType<TrainingPersonaSelection>
+    export type CreateTrainingSessionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Active normal-mode admin only; issue a two-hour training-only session
+ */
+export const useCreateTrainingSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTrainingSession>>, TError,{data: BodyType<TrainingPersonaSelection>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTrainingSession>>,
+        TError,
+        {data: BodyType<TrainingPersonaSelection>},
+        TContext
+      > => {
+      return useMutation(getCreateTrainingSessionMutationOptions(options));
+    }
+
+export const getResetTrainingDataUrl = () => {
+
+
+
+
+  return `/api/training/reset`
+}
+
+/**
+ * @summary Active normal-mode admin only; atomically reset dummy data and revoke training sessions
+ */
+export const resetTrainingData = async (trainingResetConfirmation: TrainingResetConfirmation, options?: RequestInit): Promise<ResetTrainingData200> => {
+
+  return customFetch<ResetTrainingData200>(getResetTrainingDataUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(trainingResetConfirmation)
+  }
+);}
+
+
+
+
+export const getResetTrainingDataMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetTrainingData>>, TError,{data: BodyType<TrainingResetConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetTrainingData>>, TError,{data: BodyType<TrainingResetConfirmation>}, TContext> => {
+
+const mutationKey = ['resetTrainingData'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetTrainingData>>, {data: BodyType<TrainingResetConfirmation>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  resetTrainingData(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetTrainingDataMutationResult = NonNullable<Awaited<ReturnType<typeof resetTrainingData>>>
+    export type ResetTrainingDataMutationBody = BodyType<TrainingResetConfirmation>
+    export type ResetTrainingDataMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Active normal-mode admin only; atomically reset dummy data and revoke training sessions
+ */
+export const useResetTrainingData = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetTrainingData>>, TError,{data: BodyType<TrainingResetConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetTrainingData>>,
+        TError,
+        {data: BodyType<TrainingResetConfirmation>},
+        TContext
+      > => {
+      return useMutation(getResetTrainingDataMutationOptions(options));
+    }
 
 export const getGetStoreGiftCardStatusUrl = () => {
 

@@ -1,3 +1,4 @@
+import { IS_TRAINING, goToTrainingLaunch } from "@/lib/training";
 import { 
   useGetMe, 
   useLogout, 
@@ -146,6 +147,7 @@ export default function Settings() {
       onSettled: () => {
         clearSessionToken();
         queryClient.clear();
+        if (IS_TRAINING) { goToTrainingLaunch(); return; }
         window.location.href = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/login`;
       },
     });
